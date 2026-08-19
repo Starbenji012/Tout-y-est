@@ -42,10 +42,10 @@
   position: relative;
   isolation: isolate;
   display: flex;
-  min-height: clamp(34rem, 52vw, 40rem);
+  min-height: clamp(30rem, 45vw, 35rem);
   align-items: center;
   padding: clamp(2rem, 6vw, 5rem);
-  padding-bottom: clamp(5.5rem, 9vw, 7rem);
+  padding-bottom: clamp(4.5rem, 7vw, 5.5rem);
 }
 
 .hero-slide__layout::before {
@@ -108,7 +108,7 @@
   max-width: 15ch;
   margin-top: var(--space-5);
   color: var(--brand-gray-50);
-  font-size: clamp(2.75rem, 6vw, 5rem);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
   line-height: 1.02;
   letter-spacing: -0.055em;
 }
@@ -140,6 +140,17 @@
 
 .hero-buttons .btn {
   min-height: 3.25rem;
+  box-shadow: var(--shadow-small);
+}
+
+.hero-buttons .btn:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+.hero-buttons .btn:active {
+  box-shadow: var(--shadow-small);
+  transform: scale(0.98);
 }
 
 .hero .hero-buttons .btn-secondary {
@@ -157,6 +168,34 @@
 .hero-buttons svg {
   width: var(--icon-size-sm);
   height: var(--icon-size-sm);
+}
+
+.hero-scroll-cue {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  color: var(--brand-gray-400);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-base);
+}
+
+.hero-scroll-cue:hover,
+.hero-scroll-cue:focus-visible {
+  color: var(--color-gold);
+}
+
+.hero-scroll-cue:focus-visible {
+  outline: var(--border-width) var(--border-style) var(--color-gold);
+  outline-offset: var(--space-1);
+}
+
+.hero-scroll-cue svg {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  animation: hero-scroll-hint calc(var(--duration-slow) * 2) var(--ease-standard) infinite;
 }
 
 /* Photographie */
@@ -181,9 +220,12 @@
   transition: transform var(--transition-slow), filter var(--transition-slow);
 }
 
-.hero-product-image--phone,
-.hero-product-image--fashion {
-  object-position: center;
+.hero-product-image--collection {
+  object-position: center 58%;
+}
+
+.hero-product-image--jewelry {
+  object-position: center 48%;
 }
 
 .hero-product-image--shoes {
@@ -225,6 +267,11 @@
   transform: translateY(-1px);
 }
 
+.hero-navigation__button:active {
+  box-shadow: none;
+  transform: scale(0.94);
+}
+
 .hero-navigation__button:focus-visible {
   outline: 0;
   border-color: var(--color-gold);
@@ -249,7 +296,12 @@
   margin-inline: var(--space-1);
   background-color: var(--brand-gray-500);
   opacity: 1;
-  transition: width var(--transition), background-color var(--transition);
+  transition: width var(--transition-normal), background-color var(--transition-normal), transform var(--transition-normal);
+}
+
+.hero-pagination .swiper-pagination-bullet:hover {
+  background-color: var(--color-gold-dark);
+  transform: scale(1.15);
 }
 
 .hero-pagination .swiper-pagination-bullet-active {
@@ -275,6 +327,10 @@
   animation-delay: var(--duration-normal);
 }
 
+.swiper-slide-active .hero-left > :nth-child(5) {
+  animation-delay: calc(var(--duration-normal) + var(--duration-fast));
+}
+
 @keyframes hero-content-enter {
   from {
     opacity: 0;
@@ -287,14 +343,25 @@
   }
 }
 
+@keyframes hero-scroll-hint {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(var(--space-1));
+  }
+}
+
 @media (max-width: 64rem) {
   .hero-slide__layout {
-    min-height: 36rem;
+    min-height: 32rem;
     padding-inline: var(--space-6);
   }
 
   .hero-title {
-    font-size: clamp(2.5rem, 6.5vw, 4rem);
+    font-size: clamp(2.375rem, 6vw, 3.75rem);
   }
 
   .hero-description {
@@ -305,10 +372,10 @@
 
 @media (max-width: 48rem) {
   .hero-slide__layout {
-    min-height: 39rem;
+    min-height: 34rem;
     align-items: flex-end;
     padding: var(--space-6);
-    padding-bottom: 6.5rem;
+    padding-bottom: 5.75rem;
   }
 
   .hero-slide__layout::before {
@@ -342,8 +409,11 @@
     font-size: clamp(2.25rem, 10vw, 3.25rem);
   }
 
-  .hero-product-image--phone,
-  .hero-product-image--fashion {
+  .hero-product-image--collection {
+    object-position: 62% center;
+  }
+
+  .hero-product-image--jewelry {
     object-position: 58% center;
   }
 
@@ -354,7 +424,7 @@
 
 @media (max-width: 30rem) {
   .hero-slide__layout {
-    min-height: 42rem;
+    min-height: 37rem;
     padding-inline: var(--space-4);
   }
 
@@ -376,6 +446,11 @@
   .hero-buttons .btn {
     width: 100%;
   }
+
+  .hero-scroll-cue {
+    min-height: 2rem;
+    margin-top: var(--space-3);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -385,6 +460,10 @@
 
   .hero-product-image {
     transition: none;
+  }
+
+  .hero-scroll-cue svg {
+    animation: none;
   }
 
   .swiper-slide-active .hero-product-image {

@@ -1,1 +1,7 @@
-/* Styles de la boutique. */
+.product-section--shop {
+  min-height: 70vh;
+}
+
+.product-section--shop .section-header__content {
+  max-width: 48rem;
+}

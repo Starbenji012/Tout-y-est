@@ -18,8 +18,10 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
             >
         </a>
 
-        <?php $badge = ['label' => (string) ($product['badge'] ?? 'Nouveau'), 'variant' => (string) ($product['badgeVariant'] ?? 'new'), 'class' => 'product-card__badge']; ?>
-        <?php require __DIR__ . '/badge.php'; ?>
+        <?php if (!empty($product['badge'])): ?>
+            <?php $badge = ['label' => (string) $product['badge'], 'variant' => (string) ($product['badgeVariant'] ?? 'new'), 'class' => 'product-card__badge']; ?>
+            <?php require __DIR__ . '/badge.php'; ?>
+        <?php endif; ?>
 
         <div class="product-card__actions" role="group" aria-label="Actions rapides">
             <button class="product-card__action" type="button" data-product-action="favorite" aria-label="Ajouter <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> aux favoris">
@@ -50,6 +52,10 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
             <span class="product-card__price<?= !empty($product['oldPrice']) ? ' product-card__price--sale' : '' ?>"><?= htmlspecialchars((string) $product['price'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
             <?php if (!empty($product['oldPrice'])): ?>
                 <del class="product-card__old-price"><?= htmlspecialchars((string) $product['oldPrice'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></del>
+            <?php endif; ?>
+            <?php if (!empty($product['discount'])): ?>
+                <?php $badge = ['label' => '-' . (int) $product['discount'] . ' %', 'variant' => 'promotion', 'class' => 'product-card__discount']; ?>
+                <?php require __DIR__ . '/badge.php'; ?>
             <?php endif; ?>
         </div>
 

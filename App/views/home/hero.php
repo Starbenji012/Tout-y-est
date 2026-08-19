@@ -7,11 +7,11 @@ $heroSlides = $heroSlides ?? [
         'titleAccent' => 'vous avez besoin,',
         'titleEnd' => 'au même endroit.',
         'description' => 'Découvrez une sélection pensée pour votre quotidien, avec des produits utiles, actuels et accessibles.',
-        'image' => '/assets/images/products/telephone.jpg',
-        'alt' => 'Téléphone présenté sur un fond doré',
-        'width' => 1400,
+        'image' => '/assets/images/products/jeans.jpg',
+        'alt' => 'Collection de jeans suspendus dans une boutique',
+        'width' => 933,
         'height' => 1400,
-        'imageClass' => 'hero-product-image--phone',
+        'imageClass' => 'hero-product-image--collection',
     ],
     [
         'badge' => 'Sélection du moment',
@@ -19,11 +19,11 @@ $heroSlides = $heroSlides ?? [
         'titleAccent' => 'pensé pour vous,',
         'titleEnd' => 'chaque jour.',
         'description' => 'Des essentiels faciles à porter, choisis pour associer confort, sobriété et modernité.',
-        'image' => '/assets/images/products/shirts.jpg',
-        'alt' => 'Chemise bleue présentée sur un cintre',
-        'width' => 1400,
+        'image' => '/assets/images/products/jewelry.jpg',
+        'alt' => 'Sélection de bagues dorées présentées dans un écrin',
+        'width' => 1120,
         'height' => 1400,
-        'imageClass' => 'hero-product-image--fashion',
+        'imageClass' => 'hero-product-image--jewelry',
     ],
     [
         'badge' => 'À découvrir',
@@ -63,6 +63,10 @@ $heroSlides = $heroSlides ?? [
                                     <?php $button = ['label' => 'Voir les promotions', 'variant' => 'secondary', 'href' => '/promotions']; ?>
                                     <?php require dirname(__DIR__) . '/components/button.php'; ?>
                                 </div>
+                                <a class="hero-scroll-cue" href="#new-products-title" aria-label="Découvrir les nouveautés">
+                                    <span>Découvrir la suite</span>
+                                    <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                </a>
                             </div>
 
                             <div class="hero-right">

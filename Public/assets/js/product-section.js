@@ -1,25 +1,24 @@
 (() => {
-  const section = document.querySelector("[data-new-products]");
-
-  if (!section) {
-    return;
-  }
-
-  section.addEventListener("click", (event) => {
+  document.addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-product-action]");
 
-    if (!actionButton || !section.contains(actionButton)) {
+    if (!actionButton) {
       return;
     }
 
     const productCard = actionButton.closest("[data-product-card]");
+    const productSection = actionButton.closest("[data-product-section]");
 
-    section.dispatchEvent(
+    if (!productCard || !productSection) {
+      return;
+    }
+
+    productSection.dispatchEvent(
       new CustomEvent("product:action", {
         bubbles: true,
         detail: {
           action: actionButton.dataset.productAction,
-          productId: productCard?.dataset.productId ?? null,
+          productId: productCard.dataset.productId,
         },
       }),
     );

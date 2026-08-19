@@ -6,6 +6,8 @@ $sectionHeaderTitle = (string) ($sectionHeaderConfig['title'] ?? '');
 $sectionHeaderDescription = (string) ($sectionHeaderConfig['description'] ?? '');
 $sectionHeaderBadge = $sectionHeaderConfig['badge'] ?? null;
 $sectionHeaderAction = $sectionHeaderConfig['action'] ?? null;
+$sectionHeaderHeadingLevel = (int) ($sectionHeaderConfig['headingLevel'] ?? 2);
+$sectionHeaderHeadingTag = $sectionHeaderHeadingLevel === 1 ? 'h1' : 'h2';
 ?>
 
 <div class="section-header">
@@ -15,9 +17,9 @@ $sectionHeaderAction = $sectionHeaderConfig['action'] ?? null;
             <?php require __DIR__ . '/badge.php'; ?>
         <?php endif; ?>
 
-        <h2 class="section-header__title" id="<?= htmlspecialchars($sectionHeaderId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+        <<?= $sectionHeaderHeadingTag ?> class="section-header__title" id="<?= htmlspecialchars($sectionHeaderId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
             <?= htmlspecialchars($sectionHeaderTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
-        </h2>
+        </<?= $sectionHeaderHeadingTag ?>>
 
         <?php if ($sectionHeaderDescription !== ''): ?>
             <p class="section-header__description"><?= htmlspecialchars($sectionHeaderDescription, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
@@ -32,4 +34,4 @@ $sectionHeaderAction = $sectionHeaderConfig['action'] ?? null;
     <?php endif; ?>
 </div>
 
-<?php unset($sectionHeader, $sectionHeaderConfig, $sectionHeaderId, $sectionHeaderTitle, $sectionHeaderDescription, $sectionHeaderBadge, $sectionHeaderAction); ?>
+<?php unset($sectionHeader, $sectionHeaderConfig, $sectionHeaderId, $sectionHeaderTitle, $sectionHeaderDescription, $sectionHeaderBadge, $sectionHeaderAction, $sectionHeaderHeadingLevel, $sectionHeaderHeadingTag); ?>

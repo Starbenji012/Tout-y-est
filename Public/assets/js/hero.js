@@ -15,7 +15,7 @@
   new window.Swiper(slider, {
     slidesPerView: 1,
     loop: true,
-    speed: reducedMotion ? 0 : 650,
+    speed: reducedMotion ? 0 : 600,
     effect: reducedMotion ? "slide" : "fade",
     fadeEffect: {
       crossFade: true,

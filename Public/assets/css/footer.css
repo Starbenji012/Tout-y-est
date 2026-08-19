@@ -1,6 +1,6 @@
 .site-footer {
-  border-top: var(--border-width) var(--border-style) var(--color-border);
-  background-color: var(--color-background-subtle);
+  border-top: var(--border-width) var(--border-style) var(--brand-gray-500);
+  background-color: var(--brand-gray-400);
   color: var(--color-text);
 }
 
