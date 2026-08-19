@@ -1,0 +1,19 @@
+# Fichier contenant les informations sensibles
+.env
+
+# Dépendances PHP installées par Composer
+/vendor/
+
+# Fichiers temporaires et logs
+*.log
+*.tmp
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# VS Code - paramètres locaux
+.vscode/
+
+# IDE JetBrains
+.idea/

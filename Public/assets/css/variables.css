@@ -1,0 +1,120 @@
+:root {
+  /* Palette officielle */
+  --brand-gray-50: #fbfbfb;
+  --brand-gray-100: #f7f7f7;
+  --brand-gray-200: #efefef;
+  --brand-gray-300: #e7e7e7;
+  --brand-gray-400: #d6d6d6;
+  --brand-gray-500: #b9b9b9;
+  --brand-gray-600: #979797;
+  --brand-gray-700: #787878;
+  --brand-gray-800: #303030;
+  --brand-gray-900: #1d1d1d;
+  --color-anthracite: var(--brand-gray-900);
+  --color-black: var(--brand-gray-900);
+  --color-gold: #c8a33a;
+  --color-gold-dark: #a7831f;
+
+  /* Typographie */
+  --font-family-primary: "Poppins", sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-subtitle: clamp(1.125rem, 2vw, 1.5rem);
+  --font-size-h1: clamp(2.25rem, 5vw, 3.5rem);
+  --font-size-h2: clamp(1.875rem, 4vw, 2.75rem);
+  --font-size-h3: clamp(1.5rem, 3vw, 2rem);
+  --font-size-h4: 1.25rem;
+  --font-size-h5: 1.125rem;
+  --font-size-h6: 1rem;
+  --line-height-tight: 1.2;
+  --line-height-base: 1.6;
+  --line-height-relaxed: 1.75;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Grille d'espacement */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  --spacing-xs: var(--space-2);
+  --spacing-sm: var(--space-3);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-5);
+  --spacing-xl: var(--space-6);
+  --spacing-xxl: var(--space-7);
+
+  /* Couleurs sémantiques */
+  --color-primary: var(--color-gold);
+  --color-primary-hover: var(--color-gold-dark);
+  --color-secondary: var(--color-anthracite);
+  --color-secondary-hover: var(--brand-gray-800);
+  --color-accent: var(--color-gold);
+  --color-heading: var(--color-anthracite);
+  --color-text: var(--color-anthracite);
+  --color-text-muted: var(--brand-gray-800);
+  --color-text-light: var(--brand-gray-50);
+  --color-background: var(--brand-gray-200);
+  --color-background-subtle: var(--brand-gray-300);
+  --color-background-muted: var(--brand-gray-300);
+  --color-overlay: color-mix(in srgb, var(--brand-gray-900) 62%, transparent);
+  --color-focus-ring: color-mix(in srgb, var(--color-gold) 24%, transparent);
+
+  /* Bordures et rayons */
+  --color-border: var(--brand-gray-400);
+  --color-border-strong: var(--brand-gray-700);
+  --border-width: 1px;
+  --border-style: solid;
+  --border: var(--border-width) var(--border-style) var(--color-border);
+  --radius-small: 0.375rem;
+  --radius-medium: 0.5rem;
+  --radius-large: 0.75rem;
+  --radius-sm: var(--radius-small);
+  --radius-field: var(--radius-medium);
+  --radius-button: var(--radius-medium);
+  --radius-card: var(--radius-large);
+  --radius-pill: 9999px;
+
+  /* Élévation */
+  --shadow-small: 0 2px 8px color-mix(in srgb, var(--brand-gray-900) 8%, transparent);
+  --shadow-medium: 0 12px 28px color-mix(in srgb, var(--brand-gray-900) 12%, transparent);
+  --shadow-large: 0 24px 48px color-mix(in srgb, var(--brand-gray-900) 16%, transparent);
+  --shadow-light: var(--shadow-small);
+
+  /* Mouvement */
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 600ms;
+  --ease-standard: ease;
+  --transition-fast: var(--duration-fast) var(--ease-standard);
+  --transition-normal: var(--duration-normal) var(--ease-standard);
+  --transition-slow: var(--duration-slow) var(--ease-standard);
+  --transition: var(--transition-normal);
+  --transition-base: color var(--transition-normal), background-color var(--transition-normal),
+    border-color var(--transition-normal), box-shadow var(--transition-normal), transform var(--transition-normal);
+
+  /* Composants et grille */
+  --font-size-paragraph: var(--font-size-base);
+  --font-size-button: var(--font-size-sm);
+  --font-size-label: var(--font-size-sm);
+  --section-spacing: clamp(3rem, 8vw, 6rem);
+  --container-padding: clamp(1rem, 4vw, 2rem);
+  --container-width: 75rem;
+  --control-height: 3rem;
+  --button-min-width: 7rem;
+  --icon-size-sm: 1rem;
+  --icon-size: 1.25rem;
+  --icon-size-lg: 1.5rem;
+  --icon-stroke-width: 1.8;
+}
