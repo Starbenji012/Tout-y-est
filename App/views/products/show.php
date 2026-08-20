@@ -17,7 +17,7 @@ $breadcrumb = ['items' => [
         <?php require dirname(__DIR__) . '/components/breadcrumb.php'; ?>
 
         <div class="product-detail__layout" data-product-card data-product-id="<?= (int) $product['id'] ?>">
-            <div class="product-detail__media" data-aos="soft-right">
+            <div class="product-detail__media" data-motion="side">
                 <div class="product-detail__image-container">
                     <img data-gallery-main src="<?= htmlspecialchars((string) $productGallery[0]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $productGallery[0]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) $product['width'] ?>" height="<?= (int) $product['height'] ?>" fetchpriority="high">
                     <button class="product-detail__zoom" type="button" aria-label="Agrandir l’image" aria-pressed="false" data-product-zoom><i data-lucide="zoom-in" aria-hidden="true"></i></button>
@@ -31,7 +31,7 @@ $breadcrumb = ['items' => [
                 <?php endif; ?>
             </div>
 
-            <div class="product-detail__information" data-aos="soft-up">
+            <div class="product-detail__information" data-motion="section">
                 <div class="product-detail__eyebrow">
                     <span><?= htmlspecialchars((string) $product['category'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
                     <?php if (!empty($product['badge'])): ?>
@@ -71,14 +71,14 @@ $breadcrumb = ['items' => [
 
 <section class="product-content" aria-label="Informations détaillées">
     <div class="container product-content__container">
-        <article class="product-content__panel" data-aos="soft-up">
+        <article class="product-content__panel" data-motion="section">
             <span class="section-badge">Le produit</span>
             <h2>Description détaillée</h2>
             <p><?= htmlspecialchars((string) $product['description'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
             <p>Notre sélection privilégie des produits utiles, actuels et présentés avec des informations claires pour vous aider à choisir sereinement.</p>
         </article>
 
-        <article class="product-content__panel" data-aos="soft-up">
+        <article class="product-content__panel" data-motion="section">
             <span class="section-badge">Informations</span>
             <h2>Caractéristiques</h2>
             <?php if ($productCharacteristics !== []): ?>
@@ -92,13 +92,13 @@ $breadcrumb = ['items' => [
             <?php endif; ?>
         </article>
 
-        <div class="product-content__services" data-aos="soft-up">
+        <div class="product-content__services" data-motion="section">
             <details open><summary><i data-lucide="truck" aria-hidden="true"></i>Livraison</summary><p>Le délai et le tarif exacts seront confirmés selon votre adresse au moment de la commande.</p></details>
             <details><summary><i data-lucide="rotate-ccw" aria-hidden="true"></i>Retours</summary><p>Les conditions applicables seront présentées clairement avant la validation de votre achat.</p></details>
             <details><summary><i data-lucide="shield-check" aria-hidden="true"></i>Garantie</summary><p>Les informations de garantie propres à ce produit seront précisées avec les données du propriétaire.</p></details>
         </div>
 
-        <article class="product-content__panel product-content__faq" data-aos="soft-up">
+        <article class="product-content__panel product-content__faq" data-motion="section">
             <span class="section-badge">Besoin d’aide ?</span>
             <h2>Questions fréquentes</h2>
             <details><summary>Comment connaître la disponibilité réelle ?</summary><p>L’état du stock affiché provient des variantes enregistrées dans la boutique.</p></details>
@@ -106,7 +106,7 @@ $breadcrumb = ['items' => [
             <details><summary>Puis-je demander plus d’informations ?</summary><p>Oui, le service client pourra vous accompagner avant votre décision d’achat.</p></details>
         </article>
 
-        <article class="product-content__panel product-reviews" id="product-reviews" data-aos="soft-up">
+        <article class="product-content__panel product-reviews" id="product-reviews" data-motion="section">
             <span class="section-badge">Expériences clients</span>
             <h2>Avis clients</h2>
             <p class="product-reviews__summary"><i data-lucide="star" aria-hidden="true"></i><strong><?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/5</strong><span>sur <?= (int) $product['reviews'] ?> avis</span></p>

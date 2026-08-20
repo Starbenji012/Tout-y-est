@@ -90,6 +90,31 @@ final class ProductService
         ];
     }
 
+    public function searchSuggestions(string $query, int $limit = 5): array
+    {
+        $query = trim($query);
+
+        if (strlen($query) < 2) {
+            return [];
+        }
+
+        $limit = max(1, min(8, $limit));
+        $filters = $this->normalizeFilters(['q' => $query]);
+
+        if ($this->usesDatabase()) {
+            return array_map(
+                fn (array $product): array => $this->mapDatabaseProduct($product),
+                $this->productModel->findCatalog($filters, 'popular', $limit, 0),
+            );
+        }
+
+        return array_slice(
+            $this->filterDemoProducts($this->withCatalogBadges($this->demoProducts()), $filters),
+            0,
+            $limit,
+        );
+    }
+
     public function findProduct(int $productId): ?array
     {
         if ($productId < 1) {
@@ -109,6 +134,35 @@ final class ProductService
         }
 
         return null;
+    }
+
+    public function findProductsByIds(array $productIds): array
+    {
+        $productIds = array_values(array_unique(array_slice(array_filter(
+            array_map(static fn (mixed $productId): int => (int) $productId, $productIds),
+            static fn (int $productId): bool => $productId > 0,
+        ), 0, 40)));
+
+        if ($productIds === []) {
+            return [];
+        }
+
+        $products = $this->usesDatabase()
+            ? array_map(
+                fn (array $product): array => $this->mapDatabaseProduct($product),
+                $this->productModel->findByIds($productIds),
+            )
+            : $this->withCatalogBadges($this->demoProducts());
+        $productsById = [];
+
+        foreach ($products as $product) {
+            $productsById[(int) $product['id']] = $product;
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (int $productId): ?array => $productsById[$productId] ?? null,
+            $productIds,
+        )));
     }
 
     public function getRelatedProducts(array $product, int $limit = 4): array
@@ -575,6 +629,7 @@ final class ProductService
 
         return array_map(fn (array $product): array => array_replace($product, [
             'categorySlug' => $this->slugify((string) $product['category']),
+            'priceValue' => $this->priceValue((string) $product['price']),
             'description' => sprintf(
                 '%s a été sélectionné pour sa qualité, son style et son utilité au quotidien.',
                 (string) $product['name'],

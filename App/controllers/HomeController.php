@@ -19,7 +19,7 @@ final class HomeController extends Controller
             'title' => 'Accueil | Tout y est',
             'metaDescription' => 'Découvrez Tout y est, votre boutique en ligne.',
             'activePage' => 'home',
-            'pageLibraries' => ['swiper', 'aos', 'gsap', 'sweetalert2'],
+            'pageLibraries' => ['swiper', 'gsap', 'sweetalert2'],
             'pageStyles' => ['/assets/css/hero.css', '/assets/css/product-section.css'],
             'pageScripts' => ['/assets/js/hero.js', '/assets/js/product-section.js'],
             'newProducts' => $this->productService->getNewArrivals(),

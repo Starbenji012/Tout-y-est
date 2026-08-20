@@ -12,46 +12,16 @@
     return;
   }
 
-  const usesGsap = !reducedMotion && typeof window.gsap === "object";
-
   const animateActiveSlide = (swiper) => {
-    if (!usesGsap) {
-      return;
-    }
-
     const activeSlide = swiper.slides[swiper.activeIndex];
-    const content = activeSlide?.querySelectorAll(".hero-left > *");
-    const image = activeSlide?.querySelector(".hero-product-image");
-
-    if (!activeSlide || !content || !image) {
-      return;
-    }
-
-    window.gsap.killTweensOf([...content, image]);
-    window.gsap.fromTo(
-      content,
-      { autoAlpha: 0, y: 18 },
-      {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.65,
-        stagger: 0.08,
-        ease: "power3.out",
-        clearProps: "opacity,transform,visibility",
-      },
-    );
-    window.gsap.fromTo(
-      image,
-      { scale: 1.08 },
-      { scale: 1.045, duration: 1.2, ease: "power3.out", clearProps: "transform" },
-    );
+    window.MotionSystem?.heroSlide(activeSlide);
   };
 
-  if (usesGsap) {
+  if (!reducedMotion && typeof window.gsap === "object") {
     hero.classList.add("has-gsap");
   }
 
-  const swiper = new window.Swiper(slider, {
+  new window.Swiper(slider, {
     slidesPerView: 1,
     loop: true,
     speed: reducedMotion ? 0 : 800,
@@ -89,6 +59,4 @@
       slideChangeTransitionStart: animateActiveSlide,
     },
   });
-
-  window.addEventListener("site:return-to-top", () => animateActiveSlide(swiper));
 })();

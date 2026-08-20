@@ -47,7 +47,7 @@
                 <?php require __DIR__ . '/brand.php'; ?>
             </div>
 
-            <form class="header-search" action="/boutique" method="get" role="search">
+            <form class="header-search" action="/boutique" method="get" role="search" data-header-search>
                 <label class="visually-hidden" for="header-search-input">Rechercher un produit</label>
                 <input
                     id="header-search-input"
@@ -55,30 +55,35 @@
                     name="q"
                     placeholder="Rechercher un téléphone, un vêtement, une chaussure..."
                     autocomplete="off"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="header-search-suggestions"
+                    aria-expanded="false"
                 >
                 <button type="submit" aria-label="Lancer la recherche">
                     <i data-lucide="search" aria-hidden="true"></i>
                 </button>
+                <div class="header-search__suggestions" id="header-search-suggestions" role="listbox" aria-label="Suggestions de produits" data-search-suggestions hidden></div>
             </form>
 
             <div class="header-actions">
-                <a class="header-action header-action--desktop" href="/favoris" aria-label="Favoris, 0 article">
+                <a class="header-action header-action--desktop<?= $activePage === 'favorites' ? ' is-active' : '' ?>" href="/favoris" aria-label="Favoris, 0 article" data-favorites-link<?= $activePage === 'favorites' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">
                         <i data-lucide="heart" aria-hidden="true"></i>
-                        <span class="action-badge" aria-hidden="true">0</span>
+                        <span class="action-badge" aria-hidden="true" data-favorites-count>0</span>
                     </span>
                     <span class="header-action__label">Favoris</span>
                 </a>
-                <a class="header-action header-action--desktop" href="/compte" aria-label="Mon compte">
+                <a class="header-action header-action--desktop<?= $activePage === 'account' ? ' is-active' : '' ?>" href="/compte" aria-label="Mon compte"<?= $activePage === 'account' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">
                         <i data-lucide="user" aria-hidden="true"></i>
                     </span>
                     <span class="header-action__label">Mon compte</span>
                 </a>
-                <a class="header-action header-action--cart" href="/panier" aria-label="Panier, 0 produit">
+                <a class="header-action header-action--cart<?= $activePage === 'cart' ? ' is-active' : '' ?>" href="/panier" aria-label="Panier, 0 produit" data-cart-link<?= $activePage === 'cart' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">
                         <i data-lucide="shopping-cart" aria-hidden="true"></i>
-                        <span class="action-badge" aria-hidden="true">0</span>
+                        <span class="action-badge" aria-hidden="true" data-cart-count>0</span>
                     </span>
                     <span class="header-action__label">Panier</span>
                 </a>
@@ -129,16 +134,16 @@
                 <a class="site-navigation__link<?= $activePage === 'contact' ? ' is-active' : '' ?>" href="/contact"<?= $activePage === 'contact' ? ' aria-current="page"' : '' ?>>Contact</a>
             </li>
             <li class="site-navigation__mobile-action site-navigation__mobile-action--first">
-                <a class="site-navigation__link" href="/favoris" aria-label="Favoris, 0 article">
+                <a class="site-navigation__link<?= $activePage === 'favorites' ? ' is-active' : '' ?>" href="/favoris" aria-label="Favoris, 0 article" data-favorites-link<?= $activePage === 'favorites' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">
                         <i data-lucide="heart" aria-hidden="true"></i>
-                        <span class="action-badge" aria-hidden="true">0</span>
+                        <span class="action-badge" aria-hidden="true" data-favorites-count>0</span>
                     </span>
                     <span>Favoris</span>
                 </a>
             </li>
             <li class="site-navigation__mobile-action">
-                <a class="site-navigation__link" href="/compte">
+                <a class="site-navigation__link<?= $activePage === 'account' ? ' is-active' : '' ?>" href="/compte"<?= $activePage === 'account' ? ' aria-current="page"' : '' ?>>
                     <i data-lucide="user" aria-hidden="true"></i>
                     Mon compte
                 </a>

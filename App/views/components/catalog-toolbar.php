@@ -8,7 +8,7 @@ $catalogSearch = (string) ($catalogActiveFilters['search'] ?? '');
 $catalogSort = (string) ($catalogActiveFilters['sort'] ?? 'newest');
 ?>
 
-<div class="catalog-toolbar" data-catalog-toolbar data-aos="soft-down">
+<div class="catalog-toolbar" data-catalog-toolbar data-motion="down">
     <form class="catalog-search" action="/boutique" method="get" role="search" data-catalog-search>
         <label class="visually-hidden" for="catalog-search-input">Rechercher dans la boutique</label>
         <i data-lucide="search" aria-hidden="true"></i>

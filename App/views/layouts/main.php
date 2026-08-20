@@ -1,7 +1,6 @@
 <?php
 $pageLibraries = $pageLibraries ?? [];
 $usesSwiper = in_array('swiper', $pageLibraries, true);
-$usesAos = in_array('aos', $pageLibraries, true);
 $usesSweetAlert = in_array('sweetalert2', $pageLibraries, true);
 $usesGsap = in_array('gsap', $pageLibraries, true);
 ?>
@@ -36,9 +35,6 @@ $usesGsap = in_array('gsap', $pageLibraries, true);
     <?php if ($usesSwiper): ?>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css">
     <?php endif; ?>
-    <?php if ($usesAos): ?>
-        <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
-    <?php endif; ?>
 
     <!-- Styles de la page -->
     <?php foreach ($pageStyles ?? [] as $stylesheet): ?>
@@ -64,9 +60,6 @@ $usesGsap = in_array('gsap', $pageLibraries, true);
     <?php if ($usesSwiper): ?>
         <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
     <?php endif; ?>
-    <?php if ($usesAos): ?>
-        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <?php endif; ?>
     <?php if ($usesSweetAlert): ?>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <?php endif; ?>
@@ -74,8 +67,12 @@ $usesGsap = in_array('gsap', $pageLibraries, true);
         <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
     <?php endif; ?>
 
+    <script src="/assets/js/favorites-store.js"></script>
+    <script src="/assets/js/cart-store.js"></script>
+    <script src="/assets/js/animations.js"></script>
     <script src="/assets/js/app.js"></script>
     <script src="/assets/js/header.js"></script>
+    <script src="/assets/js/search.js"></script>
     <?php foreach ($pageScripts ?? [] as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></script>
     <?php endforeach; ?>

@@ -25,7 +25,7 @@ final class ProductController extends Controller
             'title' => 'Boutique | Tout y est',
             'metaDescription' => 'Explorez tous les produits disponibles chez Tout y est.',
             'activePage' => 'shop',
-            'pageLibraries' => ['aos', 'gsap', 'sweetalert2'],
+            'pageLibraries' => ['gsap', 'sweetalert2'],
             'pageStyles' => ['/assets/css/product-section.css', '/assets/css/shop.css'],
             'pageScripts' => ['/assets/js/product-section.js', '/assets/js/shop.js'],
             'products' => $catalog['products'],
@@ -43,7 +43,7 @@ final class ProductController extends Controller
             'title' => 'Promotions | Tout y est',
             'metaDescription' => 'Découvrez les promotions disponibles chez Tout y est.',
             'activePage' => 'promotions',
-            'pageLibraries' => ['aos', 'gsap', 'sweetalert2'],
+            'pageLibraries' => ['gsap', 'sweetalert2'],
             'pageStyles' => ['/assets/css/product-section.css', '/assets/css/shop.css'],
             'pageScripts' => ['/assets/js/product-section.js'],
             'products' => $this->productService->getPromotions(),
@@ -69,7 +69,7 @@ final class ProductController extends Controller
             'title' => $product['name'] . ' | Tout y est',
             'metaDescription' => $product['description'],
             'activePage' => 'shop',
-            'pageLibraries' => ['aos', 'gsap', 'sweetalert2'],
+            'pageLibraries' => ['gsap', 'sweetalert2'],
             'pageStyles' => ['/assets/css/product-section.css', '/assets/css/product.css'],
             'pageScripts' => ['/assets/js/product-section.js', '/assets/js/product.js'],
             'product' => $product,
@@ -115,6 +115,47 @@ final class ProductController extends Controller
                 'product' => $product,
                 'productOptions' => $this->productService->getProductOptions($product),
             ]),
+        ]);
+    }
+
+    public function favorites(): void
+    {
+        $rawIds = (string) ($this->request->queryParameters()['ids'] ?? '');
+        $products = $this->productService->findProductsByIds(explode(',', $rawIds));
+        $html = $this->renderPartial('components/product-results', [
+            'productResults' => [
+                'products' => $products,
+                'emptyState' => [
+                    'title' => 'Vos favoris vous attendent',
+                    'text' => 'Ajoutez des produits à votre sélection pour les retrouver facilement ici.',
+                    'action' => ['label' => 'Découvrir la boutique', 'variant' => 'primary', 'href' => '/boutique'],
+                ],
+            ],
+        ]);
+
+        Response::json([
+            'html' => $html,
+            'count' => count($products),
+            'ids' => array_map(static fn (array $product): int => (int) $product['id'], $products),
+        ]);
+    }
+
+    public function suggestions(): void
+    {
+        $products = $this->productService->searchSuggestions(
+            (string) ($this->request->queryParameters()['q'] ?? ''),
+        );
+
+        Response::json([
+            'suggestions' => array_map(static fn (array $product): array => [
+                'id' => (int) $product['id'],
+                'name' => (string) $product['name'],
+                'category' => (string) $product['category'],
+                'price' => (string) $product['price'],
+                'image' => (string) $product['image'],
+                'alt' => (string) $product['alt'],
+                'url' => (string) $product['url'],
+            ], $products),
         ]);
     }
 

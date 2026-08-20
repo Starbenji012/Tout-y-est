@@ -96,10 +96,14 @@
   --shadow-light: var(--shadow-small);
 
   /* Mouvement */
-  --duration-fast: 150ms;
-  --duration-normal: 220ms;
-  --duration-slow: 600ms;
-  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 180ms;
+  --duration-normal: 280ms;
+  --duration-slow: 680ms;
+  --duration-motion: 760ms;
+  --duration-motion-slow: 1100ms;
+  --ease-standard: cubic-bezier(0.22, 0.7, 0.25, 1);
+  --ease-motion: cubic-bezier(0.2, 0.68, 0.24, 1);
+  --ease-motion-exit: cubic-bezier(0.4, 0, 0.6, 1);
   --transition-fast: var(--duration-fast) var(--ease-standard);
   --transition-normal: var(--duration-normal) var(--ease-standard);
   --transition-slow: var(--duration-slow) var(--ease-standard);

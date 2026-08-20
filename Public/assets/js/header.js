@@ -6,27 +6,6 @@ if (header) {
   const closeButton = header.querySelector('[data-menu-close]');
   const overlay = header.querySelector('[data-menu-overlay]');
   const mobileBreakpoint = window.matchMedia('(max-width: 48rem)');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const animateHeader = () => {
-    if (reducedMotion || typeof window.gsap !== 'object') {
-      return;
-    }
-
-    window.gsap.killTweensOf(header);
-    window.gsap.fromTo(
-      header,
-      { autoAlpha: 0.96, y: -12 },
-      {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.65,
-        ease: 'power3.out',
-        clearProps: 'opacity,transform,visibility',
-      },
-    );
-  };
-
   const closeMenu = (restoreFocus = true) => {
     header.classList.remove('is-menu-open');
     document.body.classList.remove('menu-open');
@@ -80,8 +59,7 @@ if (header) {
       hasLeftPageTop = true;
     } else if (scrollPosition <= 1 && hasLeftPageTop) {
       hasLeftPageTop = false;
-      animateHeader();
-      window.dispatchEvent(new CustomEvent('site:return-to-top'));
+      window.MotionSystem?.headerIn(header);
     }
 
     scrollUpdatePending = false;
@@ -97,6 +75,6 @@ if (header) {
   updateStickyState();
 
   if (window.scrollY <= 1) {
-    animateHeader();
+    window.MotionSystem?.headerIn(header);
   }
 }

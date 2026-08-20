@@ -875,20 +875,6 @@ textarea:focus {
 .quantity-control button:hover { background-color: var(--brand-gray-300); color: var(--color-gold-dark); }
 .quantity-control input { border-inline: var(--border); background: transparent; }
 
-@keyframes action-pop {
-  50% { transform: scale(1.08); }
-}
-
-@keyframes quick-view-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes quick-view-backdrop-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
 @media (max-width: 48rem) {
   .quick-view {
     width: calc(100% - (var(--spacing-md) * 2));

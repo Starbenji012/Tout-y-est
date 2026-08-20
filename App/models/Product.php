@@ -59,6 +59,32 @@ final class Product
         return is_array($product) ? $product : null;
     }
 
+    public function findByIds(array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $parameters = [];
+
+        foreach (array_values($productIds) as $index => $productId) {
+            $key = 'product_id_' . $index;
+            $placeholders[] = ':' . $key;
+            $parameters[$key] = (int) $productId;
+        }
+
+        $statement = $this->database->prepare(
+            $this->selectSql()
+            . ' WHERE p.id_produit IN (' . implode(', ', $placeholders) . ')'
+            . " AND LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')",
+        );
+        $this->bindParameters($statement, $parameters);
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
     public function categories(): array
     {
         $statement = $this->database->query(

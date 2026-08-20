@@ -13,7 +13,7 @@ $promotionBannerCountdown = $promotionBannerConfig['countdown'] ?? [
 ];
 ?>
 
-<aside class="promotion-banner" aria-labelledby="<?= htmlspecialchars($promotionBannerId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-aos="soft-right">
+<aside class="promotion-banner" aria-labelledby="<?= htmlspecialchars($promotionBannerId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-motion="side">
     <div class="promotion-banner__content">
         <h3 class="promotion-banner__title" id="<?= htmlspecialchars($promotionBannerId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
             <?= htmlspecialchars($promotionBannerTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>

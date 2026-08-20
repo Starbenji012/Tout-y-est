@@ -5,7 +5,7 @@ $productName = (string) ($product['name'] ?? 'Produit');
 $productUrl = (string) ($product['url'] ?? '/boutique');
 ?>
 
-<article class="product-card" data-product-card data-product-id="<?= htmlspecialchars($productId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-aos="soft-up" data-aos-delay="<?= (int) ($productCardAnimationDelay ?? 0) ?>">
+<article class="product-card" data-product-card data-product-id="<?= htmlspecialchars($productId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-motion="card" data-motion-delay="<?= (int) ($productCardAnimationDelay ?? 0) ?>">
     <div class="product-card__media">
         <a class="product-card__image-link" href="<?= htmlspecialchars($productUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Voir <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
             <img
@@ -66,7 +66,7 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
             'icon' => 'shopping-cart',
             'iconPosition' => 'start',
             'class' => 'product-card__add',
-            'attributes' => ['data-product-action' => 'cart', 'data-product-name' => $productName],
+            'attributes' => ['data-product-action' => 'cart', 'data-product-name' => $productName, 'disabled' => (int) ($product['stock'] ?? 0) === 0],
         ];
         require __DIR__ . '/button.php';
         ?>

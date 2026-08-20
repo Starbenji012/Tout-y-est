@@ -83,7 +83,7 @@
 
   const refreshEnhancements = () => {
     window.lucide?.createIcons();
-    window.AOS?.refreshHard();
+    window.MotionSystem?.refresh(content);
   };
 
   const updateCatalog = async (page = 1) => {
@@ -114,7 +114,7 @@
       }
     } catch (error) {
       if (error.name !== "AbortError") {
-        window.Swal?.fire({ toast: true, position: "bottom-end", icon: "error", title: "Impossible de mettre à jour le catalogue", showConfirmButton: false, timer: 2600 });
+        window.MotionSystem?.fire({ toast: true, position: "bottom-end", icon: "error", title: "Impossible de mettre à jour le catalogue", showConfirmButton: false, timer: 2600 });
       }
     } finally {
       if (requestController === controller) {

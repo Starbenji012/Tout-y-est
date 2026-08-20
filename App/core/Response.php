@@ -6,6 +6,12 @@ namespace App\Core;
 
 final class Response
 {
+    public static function redirect(string $location, int $status = 303): void
+    {
+        header('Location: ' . $location, true, $status);
+        exit;
+    }
+
     public static function json(array $data, int $status = 200): void
     {
         http_response_code($status);

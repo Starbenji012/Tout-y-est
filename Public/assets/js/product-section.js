@@ -1,9 +1,8 @@
 (() => {
   const quickViewHost = document.querySelector("[data-quick-view-host]");
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const notify = (title, icon = "success") => {
-    window.Swal?.fire({ toast: true, position: "bottom-end", icon, title, showConfirmButton: false, timer: 2200, timerProgressBar: true });
+    window.MotionSystem?.fire({ toast: true, position: "bottom-end", icon, title, showConfirmButton: false, timer: 2200, timerProgressBar: true });
   };
 
   const normalizeQuantity = (input, value) => {
@@ -28,15 +27,33 @@
     });
   };
 
-  const toggleFavorite = (button) => {
-    const active = button.getAttribute("aria-pressed") !== "true";
+  const syncFavoriteButtons = (root = document) => {
+    if (!window.FavoriteStore) {
+      return;
+    }
+
+    root.querySelectorAll("[data-product-action='favorite']").forEach((button) => {
+      const productCard = button.closest("[data-product-card]");
+      const productId = Number(productCard?.dataset.productId);
+      const active = window.FavoriteStore.has(productId);
+      const productName = productCard?.querySelector(".product-card__title, .quick-view__title, .product-detail__title")?.textContent?.trim() || "ce produit";
+      button.setAttribute("aria-pressed", String(active));
+      button.setAttribute("aria-label", `${active ? "Retirer" : "Ajouter"} ${productName} ${active ? "des" : "aux"} favoris`);
+      button.classList.toggle("is-active", active);
+    });
+  };
+
+  const toggleFavorite = (button, productCard) => {
+    const active = window.FavoriteStore?.toggle(Number(productCard.dataset.productId)) ?? false;
     button.setAttribute("aria-pressed", String(active));
     button.classList.toggle("is-active", active);
+    syncFavoriteButtons(productCard);
     notify(active ? "Produit ajouté aux favoris" : "Produit retiré des favoris", active ? "success" : "info");
   };
 
   const confirmCart = (button, productCard) => {
     const quantity = Number(productCard.querySelector("[data-quantity-input]")?.value) || 1;
+    window.CartStore?.add(Number(productCard.dataset.productId), quantity);
     button.classList.remove("is-feedback");
     window.requestAnimationFrame(() => button.classList.add("is-feedback"));
     window.setTimeout(() => button.classList.remove("is-feedback"), 500);
@@ -52,12 +69,11 @@
     dialog.classList.add("is-closing");
     const finish = () => dialog.close();
 
-    if (!reducedMotion && typeof window.gsap === "object") {
-      window.gsap.to(dialog, { autoAlpha: 0, y: 10, scale: 0.985, duration: 0.2, ease: "power2.in", onComplete: finish });
-      return;
+    if (window.MotionSystem) {
+      window.MotionSystem.modalOut(dialog, finish);
+    } else {
+      finish();
     }
-
-    finish();
   };
 
   const revealQuickView = (dialog) => {
@@ -72,9 +88,7 @@
       }
     }, { once: true });
 
-    if (!reducedMotion && typeof window.gsap === "object") {
-      window.gsap.fromTo(dialog, { autoAlpha: 0, y: 14, scale: 0.975 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.36, ease: "power3.out", clearProps: "opacity,transform,visibility" });
-    }
+    window.MotionSystem?.modalIn(dialog);
   };
 
   const openQuickView = async (productId, button) => {
@@ -91,6 +105,7 @@
       const result = await response.json();
       quickViewHost.innerHTML = result.html;
       window.lucide?.createIcons();
+      syncFavoriteButtons(quickViewHost);
       const dialog = quickViewHost.querySelector("[data-quick-view-dialog]");
       if (dialog) {
         revealQuickView(dialog);
@@ -144,7 +159,7 @@
 
     const action = actionButton.dataset.productAction;
     if (action === "favorite") {
-      toggleFavorite(actionButton);
+      toggleFavorite(actionButton, productCard);
     } else if (action === "cart") {
       confirmCart(actionButton, productCard);
     } else if (action === "quick-view") {
@@ -153,4 +168,8 @@
 
     productCard.closest("[data-product-section]")?.dispatchEvent(new CustomEvent("product:action", { bubbles: true, detail: { action, productId: productCard.dataset.productId } }));
   });
+
+  window.addEventListener("favorites:updated", () => syncFavoriteButtons());
+  window.addEventListener("favorites:sync", () => syncFavoriteButtons());
+  syncFavoriteButtons();
 })();

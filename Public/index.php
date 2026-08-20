@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use App\Core\Database;
 use App\Core\Request;
+use App\Core\Session;
+use App\Controllers\ErrorController;
+use App\Models\User;
+use App\Services\AuthService;
+use App\Services\CartService;
 use App\Models\CharacteristicValue;
 use App\Models\Product;
 use App\Models\Review;
@@ -22,14 +27,26 @@ require_once dirname(__DIR__) . '/App/core/Database.php';
 require_once dirname(__DIR__) . '/App/core/Request.php';
 require_once dirname(__DIR__) . '/App/core/Response.php';
 require_once dirname(__DIR__) . '/App/core/Controller.php';
+require_once dirname(__DIR__) . '/App/core/Session.php';
+require_once dirname(__DIR__) . '/App/middleware/CsrfMiddleware.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
 require_once dirname(__DIR__) . '/App/models/CharacteristicValue.php';
 require_once dirname(__DIR__) . '/App/models/Review.php';
+require_once dirname(__DIR__) . '/App/models/User.php';
+require_once dirname(__DIR__) . '/App/services/AuthService.php';
 require_once dirname(__DIR__) . '/App/services/ProductService.php';
+require_once dirname(__DIR__) . '/App/services/CartService.php';
+require_once dirname(__DIR__) . '/App/controllers/CartController.php';
+require_once dirname(__DIR__) . '/App/controllers/AccountController.php';
+require_once dirname(__DIR__) . '/App/controllers/AuthController.php';
+require_once dirname(__DIR__) . '/App/controllers/ErrorController.php';
 require_once dirname(__DIR__) . '/App/controllers/HomeController.php';
+require_once dirname(__DIR__) . '/App/controllers/FavoriteController.php';
 require_once dirname(__DIR__) . '/App/controllers/ProductController.php';
 
 $databaseConfig = require dirname(__DIR__) . '/Config/database.php';
+$database = null;
+Session::start();
 
 try {
     $database = Database::connect($databaseConfig);
@@ -43,13 +60,14 @@ try {
     $productService = new ProductService();
 }
 $request = new Request();
+$authService = new AuthService($database instanceof PDO ? new User($database) : null);
+$cartService = new CartService($productService);
 $routes = require dirname(__DIR__) . '/Routes/web.php';
 $requestPath = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 $route = $routes[$requestPath] ?? null;
 
 if ($route === null) {
-    http_response_code(404);
-    echo 'Page introuvable';
+    (new ErrorController())->notFound();
 
     return;
 }
