@@ -10,7 +10,7 @@ $sectionHeaderHeadingLevel = (int) ($sectionHeaderConfig['headingLevel'] ?? 2);
 $sectionHeaderHeadingTag = $sectionHeaderHeadingLevel === 1 ? 'h1' : 'h2';
 ?>
 
-<div class="section-header">
+<div class="section-header" data-aos="soft-up">
     <div class="section-header__content">
         <?php if (is_array($sectionHeaderBadge)): ?>
             <?php $badge = $sectionHeaderBadge + ['class' => 'section-badge']; ?>

@@ -5,7 +5,7 @@ $productName = (string) ($product['name'] ?? 'Produit');
 $productUrl = (string) ($product['url'] ?? '/boutique');
 ?>
 
-<article class="product-card" data-product-card data-product-id="<?= htmlspecialchars($productId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+<article class="product-card" data-product-card data-product-id="<?= htmlspecialchars($productId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-aos="soft-up" data-aos-delay="<?= (int) ($productCardAnimationDelay ?? 0) ?>">
     <div class="product-card__media">
         <a class="product-card__image-link" href="<?= htmlspecialchars($productUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Voir <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
             <img
@@ -24,7 +24,7 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
         <?php endif; ?>
 
         <div class="product-card__actions" role="group" aria-label="Actions rapides">
-            <button class="product-card__action" type="button" data-product-action="favorite" aria-label="Ajouter <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> aux favoris">
+            <button class="product-card__action" type="button" data-product-action="favorite" aria-label="Ajouter <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> aux favoris" aria-pressed="false">
                 <i data-lucide="heart" aria-hidden="true"></i>
             </button>
             <button class="product-card__action" type="button" data-product-action="quick-view" aria-label="Aperçu rapide de <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
@@ -66,7 +66,7 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
             'icon' => 'shopping-cart',
             'iconPosition' => 'start',
             'class' => 'product-card__add',
-            'attributes' => ['data-product-action' => 'cart'],
+            'attributes' => ['data-product-action' => 'cart', 'data-product-name' => $productName],
         ];
         require __DIR__ . '/button.php';
         ?>

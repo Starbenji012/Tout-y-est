@@ -10,6 +10,23 @@ $productSection = [
         'title' => 'Toute la boutique',
         'description' => 'Découvrez tous les produits disponibles et trouvez simplement ce dont vous avez besoin.',
     ],
+    'catalog' => [
+        'resultCount' => $productCount ?? 0,
+        'categories' => $catalogCategories ?? [],
+        'filters' => $activeFilters ?? [],
+        'statuses' => [
+            'promotion' => 'Promotions',
+            'new' => 'Nouveautés',
+            'limited' => 'Offres limitées',
+        ],
+        'sortOptions' => [
+            'newest' => 'Nouveautés',
+            'price-asc' => 'Prix croissant',
+            'price-desc' => 'Prix décroissant',
+            'popular' => 'Popularité',
+            'promotion' => 'Promotions',
+        ],
+    ],
     'emptyState' => [
         'title' => 'Aucun produit disponible',
         'text' => 'Le catalogue sera enrichi très prochainement.',

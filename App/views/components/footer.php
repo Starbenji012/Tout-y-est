@@ -1,6 +1,6 @@
 <footer class="site-footer">
     <div class="container footer-container">
-        <div class="footer-grid">
+        <div class="footer-grid" data-aos="soft-up">
             <section class="footer-about-container" aria-labelledby="footer-about-title">
                 <h2 class="visually-hidden" id="footer-about-title">À propos de Tout y est</h2>
                 <div class="footer-brand-container">

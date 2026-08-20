@@ -88,15 +88,18 @@
 
   /* Élévation */
   --shadow-small: 0 2px 8px color-mix(in srgb, var(--brand-gray-900) 8%, transparent);
-  --shadow-medium: 0 12px 28px color-mix(in srgb, var(--brand-gray-900) 12%, transparent);
-  --shadow-large: 0 24px 48px color-mix(in srgb, var(--brand-gray-900) 16%, transparent);
+  --shadow-medium: 0 4px 12px color-mix(in srgb, var(--brand-gray-900) 8%, transparent),
+    0 18px 36px color-mix(in srgb, var(--brand-gray-900) 10%, transparent);
+  --shadow-large: 0 8px 20px color-mix(in srgb, var(--brand-gray-900) 10%, transparent),
+    0 28px 56px color-mix(in srgb, var(--brand-gray-900) 14%, transparent);
+  --shadow-accent: 0 12px 28px color-mix(in srgb, var(--color-gold) 20%, transparent);
   --shadow-light: var(--shadow-small);
 
   /* Mouvement */
   --duration-fast: 150ms;
   --duration-normal: 220ms;
   --duration-slow: 600ms;
-  --ease-standard: ease;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --transition-fast: var(--duration-fast) var(--ease-standard);
   --transition-normal: var(--duration-normal) var(--ease-standard);
   --transition-slow: var(--duration-slow) var(--ease-standard);

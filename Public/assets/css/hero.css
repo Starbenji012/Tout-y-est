@@ -55,10 +55,10 @@
   background:
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--brand-gray-900) 96%, transparent) 0%,
-      color-mix(in srgb, var(--brand-gray-900) 88%, transparent) 38%,
-      color-mix(in srgb, var(--brand-gray-900) 52%, transparent) 66%,
-      color-mix(in srgb, var(--brand-gray-900) 18%, transparent) 100%
+      color-mix(in srgb, var(--brand-gray-900) 92%, transparent) 0%,
+      color-mix(in srgb, var(--brand-gray-900) 82%, transparent) 38%,
+      color-mix(in srgb, var(--brand-gray-900) 46%, transparent) 66%,
+      color-mix(in srgb, var(--brand-gray-900) 14%, transparent) 100%
     ),
     linear-gradient(
       color-mix(in srgb, var(--brand-gray-900) 18%, transparent),
@@ -212,12 +212,20 @@
   overflow: hidden;
 }
 
+.hero-product-showcase::after {
+  position: absolute;
+  inset: 52% 0 0;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--brand-gray-900) 34%, transparent));
+  content: "";
+  pointer-events: none;
+}
+
 .hero-product-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   filter: saturate(0.88) contrast(1.04) brightness(0.92);
-  transition: transform var(--transition-slow), filter var(--transition-slow);
+  transition: transform calc(var(--duration-slow) * 2) var(--ease-standard), filter var(--transition-slow);
 }
 
 .hero-product-image--collection {
@@ -233,7 +241,9 @@
 }
 
 .swiper-slide-active .hero-product-image {
-  transform: scale(1.035);
+  filter: saturate(0.94) contrast(1.06) brightness(0.96);
+  transform: scale(1.045);
+  will-change: transform;
 }
 
 /* Navigation */
@@ -315,6 +325,18 @@
   animation: hero-content-enter var(--duration-slow) var(--ease-standard) both;
 }
 
+.hero.has-gsap .swiper-slide-active .hero-left > * {
+  animation: none;
+}
+
+.swiper-slide-active .hero-left .section-badge::before {
+  animation: hero-badge-breathe calc(var(--duration-slow) * 4) var(--ease-standard) infinite;
+}
+
+.swiper-slide-active .hero-slide__layout::after {
+  animation: hero-light-drift calc(var(--duration-slow) * 10) var(--ease-standard) infinite alternate;
+}
+
 .swiper-slide-active .hero-left > :nth-child(2) {
   animation-delay: calc(var(--duration-fast) / 2);
 }
@@ -352,6 +374,22 @@
   50% {
     transform: translateY(var(--space-1));
   }
+}
+
+@keyframes hero-badge-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-gold) 0%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--color-gold) 10%, transparent);
+  }
+}
+
+@keyframes hero-light-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(var(--space-2), calc(var(--space-2) * -1), 0) scale(1.02); }
 }
 
 @media (max-width: 64rem) {
@@ -463,6 +501,11 @@
   }
 
   .hero-scroll-cue svg {
+    animation: none;
+  }
+
+  .swiper-slide-active .hero-left .section-badge::before,
+  .swiper-slide-active .hero-slide__layout::after {
     animation: none;
   }
 

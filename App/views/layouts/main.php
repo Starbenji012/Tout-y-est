@@ -54,6 +54,8 @@ $usesGsap = in_array('gsap', $pageLibraries, true);
         <?= $content ?? '' ?>
     </main>
 
+    <div data-quick-view-host></div>
+
     <!-- Pied de page -->
     <?php require dirname(__DIR__) . '/components/footer.php'; ?>
 

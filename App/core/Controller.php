@@ -32,4 +32,25 @@ abstract class Controller
 
         require $layoutPath;
     }
+
+    protected function renderPartial(string $view, array $data = []): string
+    {
+        $viewPath = dirname(__DIR__) . '/views/' . $view . '.php';
+
+        if (!is_file($viewPath)) {
+            throw new RuntimeException('Vue partielle introuvable.');
+        }
+
+        extract($data, EXTR_SKIP);
+        ob_start();
+
+        try {
+            require $viewPath;
+
+            return (string) ob_get_clean();
+        } catch (Throwable $exception) {
+            ob_end_clean();
+            throw $exception;
+        }
+    }
 }

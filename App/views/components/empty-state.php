@@ -3,7 +3,8 @@
 $emptyStateConfig = $emptyState ?? [];
 $emptyStateTitle = (string) ($emptyStateConfig['title'] ?? 'Aucun produit disponible');
 $emptyStateText = (string) ($emptyStateConfig['text'] ?? 'De nouveaux produits seront bientôt disponibles.');
-$emptyStateIcon = preg_match('/^[a-z0-9-]+$/', (string) ($emptyStateConfig['icon'] ?? 'package-open')) ? (string) $emptyStateConfig['icon'] : 'package-open';
+$emptyStateIconCandidate = (string) ($emptyStateConfig['icon'] ?? 'package-open');
+$emptyStateIcon = preg_match('/^[a-z0-9-]+$/', $emptyStateIconCandidate) ? $emptyStateIconCandidate : 'package-open';
 $emptyStateAction = $emptyStateConfig['action'] ?? null;
 ?>
 
@@ -20,4 +21,4 @@ $emptyStateAction = $emptyStateConfig['action'] ?? null;
     <?php endif; ?>
 </div>
 
-<?php unset($emptyState, $emptyStateConfig, $emptyStateTitle, $emptyStateText, $emptyStateIcon, $emptyStateAction); ?>
+<?php unset($emptyState, $emptyStateConfig, $emptyStateTitle, $emptyStateText, $emptyStateIconCandidate, $emptyStateIcon, $emptyStateAction); ?>

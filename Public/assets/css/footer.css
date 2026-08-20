@@ -1,7 +1,8 @@
 .site-footer {
   border-top: var(--border-width) var(--border-style) var(--brand-gray-500);
-  background-color: var(--brand-gray-400);
+  background: linear-gradient(145deg, var(--brand-gray-400), color-mix(in srgb, var(--brand-gray-400) 72%, var(--brand-gray-300)));
   color: var(--color-text);
+  box-shadow: inset 0 var(--space-1) var(--space-3) color-mix(in srgb, var(--brand-gray-900) 5%, transparent);
 }
 
 .footer-container {
@@ -75,6 +76,13 @@
   height: var(--border-width);
   background-color: var(--color-gold);
   content: "";
+  transition: width var(--transition-normal);
+}
+
+.footer-navigation-container:hover .footer-title::after,
+.footer-information-container:hover .footer-title::after,
+.footer-contact-container:hover .footer-title::after {
+  width: var(--space-6);
 }
 
 .footer-links,
@@ -162,7 +170,8 @@
 .footer-social-links a:hover {
   border-color: var(--color-gold);
   color: var(--color-gold-dark);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-small);
+  transform: translateY(calc(var(--space-1) * -1));
 }
 
 .footer-social-links svg {

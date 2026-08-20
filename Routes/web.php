@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 use App\Controllers\HomeController;
 use App\Controllers\ProductController;
-use App\Services\ProductService;
 
-$productService = new ProductService();
+$homeController = new HomeController($productService);
+$productController = new ProductController($productService, $request);
 
 return [
-    '/' => [new HomeController($productService), 'index'],
-    '/boutique' => [new ProductController($productService), 'index'],
-    '/promotions' => [new ProductController($productService), 'promotions'],
+    '/' => [$homeController, 'index'],
+    '/boutique' => [$productController, 'index'],
+    '/produit' => [$productController, 'show'],
+    '/promotions' => [$productController, 'promotions'],
+    '/api/catalogue' => [$productController, 'catalog'],
+    '/api/produit/apercu' => [$productController, 'quickView'],
 ];

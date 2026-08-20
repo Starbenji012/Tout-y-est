@@ -7,6 +7,7 @@ $productSectionProducts = $productSectionConfig['products'] ?? [];
 $productSectionHeader = $productSectionConfig['header'] ?? [];
 $productSectionBanner = $productSectionConfig['banner'] ?? null;
 $productSectionFooterAction = $productSectionConfig['footerAction'] ?? null;
+$productSectionCatalog = $productSectionConfig['catalog'] ?? null;
 $productSectionEmptyState = $productSectionConfig['emptyState'] ?? [];
 $productSectionPagination = $productSectionConfig['pagination'] ?? null;
 ?>
@@ -21,31 +22,37 @@ $productSectionPagination = $productSectionConfig['pagination'] ?? null;
             <?php require __DIR__ . '/promotion-banner.php'; ?>
         <?php endif; ?>
 
-        <?php if ($productSectionProducts !== []): ?>
-            <div class="product-section__grid">
-                <?php foreach ($productSectionProducts as $product): ?>
-                    <?php require __DIR__ . '/product-card.php'; ?>
-                <?php endforeach; ?>
-            </div>
-        <?php else: ?>
-            <?php $emptyState = $productSectionEmptyState; ?>
-            <?php require __DIR__ . '/empty-state.php'; ?>
+        <?php if (is_array($productSectionCatalog)): ?>
+            <?php $catalogToolbar = $productSectionCatalog; ?>
+            <?php require __DIR__ . '/catalog-toolbar.php'; ?>
+
+            <div class="catalog-layout" data-product-catalog>
+                <?php $catalogFilters = $productSectionCatalog; ?>
+                <?php require __DIR__ . '/catalog-filters.php'; ?>
+                <div class="catalog-results" data-catalog-results aria-live="polite">
+                    <div class="catalog-results__loading" data-catalog-loader hidden>
+                        <?php $loader = ['label' => 'Mise à jour du catalogue']; ?>
+                        <?php require __DIR__ . '/loader.php'; ?>
+                    </div>
+                    <div data-catalog-content>
         <?php endif; ?>
 
-        <?php if ($productSectionProducts !== [] && is_array($productSectionFooterAction)): ?>
-            <div class="product-section__footer-action">
-                <?php $button = $productSectionFooterAction; ?>
-                <?php require __DIR__ . '/button.php'; ?>
-            </div>
-        <?php endif; ?>
+        <?php
+        $productResults = [
+            'products' => $productSectionProducts,
+            'emptyState' => $productSectionEmptyState,
+            'footerAction' => $productSectionFooterAction,
+            'pagination' => $productSectionPagination,
+        ];
+        require __DIR__ . '/product-results.php';
+        ?>
 
-        <?php if (is_array($productSectionPagination) && ($productSectionPagination['total'] ?? 1) > 1): ?>
-            <div class="product-section__pagination">
-                <?php $pagination = $productSectionPagination; ?>
-                <?php require __DIR__ . '/pagination.php'; ?>
+        <?php if (is_array($productSectionCatalog)): ?>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
     </div>
 </section>
 
-<?php unset($productSection, $productSectionConfig, $productSectionId, $productSectionClass, $productSectionProducts, $productSectionHeader, $productSectionBanner, $productSectionFooterAction, $productSectionEmptyState, $productSectionPagination, $button); ?>
+<?php unset($productSection, $productSectionConfig, $productSectionId, $productSectionClass, $productSectionProducts, $productSectionHeader, $productSectionBanner, $productSectionFooterAction, $productSectionCatalog, $productSectionEmptyState, $productSectionPagination, $catalogToolbar, $catalogFilters, $productResults, $loader); ?>
