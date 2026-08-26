@@ -10,12 +10,14 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Middleware\CsrfMiddleware;
 use App\Services\AuthService;
+use App\Services\LoginThrottleService;
 
 final class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthService $authService,
         private readonly Request $request,
+        private readonly LoginThrottleService $loginThrottleService,
     ) {
     }
 
@@ -38,14 +40,39 @@ final class AuthController extends Controller
             return;
         }
 
-        $result = ($input['mode'] ?? '') === 'register'
+        $mode = ($input['mode'] ?? '') === 'register' ? 'register' : 'login';
+        $throttle = $this->loginThrottleService->status();
+
+        if ($mode === 'login' && $throttle['blocked']) {
+            $this->renderThrottleResponse($input, $throttle);
+            return;
+        }
+
+        $result = $mode === 'register'
             ? $this->authService->register($input)
             : $this->authService->login($input);
 
         if (!$result['success']) {
+            if ($mode === 'login' && ($result['reason'] ?? '') === 'invalid_credentials') {
+                $throttle = $this->loginThrottleService->recordFailure();
+            }
+
+            if ($mode === 'login' && $throttle['blocked']) {
+                $this->renderThrottleResponse($input, $throttle, $result['advice'] ?? null);
+                return;
+            }
+
             http_response_code(422);
-            $this->renderPage($result['errors'], $input);
+            $this->renderPage($result['errors'], $input, [
+                'authAdvice' => $result['advice'] ?? null,
+                'loginFailures' => $throttle['count'],
+                'showLoginHelp' => $throttle['showHelp'],
+            ]);
             return;
+        }
+
+        if ($mode === 'login') {
+            $this->loginThrottleService->clear();
         }
 
         Session::regenerate();
@@ -55,7 +82,8 @@ final class AuthController extends Controller
             Session::remember();
         }
 
-        Response::redirect('/compte');
+        $returnTo = $this->safeReturnPath((string) ($input['return_to'] ?? ''));
+        Response::redirect($returnTo ?? '/compte');
     }
 
     public function logout(): void
@@ -67,7 +95,7 @@ final class AuthController extends Controller
         Response::redirect('/');
     }
 
-    private function renderPage(array $errors = [], array $old = []): void
+    private function renderPage(array $errors = [], array $old = [], array $context = []): void
     {
         unset($old['_token'], $old['password'], $old['password_confirmation']);
 
@@ -75,12 +103,39 @@ final class AuthController extends Controller
             'title' => 'Connexion et inscription | Tout y est',
             'metaDescription' => 'Connectez-vous ou créez votre compte Tout y est.',
             'activePage' => 'account',
-            'pageLibraries' => ['gsap'],
+            'pageLibraries' => ['gsap', 'sweetalert2'],
             'pageStyles' => ['/assets/css/account.css'],
-            'pageScripts' => ['/assets/js/account.js'],
+            'pageScripts' => ['/assets/js/validation.js', '/assets/js/account.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'authErrors' => $errors,
             'oldInput' => $old,
+            'authAdvice' => $context['authAdvice'] ?? null,
+            'loginFailures' => (int) ($context['loginFailures'] ?? 0),
+            'showLoginHelp' => (bool) ($context['showLoginHelp'] ?? false),
+            'loginRetryAfter' => (int) ($context['loginRetryAfter'] ?? 0),
+            'returnTo' => $this->safeReturnPath((string) ($old['return_to'] ?? $this->request->queryParameters()['return'] ?? '')),
         ]);
+    }
+
+    private function renderThrottleResponse(array $input, array $throttle, ?string $advice = null): void
+    {
+        $retryAfter = max(1, (int) $throttle['retryAfter']);
+        http_response_code(429);
+        header('Retry-After: ' . $retryAfter);
+        $this->renderPage(
+            ['Plusieurs tentatives ont échoué. Patientez un instant avant de réessayer.'],
+            $input,
+            [
+                'authAdvice' => $advice ?? 'Utilisez « Mot de passe oublié ? » si vous ne retrouvez plus vos informations.',
+                'loginFailures' => $throttle['count'],
+                'showLoginHelp' => true,
+                'loginRetryAfter' => $retryAfter,
+            ],
+        );
+    }
+
+    private function safeReturnPath(string $path): ?string
+    {
+        return in_array($path, ['/favoris', '/panier', '/boutique'], true) ? $path : null;
     }
 }

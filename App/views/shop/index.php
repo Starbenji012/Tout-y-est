@@ -13,6 +13,8 @@ $productSection = [
     'catalog' => [
         'resultCount' => $productCount ?? 0,
         'categories' => $catalogCategories ?? [],
+        'facets' => $catalogFacets ?? [],
+        'searchNotice' => $catalogSearchNotice ?? null,
         'filters' => $activeFilters ?? [],
         'statuses' => [
             'promotion' => 'Promotions',
@@ -35,7 +37,7 @@ $productSection = [
     'pagination' => [
         'current' => $currentPage ?? 1,
         'total' => $totalPages ?? 1,
-        'url' => '/boutique?page=%d',
+        'url' => $paginationUrl ?? '/boutique?page=%d',
     ],
 ];
 

@@ -33,6 +33,19 @@ final class Product
         return $statement->fetchAll();
     }
 
+    public function findSuggestionCandidates(int $limit = 80): array
+    {
+        $statement = $this->database->prepare(
+            $this->selectSql()
+            . " WHERE LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"
+            . ' ORDER BY avis_count DESC, note DESC, p.date_creation DESC LIMIT :limit',
+        );
+        $statement->bindValue(':limit', max(1, min(100, $limit)), PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
     public function countCatalog(array $filters): int
     {
         [$where, $parameters] = $this->buildFilters($filters);
@@ -173,6 +186,31 @@ final class Product
         if (($filters['rating'] ?? 0) > 0) {
             $conditions[] = 'COALESCE((SELECT AVG(a.note) FROM avis a WHERE a.id_produit = p.id_produit), 0) >= :rating';
             $parameters['rating'] = $filters['rating'];
+        }
+
+        foreach ($filters['attributes'] ?? [] as $attribute => $values) {
+            if ($values === []) {
+                continue;
+            }
+
+            $valuePlaceholders = [];
+
+            foreach ($values as $index => $value) {
+                $key = 'attribute_' . $attribute . '_' . $index;
+                $valuePlaceholders[] = ':' . $key;
+                $parameters[$key] = $value;
+            }
+
+            $nameKey = 'attribute_name_' . $attribute;
+            $parameters[$nameKey] = '%' . $attribute . '%';
+            $conditions[] = 'EXISTS (
+                SELECT 1
+                FROM `valeur_caractéristique` vf
+                INNER JOIN `caractéristique` cf ON cf.id_caracteristique = vf.id_caracteristique
+                WHERE vf.id_produit = p.id_produit
+                  AND LOWER(cf.nom) LIKE :' . $nameKey . '
+                  AND vf.valeur IN (' . implode(', ', $valuePlaceholders) . ')
+            )';
         }
 
         return [' WHERE ' . implode(' AND ', $conditions), $parameters];

@@ -20,7 +20,9 @@ $accountUser = $accountUser ?? [];
                 <h2>Mes informations</h2>
                 <dl>
                     <div><dt>E-mail</dt><dd><?= htmlspecialchars((string) ($accountUser['email'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></dd></div>
-                    <div><dt>Téléphone</dt><dd><?= htmlspecialchars((string) ($accountUser['phone'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></dd></div>
+                    <?php if (!empty($accountUser['phone'])): ?>
+                        <div><dt>Téléphone</dt><dd><?= htmlspecialchars((string) $accountUser['phone'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></dd></div>
+                    <?php endif; ?>
                 </dl>
             </article>
             <a class="account-dashboard__card" href="/favoris" data-motion="card"><i data-lucide="heart" aria-hidden="true"></i><h2>Mes favoris</h2><p>Retrouvez les produits enregistrés sur cet appareil.</p><span>Voir mes favoris <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>

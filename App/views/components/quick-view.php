@@ -30,11 +30,12 @@ $quickViewOptions = $productOptions ?? [];
         </div>
 
         <div class="quick-view__information">
+            <span class="quick-view__label"><i data-lucide="scan-eye" aria-hidden="true"></i>Aperçu rapide</span>
             <div class="quick-view__eyebrow">
                 <span class="quick-view__category"><?= htmlspecialchars((string) ($quickViewProduct['category'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
                 <?php if (!empty($quickViewProduct['badge'])): ?><?php $badge = ['label' => (string) $quickViewProduct['badge'], 'variant' => (string) ($quickViewProduct['badgeVariant'] ?? 'new')]; require __DIR__ . '/badge.php'; ?><?php endif; ?>
             </div>
-            <h2 id="quick-view-title"><?= htmlspecialchars($quickViewName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h2>
+            <h2 class="quick-view__title" id="quick-view-title"><?= htmlspecialchars($quickViewName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h2>
             <p class="quick-view__rating" aria-label="<?= htmlspecialchars((string) ($quickViewProduct['rating'] ?? 0), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> sur 5"><i data-lucide="star" aria-hidden="true"></i><strong><?= htmlspecialchars((string) ($quickViewProduct['rating'] ?? 0), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong><span>(<?= (int) ($quickViewProduct['reviews'] ?? 0) ?> avis)</span></p>
             <div class="quick-view__price"><strong><?= htmlspecialchars((string) ($quickViewProduct['price'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong><?php if (!empty($quickViewProduct['oldPrice'])): ?><del><?= htmlspecialchars((string) $quickViewProduct['oldPrice'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></del><?php endif; ?><?php if (!empty($quickViewProduct['discount'])): ?><span>-<?= (int) $quickViewProduct['discount'] ?> %</span><?php endif; ?></div>
             <p class="quick-view__stock<?= $quickViewStock === 0 ? ' is-unavailable' : '' ?>"><i data-lucide="<?= $quickViewStock > 0 ? 'circle-check' : 'circle-x' ?>" aria-hidden="true"></i><?= $quickViewStock > 0 ? 'Disponible' : 'Rupture de stock' ?></p>

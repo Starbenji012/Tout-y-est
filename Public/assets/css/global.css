@@ -1,10 +1,13 @@
 /* Document */
 html {
   color-scheme: light;
+  overflow-x: clip;
+  scroll-padding-top: calc((var(--control-height) * 2) + var(--spacing-xl));
   scroll-behavior: smooth;
 }
 
 body {
+  overflow-x: clip;
   background-color: var(--color-background);
   color: var(--color-text);
   font-family: var(--font-family-primary);
@@ -612,6 +615,19 @@ textarea:focus {
   justify-content: center;
 }
 
+.pagination {
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.pagination__more svg {
+  transition: transform var(--transition-normal);
+}
+
+.pagination__more:hover svg {
+  transform: translateY(var(--space-1));
+}
+
 .pagination__list {
   gap: var(--spacing-xs);
   flex-wrap: wrap;
@@ -675,7 +691,7 @@ textarea:focus {
 
 /* Aperçu produit */
 .quick-view {
-  width: min(62rem, calc(100% - (var(--spacing-xl) * 2)));
+  width: min(54rem, calc(100% - (var(--spacing-xl) * 2)));
   max-height: calc(100dvh - (var(--spacing-xl) * 2));
   margin: auto;
   overflow: auto;
@@ -726,7 +742,7 @@ textarea:focus {
 
 .quick-view__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(20rem, 0.92fr);
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 0.9fr);
 }
 
 .quick-view__gallery {
@@ -737,7 +753,7 @@ textarea:focus {
 }
 
 .quick-view__media {
-  min-height: 31rem;
+  min-height: 25rem;
   overflow: hidden;
   background-color: var(--brand-gray-300);
 }
@@ -785,8 +801,23 @@ textarea:focus {
   align-items: flex-start;
   justify-content: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-xxl);
+  padding: var(--spacing-xl);
   flex-direction: column;
+}
+
+.quick-view__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-gold-dark);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.quick-view__label svg {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
 }
 
 .quick-view__category,

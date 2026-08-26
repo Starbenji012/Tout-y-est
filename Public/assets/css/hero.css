@@ -42,9 +42,10 @@
   position: relative;
   isolation: isolate;
   display: flex;
-  min-height: clamp(30rem, 45vw, 35rem);
+  min-height: clamp(28rem, 40vw, 32rem);
+  height: 100%;
   align-items: center;
-  padding: clamp(2rem, 6vw, 5rem);
+  padding: clamp(2rem, 5vw, 4rem);
   padding-bottom: clamp(4.5rem, 7vw, 5.5rem);
 }
 
@@ -105,10 +106,10 @@
 
 .hero-title {
   display: grid;
-  max-width: 15ch;
+  max-width: 20ch;
   margin-top: var(--space-5);
   color: var(--brand-gray-50);
-  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-size: clamp(2.5rem, 4.5vw, 4rem);
   line-height: 1.02;
   letter-spacing: -0.055em;
 }

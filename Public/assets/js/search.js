@@ -11,6 +11,28 @@
   let activeIndex = -1;
   let searchTimer;
   let requestController;
+  const historyKey = "tout-y-est:recent-searches";
+
+  const recentSearches = () => {
+    try {
+      const value = JSON.parse(localStorage.getItem(historyKey) || "[]");
+      return Array.isArray(value) ? value.filter((item) => typeof item === "string").slice(0, 5) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const rememberSearch = (query) => {
+    const normalized = query.trim();
+    if (normalized.length < 2) return;
+
+    try {
+      const searches = [normalized, ...recentSearches().filter((item) => item.toLowerCase() !== normalized.toLowerCase())].slice(0, 5);
+      localStorage.setItem(historyKey, JSON.stringify(searches));
+    } catch {
+      return;
+    }
+  };
 
   const closeSuggestions = () => {
     suggestionsPanel.hidden = true;
@@ -81,6 +103,40 @@
     input.setAttribute("aria-expanded", "true");
   };
 
+  const renderRecentSearches = () => {
+    const searches = recentSearches();
+
+    if (searches.length === 0) {
+      closeSuggestions();
+      return;
+    }
+
+    suggestions = searches.map((query) => ({ url: `/boutique?q=${encodeURIComponent(query)}` }));
+    activeIndex = -1;
+    const title = document.createElement("p");
+    title.className = "header-search__recent-title";
+    title.textContent = "Recherches récentes";
+    suggestionsPanel.replaceChildren(title);
+
+    searches.forEach((query, index) => {
+      const link = document.createElement("a");
+      const icon = document.createElement("i");
+      link.id = `header-search-option-${index}`;
+      link.className = "header-search__recent";
+      link.href = suggestions[index].url;
+      link.setAttribute("role", "option");
+      link.setAttribute("aria-selected", "false");
+      icon.dataset.lucide = "history";
+      icon.setAttribute("aria-hidden", "true");
+      link.append(icon, document.createTextNode(query));
+      suggestionsPanel.append(link);
+    });
+
+    suggestionsPanel.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    window.lucide?.createIcons();
+  };
+
   const search = async (query) => {
     requestController?.abort();
     const controller = new AbortController();
@@ -114,11 +170,21 @@
 
     if (query.length < 2) {
       requestController?.abort();
-      closeSuggestions();
+      renderRecentSearches();
       return;
     }
 
     searchTimer = window.setTimeout(() => search(query), 240);
+  });
+
+  input.addEventListener("focus", () => {
+    if (input.value.trim() === "") renderRecentSearches();
+  });
+
+  form.addEventListener("submit", () => rememberSearch(input.value));
+
+  suggestionsPanel.addEventListener("click", (event) => {
+    if (event.target.closest("a")) rememberSearch(input.value);
   });
 
   input.addEventListener("keydown", (event) => {

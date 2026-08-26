@@ -15,29 +15,37 @@ final class AuthService
 
     public function login(array $input): array
     {
-        if ($this->userModel === null) {
-            return $this->failure('La connexion au compte est temporairement indisponible.');
-        }
-
         $email = strtolower(trim((string) ($input['email'] ?? '')));
         $password = (string) ($input['password'] ?? '');
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
-            return $this->failure('Adresse e-mail ou mot de passe incorrect.');
+            return $this->failure(
+                'Adresse e-mail ou mot de passe incorrect.',
+                'invalid_credentials',
+                'Vérifiez votre adresse e-mail ou utilisez « Mot de passe oublié ? » si nécessaire.',
+            );
+        }
+
+        if ($this->userModel === null) {
+            return $this->failure('La connexion au compte est temporairement indisponible.', 'service_unavailable');
         }
 
         try {
             $user = $this->userModel->findByEmail($email);
         } catch (PDOException) {
-            return $this->failure('La connexion au compte est temporairement indisponible.');
+            return $this->failure('La connexion au compte est temporairement indisponible.', 'service_unavailable');
         }
 
         if ($user === null || !password_verify($password, (string) $user['mot_de_passe'])) {
-            return $this->failure('Adresse e-mail ou mot de passe incorrect.');
+            return $this->failure(
+                'Adresse e-mail ou mot de passe incorrect.',
+                'invalid_credentials',
+                'Vérifiez votre adresse e-mail ou utilisez « Mot de passe oublié ? » si nécessaire.',
+            );
         }
 
         if (!in_array(strtolower((string) $user['statut']), ['actif', 'active'], true)) {
-            return $this->failure('Ce compte est actuellement indisponible.');
+            return $this->failure('Ce compte est actuellement indisponible.', 'account_unavailable');
         }
 
         return ['success' => true, 'user' => $this->publicUser($user), 'errors' => []];
@@ -45,10 +53,6 @@ final class AuthService
 
     public function register(array $input): array
     {
-        if ($this->userModel === null) {
-            return $this->failure('La création de compte est temporairement indisponible.');
-        }
-
         $data = $this->registrationData($input);
         $errors = $this->registrationErrors($data);
 
@@ -56,23 +60,26 @@ final class AuthService
             return ['success' => false, 'user' => null, 'errors' => $errors];
         }
 
+        if ($this->userModel === null) {
+            return $this->failure('La création de compte est temporairement indisponible.');
+        }
+
         try {
-            if ($this->userModel->emailOrPhoneExists($data['email'], $data['telephone'])) {
-                return $this->failure('Un compte utilise déjà cette adresse e-mail ou ce numéro de téléphone.');
+            if ($this->userModel->emailExists($data['email'])) {
+                return $this->failure('Un compte utilise déjà cette adresse e-mail.', 'email_exists');
             }
 
             $userId = $this->userModel->create([
                 'nom' => $data['nom'],
                 'prenom' => $data['prenom'],
                 'email' => $data['email'],
-                'telephone' => $data['telephone'],
                 'mot_de_passe' => password_hash($data['password'], PASSWORD_DEFAULT),
                 'role' => 'client',
                 'statut' => 'actif',
             ]);
         } catch (PDOException $exception) {
             if ((string) $exception->getCode() === '23000') {
-                return $this->failure('Cette adresse e-mail ou ce numéro de téléphone est déjà utilisé.');
+                return $this->failure('Cette adresse e-mail est déjà utilisée.', 'email_exists');
             }
 
             return $this->failure('La création de compte est temporairement indisponible.');
@@ -84,7 +91,7 @@ final class AuthService
                 'id' => $userId,
                 'name' => $data['prenom'] . ' ' . $data['nom'],
                 'email' => $data['email'],
-                'phone' => $data['telephone'],
+                'phone' => null,
                 'role' => 'client',
             ],
             'errors' => [],
@@ -97,7 +104,6 @@ final class AuthService
             'nom' => trim((string) ($input['nom'] ?? '')),
             'prenom' => trim((string) ($input['prenom'] ?? '')),
             'email' => strtolower(trim((string) ($input['email'] ?? ''))),
-            'telephone' => trim((string) ($input['telephone'] ?? '')),
             'password' => (string) ($input['password'] ?? ''),
             'password_confirmation' => (string) ($input['password_confirmation'] ?? ''),
         ];
@@ -115,10 +121,6 @@ final class AuthService
             $errors[] = 'Saisissez une adresse e-mail valide.';
         }
 
-        if (!preg_match('/^[0-9+() .-]{8,30}$/', $data['telephone'])) {
-            $errors[] = 'Saisissez un numéro de téléphone valide.';
-        }
-
         if (strlen($data['password']) < 8 || !preg_match('/[A-Za-z]/', $data['password']) || !preg_match('/\d/', $data['password'])) {
             $errors[] = 'Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.';
         }
@@ -132,7 +134,7 @@ final class AuthService
 
     private function validName(string $name): bool
     {
-        $length = strlen($name);
+        $length = function_exists('mb_strlen') ? mb_strlen($name) : strlen($name);
 
         return $length >= 2 && $length <= 100;
     }
@@ -143,13 +145,19 @@ final class AuthService
             'id' => (int) $user['id_utilisateur'],
             'name' => trim((string) $user['prenom'] . ' ' . (string) $user['nom']),
             'email' => (string) $user['email'],
-            'phone' => (string) $user['telephone'],
+            'phone' => $user['telephone'] !== null ? (string) $user['telephone'] : null,
             'role' => (string) $user['role'],
         ];
     }
 
-    private function failure(string $message): array
+    private function failure(string $message, string $reason = 'validation_failed', ?string $advice = null): array
     {
-        return ['success' => false, 'user' => null, 'errors' => [$message]];
+        return [
+            'success' => false,
+            'user' => null,
+            'errors' => [$message],
+            'reason' => $reason,
+            'advice' => $advice,
+        ];
     }
 }

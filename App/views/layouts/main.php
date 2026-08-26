@@ -41,7 +41,7 @@ $usesGsap = in_array('gsap', $pageLibraries, true);
         <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
     <?php endforeach; ?>
 </head>
-<body>
+<body data-authenticated="<?= is_array(\App\Core\Session::get('user')) ? 'true' : 'false' ?>">
     <!-- En-tête -->
     <?php require dirname(__DIR__) . '/components/header.php'; ?>
 
@@ -71,7 +71,9 @@ $usesGsap = in_array('gsap', $pageLibraries, true);
     <script src="/assets/js/cart-store.js"></script>
     <script src="/assets/js/animations.js"></script>
     <script src="/assets/js/app.js"></script>
+    <script src="/assets/js/auth-prompt.js"></script>
     <script src="/assets/js/header.js"></script>
+    <script src="/assets/js/category-navigation.js"></script>
     <script src="/assets/js/search.js"></script>
     <?php foreach ($pageScripts ?? [] as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></script>

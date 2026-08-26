@@ -49,6 +49,10 @@
     button.classList.toggle("is-active", active);
     syncFavoriteButtons(productCard);
     notify(active ? "Produit ajouté aux favoris" : "Produit retiré des favoris", active ? "success" : "info");
+
+    if (active) {
+      window.AuthPrompt?.favoriteSaved();
+    }
   };
 
   const confirmCart = (button, productCard) => {
@@ -76,7 +80,7 @@
     }
   };
 
-  const revealQuickView = (dialog) => {
+  const revealQuickView = (dialog, trigger) => {
     dialog.showModal();
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
@@ -85,6 +89,10 @@
     dialog.addEventListener("close", () => {
       if (quickViewHost) {
         quickViewHost.innerHTML = "";
+      }
+
+      if (trigger?.isConnected) {
+        trigger.focus();
       }
     }, { once: true });
 
@@ -108,7 +116,7 @@
       syncFavoriteButtons(quickViewHost);
       const dialog = quickViewHost.querySelector("[data-quick-view-dialog]");
       if (dialog) {
-        revealQuickView(dialog);
+        revealQuickView(dialog, button);
       }
     } catch {
       notify("Impossible d’afficher ce produit", "error");

@@ -26,12 +26,12 @@ final class User
         return is_array($user) ? $user : null;
     }
 
-    public function emailOrPhoneExists(string $email, string $phone): bool
+    public function emailExists(string $email): bool
     {
         $statement = $this->database->prepare(
-            'SELECT COUNT(*) FROM utilisateur WHERE email = :email OR telephone = :telephone',
+            'SELECT COUNT(*) FROM utilisateur WHERE email = :email',
         );
-        $statement->execute(['email' => $email, 'telephone' => $phone]);
+        $statement->execute(['email' => $email]);
 
         return (int) $statement->fetchColumn() > 0;
     }
@@ -39,8 +39,8 @@ final class User
     public function create(array $user): int
     {
         $statement = $this->database->prepare(
-            'INSERT INTO utilisateur (nom, prenom, email, telephone, mot_de_passe, role, statut, date_creation)
-             VALUES (:nom, :prenom, :email, :telephone, :mot_de_passe, :role, :statut, NOW())',
+            'INSERT INTO utilisateur (nom, prenom, email, mot_de_passe, role, statut, date_creation)
+             VALUES (:nom, :prenom, :email, :mot_de_passe, :role, :statut, NOW())',
         );
         $statement->execute($user);
 

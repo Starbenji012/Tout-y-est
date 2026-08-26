@@ -23,6 +23,12 @@ $paginationPreviousPage = null;
         <?php endforeach; ?>
         <li><a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, min($paginationTotal, $paginationCurrent + 1)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Page suivante" <?= $paginationCurrent === $paginationTotal ? 'aria-disabled="true"' : '' ?> data-page="<?= min($paginationTotal, $paginationCurrent + 1) ?>"><i data-lucide="chevron-right" aria-hidden="true"></i></a></li>
     </ul>
+    <?php if ($paginationCurrent < $paginationTotal): ?>
+        <button class="btn btn-secondary pagination__more" type="button" data-load-more data-page="<?= $paginationCurrent + 1 ?>">
+            Voir plus de produits
+            <i data-lucide="chevron-down" aria-hidden="true"></i>
+        </button>
+    <?php endif; ?>
 </nav>
 
 <?php unset($pagination, $paginationConfig, $paginationCurrent, $paginationTotal, $paginationUrl, $paginationPages, $paginationPreviousPage, $page); ?>

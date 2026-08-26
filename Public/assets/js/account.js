@@ -7,56 +7,7 @@
 
   let switching = false;
   const status = view.querySelector("[data-auth-status]");
-
-  const fieldMessage = (input) => input.closest(".account-field")?.querySelector("[data-field-error]");
-
-  const validationMessage = (input) => {
-    const value = input.value.trim();
-
-    if (input.required && value === "") {
-      return "Ce champ est obligatoire.";
-    }
-
-    switch (input.dataset.validate) {
-      case "required":
-        return value === "" ? "Ce champ est obligatoire." : "";
-      case "name":
-        return value.length >= 2 ? "" : "Saisissez au moins 2 caractères.";
-      case "email":
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Saisissez une adresse e-mail valide.";
-      case "phone":
-        return /^[0-9+() .-]{8,30}$/.test(value) ? "" : "Saisissez un numéro de téléphone valide.";
-      case "password":
-        return value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value)
-          ? ""
-          : "Utilisez au moins 8 caractères, une lettre et un chiffre.";
-      case "confirmation": {
-        const password = view.querySelector("[data-register-password]")?.value || "";
-        return value !== "" && value === password ? "" : "Les mots de passe ne correspondent pas.";
-      }
-      default:
-        return "";
-    }
-  };
-
-  const validateField = (input, force = false) => {
-    if (!force && input.dataset.touched !== "true") {
-      return true;
-    }
-
-    const message = validationMessage(input);
-    const messageElement = fieldMessage(input);
-    input.setCustomValidity(message);
-    input.setAttribute("aria-invalid", String(message !== ""));
-    input.classList.toggle("is-invalid", message !== "");
-    input.classList.toggle("is-valid", message === "" && input.value.trim() !== "");
-
-    if (messageElement) {
-      messageElement.textContent = message;
-    }
-
-    return message === "";
-  };
+  const validation = window.ValidationSystem?.create(view);
 
   const passwordStrength = (password) => {
     let score = 0;
@@ -146,13 +97,46 @@
 
     button.disabled = true;
     button.classList.add("is-loading");
+    form.setAttribute("aria-busy", "true");
     button.textContent = button.dataset.loadingLabel || "Chargement…";
+  };
+
+  const initializeRetry = () => {
+    const retryMessage = view.querySelector("[data-auth-retry]");
+    const submitButton = view.querySelector("[data-auth-panel='login'] [data-auth-submit]");
+    let remaining = Number(retryMessage?.dataset.authRetry) || 0;
+
+    if (!retryMessage || !submitButton || remaining < 1) {
+      return;
+    }
+
+    const originalContent = submitButton.innerHTML;
+    submitButton.disabled = true;
+
+    const update = () => {
+      retryMessage.textContent = remaining > 0
+        ? `Nouvelle tentative disponible dans ${remaining} seconde${remaining > 1 ? "s" : ""}.`
+        : "Vous pouvez maintenant réessayer.";
+
+      if (remaining < 1) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalContent;
+        window.lucide?.createIcons();
+        return;
+      }
+
+      submitButton.textContent = `Réessayer dans ${remaining} s`;
+      remaining -= 1;
+      window.setTimeout(update, 1000);
+    };
+
+    update();
   };
 
   view.addEventListener("focusout", (event) => {
     if (event.target.matches("[data-validate]")) {
       event.target.dataset.touched = "true";
-      validateField(event.target, true);
+      validation?.validateField(event.target, true);
     }
   });
 
@@ -161,12 +145,12 @@
       return;
     }
 
-    validateField(event.target);
+    validation?.validateField(event.target);
 
     if (event.target.matches("[data-register-password]")) {
       updateStrength(event.target);
       const confirmation = view.querySelector("[data-password-confirmation]");
-      if (confirmation?.dataset.touched === "true") validateField(confirmation, true);
+      if (confirmation?.dataset.touched === "true") validation?.validateField(confirmation, true);
     }
   });
 
@@ -184,10 +168,34 @@
     }
 
     if (event.target.closest("[data-forgot-password]")) {
-      window.MotionSystem?.fire({
+      const recoveryMessage = "Contactez le support Tout y est afin de vérifier votre identité et récupérer l’accès à votre compte.";
+
+      if (!window.Swal || !window.MotionSystem?.fire) {
+        window.alert(recoveryMessage);
+        return;
+      }
+
+      window.MotionSystem.fire({
         icon: "info",
         title: "Récupération sécurisée",
-        text: "Contactez le support Tout y est afin de vérifier votre identité et récupérer l’accès à votre compte.",
+        text: recoveryMessage,
+        confirmButtonText: "Compris",
+      });
+      return;
+    }
+
+    if (event.target.closest("[data-google-auth]")) {
+      const googleMessage = "La connexion Google nécessite encore les identifiants OAuth et un stockage sécurisé de l’identifiant fournisseur.";
+
+      if (!window.Swal || !window.MotionSystem?.fire) {
+        window.alert(googleMessage);
+        return;
+      }
+
+      window.MotionSystem.fire({
+        icon: "info",
+        title: "Connexion Google à configurer",
+        text: googleMessage,
         confirmButtonText: "Compris",
       });
     }
@@ -200,15 +208,11 @@
       return;
     }
 
-    const fields = [...form.querySelectorAll("[data-validate]")];
-    const valid = fields.map((input) => {
-      input.dataset.touched = "true";
-      return validateField(input, true);
-    }).every(Boolean);
+    const result = validation?.validateForm(form) || { valid: true, fields: [] };
 
-    if (!valid) {
+    if (!result.valid) {
       event.preventDefault();
-      fields.find((input) => !input.checkValidity())?.focus();
+      result.fields.find((input) => !input.checkValidity())?.focus();
       return;
     }
 
@@ -218,4 +222,6 @@
   if (window.location.hash === "#inscription" && view.dataset.activeMode !== "register") {
     switchPanel("register");
   }
+
+  initializeRetry();
 })();

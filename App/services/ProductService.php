@@ -65,15 +65,43 @@ final class ProductService
         $filters = $this->normalizeFilters($parameters);
         $page = max(1, (int) ($parameters['page'] ?? 1));
         $perPage = 12;
+        $searchNotice = null;
 
         if ($this->usesDatabase()) {
-            $total = $this->productModel->countCatalog($filters);
+            $queryFilters = $filters;
+            $total = $this->productModel->countCatalog($queryFilters);
+
+            if ($total === 0 && $filters['search'] !== '') {
+                $closestProduct = $this->searchSuggestions($filters['search'], 1)[0] ?? null;
+
+                if (is_array($closestProduct)) {
+                    $queryFilters['search'] = (string) $closestProduct['name'];
+                    $total = $this->productModel->countCatalog($queryFilters);
+
+                    if ($total > 0) {
+                        $searchNotice = 'Aucun résultat exact. Voici les produits les plus proches de votre recherche.';
+                    } else {
+                        $queryFilters = $filters;
+                    }
+                }
+            }
+
             $totalPages = max(1, (int) ceil($total / $perPage));
             $page = min($page, $totalPages);
-            $rows = $this->productModel->findCatalog($filters, $filters['sort'], $perPage, ($page - 1) * $perPage);
+            $rows = $this->productModel->findCatalog($queryFilters, $filters['sort'], $perPage, ($page - 1) * $perPage);
             $products = array_map(fn (array $row): array => $this->mapDatabaseProduct($row), $rows);
         } else {
             $filteredProducts = $this->filterDemoProducts($this->withCatalogBadges($this->demoProducts()), $filters);
+
+            if ($filteredProducts === [] && $filters['search'] !== '') {
+                $nearbyProducts = $this->rankSuggestions($this->withCatalogBadges($this->demoProducts()), $filters['search']);
+                $filtersWithoutSearch = array_replace($filters, ['search' => '']);
+                $filteredProducts = $this->filterDemoProducts($nearbyProducts, $filtersWithoutSearch);
+                $searchNotice = $filteredProducts !== []
+                    ? 'Aucun résultat exact. Voici les produits les plus proches de votre recherche.'
+                    : null;
+            }
+
             $total = count($filteredProducts);
             $totalPages = max(1, (int) ceil($total / $perPage));
             $page = min($page, $totalPages);
@@ -87,7 +115,54 @@ final class ProductService
             'totalPages' => $totalPages,
             'filters' => $filters,
             'categories' => $this->catalogCategories(),
+            'facets' => $this->catalogFacets($filters['categories']),
+            'searchNotice' => $searchNotice,
         ];
+    }
+
+    public function catalogFacets(array $categorySlugs = []): array
+    {
+        if (!$this->usesDatabase() || $this->characteristicValueModel === null) {
+            return [];
+        }
+
+        $allowedFacets = [
+            'marque' => 'Marque',
+            'marques' => 'Marque',
+            'couleur' => 'Couleur',
+            'taille' => 'Taille',
+            'pointure' => 'Pointure',
+            'etat' => 'État',
+            'condition' => 'État',
+        ];
+        $facets = [];
+
+        try {
+            $rows = $this->characteristicValueModel->findCatalogFacets($categorySlugs);
+        } catch (\PDOException) {
+            return [];
+        }
+
+        foreach ($rows as $row) {
+            $key = $this->slugify((string) $row['nom']);
+
+            if (!isset($allowedFacets[$key])) {
+                continue;
+            }
+
+            if (count($facets[$key]['options'] ?? []) >= 20) {
+                continue;
+            }
+
+            $facets[$key]['label'] = $allowedFacets[$key];
+            $facets[$key]['options'][] = [
+                'value' => (string) $row['valeur'],
+                'label' => (string) $row['valeur'],
+                'count' => (int) $row['product_count'],
+            ];
+        }
+
+        return $facets;
     }
 
     public function searchSuggestions(string $query, int $limit = 5): array
@@ -99,17 +174,32 @@ final class ProductService
         }
 
         $limit = max(1, min(8, $limit));
-        $filters = $this->normalizeFilters(['q' => $query]);
-
         if ($this->usesDatabase()) {
-            return array_map(
+            $filters = $this->normalizeFilters(['q' => $query]);
+            $directProducts = array_map(
                 fn (array $product): array => $this->mapDatabaseProduct($product),
                 $this->productModel->findCatalog($filters, 'popular', $limit, 0),
             );
+
+            if (count($directProducts) >= $limit) {
+                return $directProducts;
+            }
+
+            $candidates = array_map(
+                fn (array $product): array => $this->mapDatabaseProduct($product),
+                $this->productModel->findSuggestionCandidates(),
+            );
+            $suggestionsById = [];
+
+            foreach ([...$directProducts, ...$this->rankSuggestions($candidates, $query)] as $product) {
+                $suggestionsById[(int) $product['id']] = $product;
+            }
+
+            return array_slice(array_values($suggestionsById), 0, $limit);
         }
 
         return array_slice(
-            $this->filterDemoProducts($this->withCatalogBadges($this->demoProducts()), $filters),
+            $this->rankSuggestions($this->withCatalogBadges($this->demoProducts()), $query),
             0,
             $limit,
         );
@@ -284,6 +374,17 @@ final class ProductService
         $priceMin = filter_var($parameters['price_min'] ?? null, FILTER_VALIDATE_FLOAT);
         $priceMax = filter_var($parameters['price_max'] ?? null, FILTER_VALIDATE_FLOAT);
         $rating = filter_var($parameters['rating'] ?? 0, FILTER_VALIDATE_INT);
+        $attributes = [];
+
+        foreach (['marque', 'marques', 'couleur', 'taille', 'pointure', 'etat', 'condition'] as $attribute) {
+            $values = is_array($parameters['attributes'][$attribute] ?? null)
+                ? $parameters['attributes'][$attribute]
+                : [];
+            $attributes[$attribute] = array_values(array_unique(array_slice(array_filter(array_map(
+                static fn (mixed $value): string => substr(trim((string) $value), 0, 100),
+                $values,
+            )), 0, 20)));
+        }
 
         return [
             'search' => substr(trim((string) ($parameters['q'] ?? '')), 0, 100),
@@ -295,6 +396,7 @@ final class ProductService
             'priceMax' => $priceMax !== false && $priceMax !== null && $priceMax >= 0 ? (float) $priceMax : null,
             'availability' => in_array($availability, $allowedAvailability, true) ? $availability : '',
             'rating' => $rating !== false ? min(5, max(0, (int) $rating)) : 0,
+            'attributes' => array_filter($attributes),
             'sort' => in_array($sort, $allowedSorts, true) ? $sort : 'newest',
         ];
     }
@@ -436,7 +538,58 @@ final class ProductService
 
     private function normalizeText(string $value): string
     {
+        $value = strtr($value, [
+            'À' => 'A', 'Â' => 'A', 'Ä' => 'A', 'à' => 'a', 'â' => 'a', 'ä' => 'a',
+            'Ç' => 'C', 'ç' => 'c',
+            'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'Î' => 'I', 'Ï' => 'I', 'î' => 'i', 'ï' => 'i',
+            'Ô' => 'O', 'Ö' => 'O', 'ô' => 'o', 'ö' => 'o',
+            'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+        ]);
+
         return strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value);
+    }
+
+    private function rankSuggestions(array $products, string $query): array
+    {
+        $normalizedQuery = $this->normalizeText($query);
+        $queryWords = array_values(array_filter(preg_split('/\s+/', $normalizedQuery) ?: []));
+        $ranked = [];
+
+        foreach ($products as $product) {
+            $searchable = $this->normalizeText(implode(' ', [
+                $product['name'],
+                $product['category'],
+                $product['description'] ?? '',
+            ]));
+            $score = str_contains($searchable, $normalizedQuery) ? 100 : 0;
+            $candidateWords = array_values(array_filter(preg_split('/[^a-z0-9]+/', $searchable) ?: []));
+
+            foreach ($queryWords as $queryWord) {
+                $bestDistance = strlen($queryWord);
+
+                foreach ($candidateWords as $candidateWord) {
+                    $bestDistance = min($bestDistance, levenshtein($queryWord, $candidateWord));
+                }
+
+                $allowedDistance = max(1, (int) floor(strlen($queryWord) * 0.3));
+
+                if ($bestDistance <= $allowedDistance) {
+                    $score += 30 - ($bestDistance * 5);
+                }
+            }
+
+            if ($score > 0) {
+                $ranked[] = ['score' => $score, 'product' => $product];
+            }
+        }
+
+        usort($ranked, static fn (array $first, array $second): int =>
+            [$second['score'], $second['product']['rating'], $second['product']['reviews']]
+            <=> [$first['score'], $first['product']['rating'], $first['product']['reviews']]
+        );
+
+        return array_column($ranked, 'product');
     }
 
     private function withBadge(array $products, string $label, string $variant): array

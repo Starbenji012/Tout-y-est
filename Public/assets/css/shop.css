@@ -61,6 +61,12 @@
   gap: var(--spacing-md);
 }
 
+.catalog-search__notice {
+  margin: calc(var(--spacing-sm) * -1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .catalog-toolbar__filter-button {
   display: none;
 }
@@ -198,7 +204,9 @@
 
 .catalog-filters {
   position: sticky;
-  top: var(--spacing-xl);
+  top: calc((var(--control-height) * 2) + var(--spacing-xl));
+  max-height: calc(100dvh - (var(--control-height) * 2) - (var(--spacing-xl) * 2));
+  overflow-y: auto;
   padding: var(--spacing-lg);
   background-color: var(--brand-gray-300);
   border: var(--border);
@@ -269,6 +277,21 @@
   accent-color: var(--color-gold);
 }
 
+.catalog-filter-option small {
+  min-width: var(--icon-size-lg);
+  margin-left: auto;
+  border-radius: var(--radius-pill);
+  background: var(--brand-gray-300);
+  padding-inline: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+[data-catalog-context-filters]:empty {
+  display: none;
+}
+
 .catalog-price-range {
   display: grid;
   gap: var(--spacing-sm);
@@ -309,9 +332,10 @@
 
   .catalog-filters {
     position: fixed;
-    z-index: 30;
+    z-index: 1030;
     inset: 0 auto 0 0;
     width: min(24rem, 90vw);
+    max-height: none;
     overflow-y: auto;
     border-radius: 0 var(--radius-large) var(--radius-large) 0;
     visibility: hidden;
@@ -330,7 +354,7 @@
 
   .catalog-filters-overlay {
     position: fixed;
-    z-index: 20;
+    z-index: 1025;
     inset: 0;
     display: block;
     background-color: var(--color-overlay);

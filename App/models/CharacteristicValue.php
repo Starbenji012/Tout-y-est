@@ -26,4 +26,41 @@ final class CharacteristicValue
 
         return $statement->fetchAll();
     }
+
+    public function findCatalogFacets(array $categorySlugs = []): array
+    {
+        $conditions = ["LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"];
+        $parameters = [];
+
+        if ($categorySlugs !== []) {
+            $placeholders = [];
+
+            foreach (array_values($categorySlugs) as $index => $slug) {
+                $key = 'category_' . $index;
+                $placeholders[] = ':' . $key;
+                $parameters[$key] = $slug;
+            }
+
+            $conditions[] = 'cat.slug_ IN (' . implode(', ', $placeholders) . ')';
+        }
+
+        $statement = $this->database->prepare(
+            'SELECT c.nom, v.valeur, COUNT(DISTINCT p.id_produit) AS product_count
+             FROM `valeur_caractéristique` v
+             INNER JOIN `caractéristique` c ON c.id_caracteristique = v.id_caracteristique
+             INNER JOIN produit p ON p.id_produit = v.id_produit
+             INNER JOIN categorie cat ON cat.id_categorie = p.id_categorie
+             WHERE ' . implode(' AND ', $conditions) . '
+             GROUP BY c.nom, v.valeur
+             ORDER BY c.nom, product_count DESC, v.valeur',
+        );
+
+        foreach ($parameters as $key => $value) {
+            $statement->bindValue(':' . $key, $value);
+        }
+
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
 }

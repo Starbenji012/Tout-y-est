@@ -6,6 +6,7 @@ $catalogSortOptions = $catalogToolbarConfig['sortOptions'] ?? [];
 $catalogActiveFilters = $catalogToolbarConfig['filters'] ?? [];
 $catalogSearch = (string) ($catalogActiveFilters['search'] ?? '');
 $catalogSort = (string) ($catalogActiveFilters['sort'] ?? 'newest');
+$catalogSearchNotice = $catalogToolbarConfig['searchNotice'] ?? null;
 ?>
 
 <div class="catalog-toolbar" data-catalog-toolbar data-motion="down">
@@ -15,6 +16,10 @@ $catalogSort = (string) ($catalogActiveFilters['sort'] ?? 'newest');
         <input id="catalog-search-input" type="search" name="q" value="<?= htmlspecialchars($catalogSearch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" placeholder="Rechercher un produit, une catégorie..." autocomplete="off">
         <button class="btn btn-primary" type="submit">Rechercher</button>
     </form>
+
+    <p class="catalog-search__notice" role="status" data-catalog-search-notice<?= $catalogSearchNotice === null ? ' hidden' : '' ?>>
+        <?= htmlspecialchars((string) ($catalogSearchNotice ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
+    </p>
 
     <div class="catalog-toolbar__controls">
         <button class="btn btn-outline catalog-toolbar__filter-button" type="button" aria-controls="catalog-filters" aria-expanded="false" data-catalog-filter-open>
@@ -36,4 +41,4 @@ $catalogSort = (string) ($catalogActiveFilters['sort'] ?? 'newest');
     </div>
 </div>
 
-<?php unset($catalogToolbar, $catalogToolbarConfig, $catalogResultCount, $catalogSortOptions, $catalogActiveFilters, $catalogSearch, $catalogSort, $value, $label); ?>
+<?php unset($catalogToolbar, $catalogToolbarConfig, $catalogResultCount, $catalogSortOptions, $catalogActiveFilters, $catalogSearch, $catalogSort, $catalogSearchNotice, $value, $label); ?>

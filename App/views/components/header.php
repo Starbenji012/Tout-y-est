@@ -115,7 +115,7 @@
                 <a class="site-navigation__link<?= $activePage === 'home' ? ' is-active' : '' ?>" href="/"<?= $activePage === 'home' ? ' aria-current="page"' : '' ?>>Accueil</a>
             </li>
             <li>
-                <button class="site-navigation__categories<?= $activePage === 'categories' ? ' is-active' : '' ?>" type="button" aria-haspopup="true" aria-expanded="false" data-categories-trigger>
+                <button class="site-navigation__categories<?= $activePage === 'categories' ? ' is-active' : '' ?>" type="button" aria-haspopup="true" aria-controls="category-navigation" aria-expanded="false" data-categories-trigger>
                     <i data-lucide="layout-grid" aria-hidden="true"></i>
                     <span>Catégories</span>
                     <i class="site-navigation__categories-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
@@ -149,6 +149,7 @@
                 </a>
             </li>
         </ul>
+        <?php require __DIR__ . '/category-navigation.php'; ?>
     </nav>
 
     <button class="menu-overlay" type="button" aria-label="Fermer le menu" aria-hidden="true" tabindex="-1" data-menu-overlay></button>

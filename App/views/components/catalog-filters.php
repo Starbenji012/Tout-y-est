@@ -3,6 +3,7 @@
 $catalogFiltersConfig = $catalogFilters ?? [];
 $catalogCategories = $catalogFiltersConfig['categories'] ?? [];
 $catalogStatuses = $catalogFiltersConfig['statuses'] ?? [];
+$catalogFacets = $catalogFiltersConfig['facets'] ?? [];
 $catalogActiveFilters = $catalogFiltersConfig['filters'] ?? [];
 $activeCategories = $catalogActiveFilters['categories'] ?? [];
 $activeStatuses = $catalogActiveFilters['statuses'] ?? [];
@@ -22,6 +23,10 @@ $activeRating = (int) ($catalogActiveFilters['rating'] ?? 0);
                 <label class="catalog-filter-option"><input type="checkbox" name="categories[]" value="<?= htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"<?= in_array((string) $value, $activeCategories, true) ? ' checked' : '' ?>><span><?= htmlspecialchars((string) $label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span></label>
             <?php endforeach; ?>
         </fieldset>
+        <div data-catalog-context-filters>
+            <?php $catalogContextFilters = ['facets' => $catalogFacets, 'filters' => $catalogActiveFilters]; ?>
+            <?php require __DIR__ . '/catalog-context-filters.php'; ?>
+        </div>
         <fieldset class="catalog-filter-group">
             <legend>Prix</legend>
             <div class="catalog-price-range">
@@ -52,4 +57,4 @@ $activeRating = (int) ($catalogActiveFilters['rating'] ?? 0);
 </aside>
 <button class="catalog-filters-overlay" type="button" aria-label="Fermer les filtres" data-catalog-filter-close tabindex="-1"></button>
 
-<?php unset($catalogFilters, $catalogFiltersConfig, $catalogCategories, $catalogStatuses, $catalogActiveFilters, $activeCategories, $activeStatuses, $activeAvailability, $activeRating, $value, $label, $button); ?>
+<?php unset($catalogFilters, $catalogFiltersConfig, $catalogCategories, $catalogStatuses, $catalogFacets, $catalogActiveFilters, $activeCategories, $activeStatuses, $activeAvailability, $activeRating, $catalogContextFilters, $value, $label, $button); ?>

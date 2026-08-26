@@ -38,7 +38,7 @@ $breadcrumb = ['items' => [
                         <?php $badge = ['label' => (string) $product['badge'], 'variant' => (string) ($product['badgeVariant'] ?? 'new')]; require dirname(__DIR__) . '/components/badge.php'; ?>
                     <?php endif; ?>
                 </div>
-                <h1 id="product-title"><?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
+                <h1 class="product-detail__title" id="product-title"><?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
                 <div class="product-detail__rating" aria-label="<?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> sur 5, <?= (int) $product['reviews'] ?> avis">
                     <i data-lucide="star" aria-hidden="true"></i><strong><?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong><span><?= (int) $product['reviews'] ?> avis</span>
                 </div>

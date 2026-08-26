@@ -32,7 +32,10 @@ final class ProductController extends Controller
             'productCount' => $catalog['count'],
             'currentPage' => $catalog['page'],
             'totalPages' => $catalog['totalPages'],
+            'paginationUrl' => $this->catalogPaginationUrl($catalog['filters']),
             'catalogCategories' => $catalog['categories'],
+            'catalogFacets' => $catalog['facets'],
+            'catalogSearchNotice' => $catalog['searchNotice'],
             'activeFilters' => $catalog['filters'],
         ]);
     }
@@ -87,13 +90,20 @@ final class ProductController extends Controller
                 'pagination' => [
                     'current' => $catalog['page'],
                     'total' => $catalog['totalPages'],
-                    'url' => '/boutique?page=%d',
+                    'url' => $this->catalogPaginationUrl($catalog['filters']),
                 ],
             ],
         ]);
 
         Response::json([
             'html' => $html,
+            'facetsHtml' => $this->renderPartial('components/catalog-context-filters', [
+                'catalogContextFilters' => [
+                    'facets' => $catalog['facets'],
+                    'filters' => $catalog['filters'],
+                ],
+            ]),
+            'searchNotice' => $catalog['searchNotice'],
             'count' => $catalog['count'],
             'page' => $catalog['page'],
             'totalPages' => $catalog['totalPages'],
@@ -166,5 +176,23 @@ final class ProductController extends Controller
             'text' => 'Essayez de modifier votre recherche ou vos filtres.',
             'action' => ['label' => 'Réinitialiser les filtres', 'variant' => 'secondary', 'href' => '/boutique'],
         ];
+    }
+
+    private function catalogPaginationUrl(array $filters): string
+    {
+        $parameters = array_filter([
+            'q' => $filters['search'] ?? '',
+            'categories' => $filters['categories'] ?? [],
+            'statuses' => $filters['statuses'] ?? [],
+            'price_min' => $filters['priceMin'] ?? null,
+            'price_max' => $filters['priceMax'] ?? null,
+            'availability' => $filters['availability'] ?? '',
+            'rating' => $filters['rating'] ?? 0,
+            'attributes' => $filters['attributes'] ?? [],
+            'sort' => ($filters['sort'] ?? 'newest') !== 'newest' ? $filters['sort'] : null,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== [] && $value !== 0);
+        $query = http_build_query($parameters);
+
+        return '/boutique?' . ($query !== '' ? $query . '&' : '') . 'page=%d';
     }
 }
