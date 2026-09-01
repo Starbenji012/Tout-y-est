@@ -9,14 +9,17 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Services\ProductService;
 
+/** Coordonne le catalogue, les fiches produits et leurs réponses dynamiques. */
 final class ProductController extends Controller
 {
+    /** Injecte le service métier et la requête HTTP courante. */
     public function __construct(
         private readonly ProductService $productService,
         private readonly Request $request,
     ) {
     }
 
+    /** Affiche la page Boutique avec les critères présents dans l'URL. */
     public function index(): void
     {
         $catalog = $this->productService->searchCatalog($this->request->queryParameters());
@@ -37,9 +40,11 @@ final class ProductController extends Controller
             'catalogFacets' => $catalog['facets'],
             'catalogSearchNotice' => $catalog['searchNotice'],
             'activeFilters' => $catalog['filters'],
+            'catalogBreadcrumb' => $this->catalogBreadcrumb($catalog),
         ]);
     }
 
+    /** Affiche uniquement les produits actuellement en promotion. */
     public function promotions(): void
     {
         $this->render('shop/promotions', [
@@ -53,6 +58,7 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Affiche la fiche détaillée du produit demandé. */
     public function show(): void
     {
         $product = $this->productService->getProductDetails($this->request->queryInteger('id'));
@@ -80,6 +86,7 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Retourne le catalogue filtré destiné aux mises à jour Fetch API. */
     public function catalog(): void
     {
         $catalog = $this->productService->searchCatalog($this->request->queryParameters());
@@ -97,6 +104,9 @@ final class ProductController extends Controller
 
         Response::json([
             'html' => $html,
+            'breadcrumbHtml' => $this->renderPartial('components/breadcrumb', [
+                'breadcrumb' => ['items' => $this->catalogBreadcrumb($catalog)],
+            ]),
             'facetsHtml' => $this->renderPartial('components/catalog-context-filters', [
                 'catalogContextFilters' => [
                     'facets' => $catalog['facets'],
@@ -110,6 +120,7 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Retourne l'aperçu rapide d'un produit sans charger sa page complète. */
     public function quickView(): void
     {
         $product = $this->productService->findProduct($this->request->queryInteger('id'));
@@ -128,6 +139,7 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Retourne les cartes correspondant aux identifiants favoris reçus. */
     public function favorites(): void
     {
         $rawIds = (string) ($this->request->queryParameters()['ids'] ?? '');
@@ -150,6 +162,7 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Retourne les suggestions correspondant au texte saisi dans la recherche. */
     public function suggestions(): void
     {
         $products = $this->productService->searchSuggestions(
@@ -169,6 +182,7 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Définit le message affiché quand aucun produit ne correspond. */
     private function catalogEmptyState(): array
     {
         return [
@@ -178,6 +192,30 @@ final class ProductController extends Controller
         ];
     }
 
+    /** Construit un fil d'Ariane adapté au contexte actuel du catalogue. */
+    private function catalogBreadcrumb(array $catalog): array
+    {
+        $items = [
+            ['label' => 'Accueil', 'href' => '/'],
+            ['label' => 'Boutique'],
+        ];
+        $filters = $catalog['filters'] ?? [];
+        $selectedCategories = $filters['categories'] ?? [];
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        if (count($selectedCategories) === 1) {
+            $slug = (string) $selectedCategories[0];
+            $items[1]['href'] = '/boutique';
+            $items[] = ['label' => (string) (($catalog['categories'] ?? [])[$slug] ?? $slug)];
+        } elseif ($search !== '') {
+            $items[1]['href'] = '/boutique';
+            $items[] = ['label' => 'Résultats pour « ' . $search . ' »'];
+        }
+
+        return $items;
+    }
+
+    /** Conserve les filtres actifs lors de la génération des liens de pagination. */
     private function catalogPaginationUrl(array $filters): string
     {
         $parameters = array_filter([

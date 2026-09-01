@@ -1,3 +1,4 @@
+// Orchestre l'interface du catalogue sans porter les règles métier des produits.
 (() => {
   const panel = document.querySelector("[data-catalog-filters-panel]");
   const openButton = document.querySelector("[data-catalog-filter-open]");
@@ -12,6 +13,7 @@
   const viewButtons = document.querySelectorAll("[data-catalog-view]");
   const contextFilters = document.querySelector("[data-catalog-context-filters]");
   const searchNotice = document.querySelector("[data-catalog-search-notice]");
+  const breadcrumb = document.querySelector("[data-catalog-breadcrumb]");
   const searchInput = searchForm?.querySelector("input[type='search']");
 
   if (!panel || !openButton || !filtersForm || !searchForm || !sortSelect || !results || !content || !loader || !count) {
@@ -23,6 +25,7 @@
   let requestController = null;
   let priceTimer = null;
 
+  // Récupère la préférence d'affichage sans dépendre du stockage local.
   const readStoredView = () => {
     try {
       return localStorage.getItem(storageKey);
@@ -31,6 +34,7 @@
     }
   };
 
+  // Conserve le choix grille ou liste pour la prochaine visite.
   const storeView = (view) => {
     try {
       localStorage.setItem(storageKey, view);
@@ -39,6 +43,7 @@
     }
   };
 
+  // Referme le panneau mobile et rend le focus à son déclencheur.
   const closeFilters = (restoreFocus = true) => {
     panel.classList.remove("is-open");
     document.body.classList.remove("catalog-filters-open");
@@ -51,6 +56,7 @@
     }
   };
 
+  // Présente les filtres comme une boîte de dialogue sur petit écran.
   const openFilters = () => {
     previousFocus = document.activeElement;
     panel.classList.add("is-open");
@@ -61,6 +67,7 @@
     panel.querySelector("[data-catalog-filter-close]")?.focus();
   };
 
+  // Change uniquement la présentation : les cartes produit restent identiques.
   const applyView = (view) => {
     const normalizedView = view === "list" ? "list" : "grid";
     results.classList.toggle("is-list-view", normalizedView === "list");
@@ -72,6 +79,7 @@
     storeView(normalizedView);
   };
 
+  // Réunit les critères courants dans le format attendu par l'API.
   const buildParameters = (page = 1) => {
     const parameters = new URLSearchParams(new FormData(filtersForm));
     const search = new FormData(searchForm).get("q");
@@ -85,17 +93,20 @@
     return parameters;
   };
 
+  // Rend le chargement perceptible et compréhensible par les aides techniques.
   const setLoading = (isLoading) => {
     loader.hidden = !isLoading;
     results.classList.toggle("is-loading", isLoading);
     results.setAttribute("aria-busy", String(isLoading));
   };
 
+  // Réactive les icônes et animations après un remplacement dynamique du HTML.
   const refreshEnhancements = () => {
     window.lucide?.createIcons();
     window.MotionSystem?.refresh(content);
   };
 
+  // Ajoute une page de produits sans recréer toute la grille existante.
   const appendCatalog = (html) => {
     const template = document.createElement("template");
     template.innerHTML = html.trim();
@@ -113,6 +124,7 @@
     if (nextPagination) content.append(nextPagination);
   };
 
+  // Demande le catalogue filtré et ignore proprement toute réponse dépassée.
   const updateCatalog = async (page = 1, append = false) => {
     requestController?.abort();
     const controller = new AbortController();
@@ -139,7 +151,11 @@
       if (!append && contextFilters && typeof catalog.facetsHtml === "string") {
         contextFilters.innerHTML = catalog.facetsHtml;
       }
-      count.innerHTML = `<strong>${catalog.count}</strong> produits trouvés`;
+      if (!append && breadcrumb && typeof catalog.breadcrumbHtml === "string") {
+        breadcrumb.innerHTML = catalog.breadcrumbHtml;
+      }
+      const resultLabel = catalog.count === 1 ? "produit trouvé" : "produits trouvés";
+      count.innerHTML = `<strong>${catalog.count}</strong> ${resultLabel}`;
       if (searchNotice) {
         searchNotice.textContent = catalog.searchNotice || "";
         searchNotice.hidden = !catalog.searchNotice;
@@ -193,6 +209,7 @@
     updateCatalog(page, loadMore);
     if (!loadMore) results.scrollIntoView({ behavior: "smooth", block: "start" });
   });
+  // Garde la navigation clavier à l'intérieur du panneau mobile ouvert.
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && panel.classList.contains("is-open")) {
       closeFilters();

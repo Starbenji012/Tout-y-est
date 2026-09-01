@@ -1,5 +1,7 @@
 <?php
 
+// Prépare les informations détaillées utilisées pour aider à la décision d'achat.
+
 $productName = (string) $product['name'];
 $productStock = (int) ($product['stock'] ?? 0);
 $productGallery = $product['gallery'] ?? [['src' => $product['image'], 'alt' => $product['alt']]];

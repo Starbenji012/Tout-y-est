@@ -1,3 +1,5 @@
+/* Présentation de la fiche produit et de son aperçu rapide. */
+
 .product-detail {
   overflow: hidden;
   border-bottom: var(--border);

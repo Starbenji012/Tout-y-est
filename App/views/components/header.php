@@ -19,23 +19,23 @@
             </div>
 
             <div class="top-bar__contacts" aria-label="Contacts et réseaux sociaux">
-                <a href="/contact" aria-label="Nous contacter sur WhatsApp">
+                <a href="/#footer-contact" aria-label="Voir les informations de contact WhatsApp">
                     <i data-lucide="message-circle" aria-hidden="true"></i>
                     <span>WhatsApp</span>
                 </a>
-                <a href="/contact" aria-label="Nous contacter par téléphone">
+                <a href="/#footer-contact" aria-label="Voir les informations de contact téléphonique">
                     <i data-lucide="phone" aria-hidden="true"></i>
                     <span>Téléphone</span>
                 </a>
-                <a href="#" aria-label="Facebook">
+                <span class="top-bar__social-placeholder" aria-label="Facebook, lien à venir">
                     <i data-lucide="thumbs-up" aria-hidden="true"></i>
-                </a>
-                <a href="#" aria-label="Instagram">
+                </span>
+                <span class="top-bar__social-placeholder" aria-label="Instagram, lien à venir">
                     <i data-lucide="camera" aria-hidden="true"></i>
-                </a>
-                <a href="#" aria-label="TikTok">
+                </span>
+                <span class="top-bar__social-placeholder" aria-label="TikTok, lien à venir">
                     <i data-lucide="music-2" aria-hidden="true"></i>
-                </a>
+                </span>
             </div>
         </div>
     </div>
@@ -53,7 +53,7 @@
                     id="header-search-input"
                     type="search"
                     name="q"
-                    placeholder="Rechercher un téléphone, un vêtement, une chaussure..."
+                    placeholder="Rechercher un produit, une marque, une catégorie..."
                     autocomplete="off"
                     role="combobox"
                     aria-autocomplete="list"
@@ -128,10 +128,10 @@
                 <a class="site-navigation__link<?= $activePage === 'promotions' ? ' is-active' : '' ?>" href="/promotions"<?= $activePage === 'promotions' ? ' aria-current="page"' : '' ?>>Promotions</a>
             </li>
             <li>
-                <a class="site-navigation__link<?= $activePage === 'about' ? ' is-active' : '' ?>" href="/a-propos"<?= $activePage === 'about' ? ' aria-current="page"' : '' ?>>À propos</a>
+                <a class="site-navigation__link" href="/#footer-about">À propos</a>
             </li>
             <li>
-                <a class="site-navigation__link<?= $activePage === 'contact' ? ' is-active' : '' ?>" href="/contact"<?= $activePage === 'contact' ? ' aria-current="page"' : '' ?>>Contact</a>
+                <a class="site-navigation__link" href="/#footer-contact">Contact</a>
             </li>
             <li class="site-navigation__mobile-action site-navigation__mobile-action--first">
                 <a class="site-navigation__link<?= $activePage === 'favorites' ? ' is-active' : '' ?>" href="/favoris" aria-label="Favoris, 0 article" data-favorites-link<?= $activePage === 'favorites' ? ' aria-current="page"' : '' ?>>

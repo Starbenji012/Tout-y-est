@@ -1,5 +1,7 @@
 <?php
 
+// Normalise les données nécessaires à l'unique carte produit réutilisée sur le site.
+
 $productId = (string) ($product['id'] ?? '');
 $productName = (string) ($product['name'] ?? 'Produit');
 $productUrl = (string) ($product['url'] ?? '/boutique');

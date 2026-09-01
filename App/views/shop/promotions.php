@@ -10,6 +10,11 @@ $productSection = [
         'title' => 'Toutes les promotions',
         'description' => 'Retrouvez les offres disponibles et profitez des meilleurs prix de la boutique.',
     ],
+    'breadcrumb' => [
+        ['label' => 'Accueil', 'href' => '/'],
+        ['label' => 'Boutique', 'href' => '/boutique'],
+        ['label' => 'Promotions'],
+    ],
     'emptyState' => [
         'title' => 'Aucune promotion actuellement',
         'text' => 'De nouvelles offres seront proposées prochainement.',

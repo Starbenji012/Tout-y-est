@@ -1,3 +1,4 @@
+// Construit le méga menu à partir des catégories fournies par l'API.
 (() => {
   const trigger = document.querySelector("[data-categories-trigger]");
   const navigation = document.querySelector("[data-category-navigation]");
@@ -10,10 +11,16 @@
   const content = navigation.querySelector("[data-category-navigation-content]");
   const roots = navigation.querySelector("[data-category-roots]");
   const highlights = navigation.querySelector("[data-category-highlights]");
+  const highlightSection = navigation.querySelector(".category-navigation__highlights");
+  const highlightStatus = navigation.querySelector("[data-category-highlights-status]");
   const mobileNavigation = window.matchMedia("(max-width: 48rem)");
+  const highlightCache = new Map();
   let loaded = false;
   let loading = false;
+  let highlightRequestController = null;
+  let hoverTimer = null;
 
+  // Crée un lien de catégorie sans injecter de HTML non fiable.
   const createLink = (category) => {
     const link = document.createElement("a");
     link.href = category.url;
@@ -29,6 +36,7 @@
     return link;
   };
 
+  // Active une catégorie et affiche ses enfants selon le support utilisé.
   const selectCategory = (item, focusFirstChild = false) => {
     const collapse = mobileNavigation.matches && item.classList.contains("is-active") && !focusFirstChild;
 
@@ -43,8 +51,13 @@
     if (focusFirstChild) {
       item.querySelector("[data-category-children] a")?.focus();
     }
+
+    if (!collapse && item.dataset.categorySlug) {
+      loadHighlights(item.dataset.categorySlug);
+    }
   };
 
+  // Transforme une catégorie reçue en élément accessible du menu.
   const createCategory = (category, index) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
@@ -55,6 +68,7 @@
     const allItem = document.createElement("li");
 
     item.dataset.categoryItem = "";
+    item.dataset.categorySlug = category.slug;
     item.classList.toggle("is-active", index === 0);
     button.type = "button";
     button.setAttribute("aria-expanded", String(index === 0));
@@ -75,6 +89,15 @@
     children.append(childList);
     item.append(button, children);
     button.addEventListener("click", () => selectCategory(item));
+    button.addEventListener("focus", () => {
+      if (!mobileNavigation.matches) selectCategory(item);
+    });
+    item.addEventListener("mouseenter", () => {
+      if (mobileNavigation.matches) return;
+      window.clearTimeout(hoverTimer);
+      hoverTimer = window.setTimeout(() => selectCategory(item), 120);
+    });
+    item.addEventListener("mouseleave", () => window.clearTimeout(hoverTimer));
     button.addEventListener("keydown", (event) => {
       if (event.key === "ArrowRight") selectCategory(item, true);
     });
@@ -82,6 +105,7 @@
     return item;
   };
 
+  // Crée la carte compacte d'un produit mis en avant.
   const createHighlight = (product) => {
     const link = document.createElement("a");
     const image = document.createElement("img");
@@ -103,16 +127,62 @@
     return link;
   };
 
+  // Remplace les mises en avant et masque leur zone lorsqu'elle est vide.
+  const renderHighlights = (products) => {
+    highlights.replaceChildren(...products.map(createHighlight));
+    highlightSection.hidden = products.length === 0;
+    highlightSection.setAttribute("aria-busy", "false");
+    window.lucide?.createIcons();
+  };
+
+  // Affiche le contenu initial reçu depuis l'API de navigation.
   const render = (payload) => {
     roots.replaceChildren(...payload.categories.map(createCategory));
-    highlights.replaceChildren(...payload.highlights.map(createHighlight));
+    const firstCategory = payload.categories[0];
+    if (firstCategory) highlightCache.set(firstCategory.slug, payload.highlights);
+    renderHighlights(payload.highlights);
     status.hidden = true;
     content.hidden = false;
-    navigation.querySelector(".category-navigation__highlights").hidden = payload.highlights.length === 0;
     window.lucide?.createIcons();
     loaded = true;
   };
 
+  // Charge les mises en avant d'une catégorie et évite les requêtes répétées.
+  const loadHighlights = async (categorySlug) => {
+    if (highlightCache.has(categorySlug)) {
+      renderHighlights(highlightCache.get(categorySlug));
+      return;
+    }
+
+    highlightRequestController?.abort();
+    const controller = new AbortController();
+    highlightRequestController = controller;
+    highlightSection.hidden = false;
+    highlightSection.setAttribute("aria-busy", "true");
+    highlightStatus.textContent = "Mise à jour des sélections…";
+
+    try {
+      const parameters = new URLSearchParams({ category: categorySlug });
+      const response = await fetch(`/api/navigation/highlights?${parameters}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Sélections indisponibles");
+      const payload = await response.json();
+      highlightCache.set(categorySlug, payload.highlights);
+      renderHighlights(payload.highlights);
+      highlightStatus.textContent = "Sélections mises à jour.";
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        highlightSection.setAttribute("aria-busy", "false");
+        highlightStatus.textContent = "Les sélections sont momentanément indisponibles.";
+      }
+    } finally {
+      if (highlightRequestController === controller) highlightRequestController = null;
+    }
+  };
+
+  // Charge une seule fois la hiérarchie complète des catégories.
   const load = async () => {
     if (loaded || loading) return;
     loading = true;
@@ -128,19 +198,30 @@
     }
   };
 
+  // Ferme le panneau et rend éventuellement le focus à son déclencheur.
   const close = (restoreFocus = false) => {
     navigation.hidden = true;
     trigger.setAttribute("aria-expanded", "false");
     if (restoreFocus) trigger.focus();
   };
 
-  const open = () => {
+  // Ouvre le panneau, attend ses données puis gère le focus clavier.
+  const open = async (focusFirstCategory = false) => {
     navigation.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
-    load();
+    await load();
+
+    if (focusFirstCategory) {
+      roots.querySelector("[data-category-item] > button")?.focus();
+    }
   };
 
   trigger.addEventListener("click", () => navigation.hidden ? open() : close());
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown") return;
+    event.preventDefault();
+    open(true);
+  });
   document.addEventListener("click", (event) => {
     if (!navigation.hidden && !navigation.contains(event.target) && !trigger.contains(event.target)) close();
   });

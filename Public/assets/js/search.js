@@ -1,3 +1,4 @@
+// Pilote les suggestions de recherche accessibles du Header.
 (() => {
   const form = document.querySelector("[data-header-search]");
 
@@ -13,6 +14,7 @@
   let requestController;
   const historyKey = "tout-y-est:recent-searches";
 
+  // Lit l'historique local sans bloquer la recherche si le stockage est refusé.
   const recentSearches = () => {
     try {
       const value = JSON.parse(localStorage.getItem(historyKey) || "[]");
@@ -22,6 +24,7 @@
     }
   };
 
+  // Mémorise uniquement les dernières recherches réellement utiles.
   const rememberSearch = (query) => {
     const normalized = query.trim();
     if (normalized.length < 2) return;
@@ -34,6 +37,7 @@
     }
   };
 
+  // Referme la liste et réinitialise son état pour le clavier.
   const closeSuggestions = () => {
     suggestionsPanel.hidden = true;
     suggestionsPanel.replaceChildren();
@@ -42,6 +46,7 @@
     activeIndex = -1;
   };
 
+  // Déplace la sélection visuelle et accessible dans la liste.
   const selectSuggestion = (index) => {
     activeIndex = Math.max(0, Math.min(suggestions.length - 1, index));
 
@@ -57,6 +62,7 @@
     });
   };
 
+  // Construit une suggestion avec des nœuds sûrs plutôt qu'avec du HTML injecté.
   const createSuggestion = (product, index) => {
     const link = document.createElement("a");
     const image = document.createElement("img");
@@ -83,6 +89,7 @@
     return link;
   };
 
+  // Affiche les produits reçus ou un message clair si aucun ne correspond.
   const renderSuggestions = (products) => {
     suggestions = products;
     activeIndex = -1;
@@ -103,6 +110,7 @@
     input.setAttribute("aria-expanded", "true");
   };
 
+  // Propose l'historique lorsque le champ ne contient pas encore de recherche.
   const renderRecentSearches = () => {
     const searches = recentSearches();
 
@@ -137,6 +145,7 @@
     window.lucide?.createIcons();
   };
 
+  // Annule la requête précédente pour éviter d'afficher une réponse devenue obsolète.
   const search = async (query) => {
     requestController?.abort();
     const controller = new AbortController();
@@ -187,6 +196,7 @@
     if (event.target.closest("a")) rememberSearch(input.value);
   });
 
+  // Permet de parcourir et choisir les suggestions sans utiliser la souris.
   input.addEventListener("keydown", (event) => {
     if (suggestionsPanel.hidden || suggestions.length === 0) {
       return;

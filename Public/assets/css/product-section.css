@@ -1,3 +1,5 @@
+/* Styles partagés par les sections et cartes de produits. */
+
 .product-section {
   position: relative;
   isolation: isolate;

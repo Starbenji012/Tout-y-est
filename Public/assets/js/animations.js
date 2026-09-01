@@ -1,9 +1,12 @@
+// Définit le Motion System commun à toutes les pages de la boutique.
 (() => {
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   let observer;
 
+  // Rend un élément visible en déclenchant sa transition CSS.
   const reveal = (element) => element.classList.add("is-motion-visible");
 
+  // Observe les entrées et sorties du viewport pour rejouer les animations naturellement.
   const createObserver = () => new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
@@ -20,6 +23,7 @@
     rootMargin: "8% 0px 8% 0px",
   });
 
+  // Enregistre les éléments ajoutés lors d'un rendu initial ou dynamique.
   const refresh = (root = document) => {
     const elements = [
       ...(root.matches?.("[data-motion]") ? [root] : []),
@@ -38,6 +42,7 @@
     });
   };
 
+  // Active le système en tenant compte des préférences de mouvement réduit.
   const init = () => {
     document.documentElement.classList.add("motion-enabled");
 
@@ -48,6 +53,7 @@
     refresh();
   };
 
+  // Anime doucement le Header au chargement et au retour en haut de page.
   const headerIn = (header) => {
     if (reducedMotionQuery.matches) {
       return;
@@ -71,6 +77,7 @@
     );
   };
 
+  // Anime le contenu de la diapositive Hero devenue active.
   const heroSlide = (slide) => {
     if (reducedMotionQuery.matches || !slide) {
       return;
@@ -101,6 +108,7 @@
     }
   };
 
+  // Anime l'ouverture d'une fenêtre modale lorsque GSAP est disponible.
   const modalIn = (dialog) => {
     if (reducedMotionQuery.matches || typeof window.gsap !== "object") {
       return;
@@ -116,6 +124,7 @@
     });
   };
 
+  // Anime la fermeture puis exécute la fonction de nettoyage reçue.
   const modalOut = (dialog, onComplete) => {
     if (reducedMotionQuery.matches || typeof window.gsap !== "object") {
       onComplete();
@@ -132,6 +141,7 @@
     });
   };
 
+  // Remplace deux panneaux en douceur sans provoquer de saut de hauteur.
   const swapPanels = (currentPanel, nextPanel, onComplete = () => {}) => {
     if (!currentPanel || !nextPanel || currentPanel === nextPanel) {
       onComplete();
@@ -175,6 +185,7 @@
     }, "<0.08");
   };
 
+  // Applique les animations officielles aux notifications SweetAlert2.
   const fire = (options) => window.Swal?.fire({
     ...options,
     showClass: { popup: options.toast ? "motion-toast-enter" : "motion-modal-enter" },

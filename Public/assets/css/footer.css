@@ -1,3 +1,5 @@
+/* Présentation du Footer commun à toutes les pages publiques. */
+
 .site-footer {
   border-top: var(--border-width) var(--border-style) var(--brand-gray-500);
   background: linear-gradient(145deg, var(--brand-gray-400), color-mix(in srgb, var(--brand-gray-400) 72%, var(--brand-gray-300)));
@@ -92,7 +94,9 @@
 }
 
 .footer-links a,
-.footer-contact-list a {
+.footer-link-placeholder,
+.footer-contact-list a,
+.footer-contact-placeholder {
   width: fit-content;
   color: var(--color-text);
   font-size: var(--font-size-sm);
@@ -118,6 +122,7 @@
 }
 
 .footer-contact-list a,
+.footer-contact-placeholder,
 .footer-contact-address {
   display: flex;
   align-items: center;
@@ -155,7 +160,8 @@
   gap: var(--space-2);
 }
 
-.footer-social-links a {
+.footer-social-links a,
+.footer-social-placeholder {
   display: grid;
   width: 2.5rem;
   height: 2.5rem;
@@ -194,6 +200,11 @@
 }
 
 .footer-copyright-container a {
+  color: var(--color-text-light);
+  opacity: 0.78;
+}
+
+.footer-legal-placeholder {
   color: var(--color-text-light);
   opacity: 0.78;
 }

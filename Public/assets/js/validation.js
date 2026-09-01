@@ -1,3 +1,4 @@
+// Fournit les mêmes règles de validation à tous les formulaires du site.
 (() => {
   const defaultRules = {
     required: (input) => input.value.trim() === "" ? "Ce champ est obligatoire." : "",
@@ -12,10 +13,12 @@
     },
   };
 
+  // Crée un validateur isolé pour un formulaire et ses éventuelles règles propres.
   const create = (root, customRules = {}) => {
     const rules = { ...defaultRules, ...customRules };
     const messageElement = (input) => input.closest(".account-field")?.querySelector("[data-field-error]");
 
+    // Choisit le message correspondant au type de champ rencontré.
     const messageFor = (input) => {
       if (input.required && input.value.trim() === "") {
         return defaultRules.required(input);
@@ -24,6 +27,7 @@
       return rules[input.dataset.validate]?.(input, root) || "";
     };
 
+    // Met à jour simultanément la validité, le style et le message accessible.
     const validateField = (input, force = false) => {
       if (!force && input.dataset.touched !== "true") {
         return true;
@@ -45,6 +49,7 @@
       return valid;
     };
 
+    // Contrôle tous les champs avant de laisser le formulaire être envoyé.
     const validateForm = (form) => {
       const fields = [...form.querySelectorAll("[data-validate]")];
       const valid = fields.map((input) => {

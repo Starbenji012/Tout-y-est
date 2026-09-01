@@ -18,6 +18,7 @@ use App\Models\Product;
 use App\Models\Review;
 use App\Services\ProductService;
 
+// Laisse le serveur PHP livrer directement les images, feuilles de style et scripts.
 if (PHP_SAPI === 'cli-server') {
     $requestedPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
     $requestedFile = __DIR__ . ($requestedPath ?: '/');
@@ -27,6 +28,7 @@ if (PHP_SAPI === 'cli-server') {
     }
 }
 
+// Charge les classes actuellement utilisées par l'application.
 require_once dirname(__DIR__) . '/App/core/Database.php';
 require_once dirname(__DIR__) . '/App/core/Request.php';
 require_once dirname(__DIR__) . '/App/core/Response.php';
@@ -52,6 +54,7 @@ require_once dirname(__DIR__) . '/App/controllers/HomeController.php';
 require_once dirname(__DIR__) . '/App/controllers/FavoriteController.php';
 require_once dirname(__DIR__) . '/App/controllers/ProductController.php';
 
+// Construit les services avec PDO, puis conserve un catalogue de démonstration si MySQL est indisponible.
 $databaseConfig = require dirname(__DIR__) . '/Config/database.php';
 $database = null;
 Session::start();
@@ -72,6 +75,8 @@ $authService = new AuthService($database instanceof PDO ? new User($database) : 
 $loginThrottleService = new LoginThrottleService();
 $categoryService = new CategoryService($database instanceof PDO ? new Category($database) : null, $productService);
 $cartService = new CartService($productService);
+
+// Associe l'adresse demandée au contrôleur chargé de produire la réponse.
 $routes = require dirname(__DIR__) . '/Routes/web.php';
 $requestPath = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 $route = $routes[$requestPath] ?? null;

@@ -9,14 +9,17 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Services\CartService;
 
+/** Fournit les vues du panier sans contenir les règles de calcul. */
 final class CartController extends Controller
 {
+    /** Injecte le service qui construit le contenu du panier. */
     public function __construct(
         private readonly CartService $cartService,
         private readonly Request $request,
     ) {
     }
 
+    /** Affiche la page complète du panier. */
     public function index(): void
     {
         $this->render('cart/index', [
@@ -29,6 +32,7 @@ final class CartController extends Controller
         ]);
     }
 
+    /** Retourne seulement le fragment actualisable par Fetch API. */
     public function content(): void
     {
         $cart = $this->cartService->buildCart((string) ($this->request->queryParameters()['items'] ?? ''));

@@ -1,6 +1,8 @@
+// Centralise le panier local afin que toutes les pages partagent les mêmes données.
 (() => {
   const STORAGE_KEY = "tout-y-est:cart";
 
+  // Nettoie les identifiants et quantités avant toute sauvegarde.
   const normalize = (values) => {
     const items = new Map();
 
@@ -16,6 +18,7 @@
     return [...items.values()];
   };
 
+  // Lit le panier local sans laisser une donnée invalide casser l'interface.
   const read = () => {
     try {
       return normalize(JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]"));
@@ -24,6 +27,7 @@
     }
   };
 
+  // Synchronise le badge et le libellé du panier dans le Header.
   const updateHeader = (items) => {
     const count = items.reduce((total, item) => total + item.quantity, 0);
     const label = `Panier, ${count} produit${count > 1 ? "s" : ""}`;
@@ -36,6 +40,7 @@
     });
   };
 
+  // Enregistre le panier normalisé puis informe les composants concernés.
   const write = (values) => {
     const items = normalize(values);
 

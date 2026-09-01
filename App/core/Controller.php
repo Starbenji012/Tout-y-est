@@ -7,8 +7,10 @@ namespace App\Core;
 use RuntimeException;
 use Throwable;
 
+/** Offre aux contrôleurs les outils communs de rendu des vues. */
 abstract class Controller
 {
+    /** Rend une vue dans un layout après avoir rendu son contenu en mémoire. */
     protected function render(string $view, array $data = [], string $layout = 'main'): void
     {
         $viewsDirectory = dirname(__DIR__) . '/views';
@@ -33,6 +35,7 @@ abstract class Controller
         require $layoutPath;
     }
 
+    /** Rend un composant isolé et retourne son HTML sous forme de chaîne. */
     protected function renderPartial(string $view, array $data = []): string
     {
         $viewPath = dirname(__DIR__) . '/views/' . $view . '.php';

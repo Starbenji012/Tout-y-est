@@ -1,5 +1,7 @@
 <?php
 
+// Affiche un aperçu volontairement plus court que la fiche produit complète.
+
 $quickViewProduct = $product ?? [];
 $quickViewName = (string) ($quickViewProduct['name'] ?? 'Produit');
 $quickViewId = (int) ($quickViewProduct['id'] ?? 0);

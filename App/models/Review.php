@@ -6,12 +6,15 @@ namespace App\Models;
 
 use PDO;
 
+/** Lit les avis publiés associés aux produits. */
 final class Review
 {
+    /** Reçoit la connexion PDO centralisée. */
     public function __construct(private readonly PDO $database)
     {
     }
 
+    /** Retourne les avis publics les plus utiles pour une fiche produit. */
     public function findPublishedByProduct(int $productId, int $limit = 5): array
     {
         $statement = $this->database->prepare(

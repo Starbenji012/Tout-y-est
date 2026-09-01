@@ -6,19 +6,23 @@ namespace App\Models;
 
 use PDO;
 
+/** Effectue uniquement les lectures de produits dans la base de données. */
 final class Product
 {
     private const ACTIVE_PROMOTION = "pr.statut NOT IN ('inactif', 'inactive', 'brouillon', 'archive') AND NOW() BETWEEN pr.date_debut AND pr.date_fin";
 
+    /** Reçoit la connexion PDO centralisée. */
     public function __construct(private readonly PDO $database)
     {
     }
 
+    /** Indique rapidement si la table contient au moins un produit. */
     public function hasProducts(): bool
     {
         return (int) $this->database->query('SELECT COUNT(*) FROM produit')->fetchColumn() > 0;
     }
 
+    /** Retourne une page de catalogue filtrée et triée. */
     public function findCatalog(array $filters, string $sort, int $limit, int $offset): array
     {
         [$where, $parameters] = $this->buildFilters($filters);
@@ -33,19 +37,54 @@ final class Product
         return $statement->fetchAll();
     }
 
-    public function findSuggestionCandidates(int $limit = 80): array
+    /** Charge un ensemble limité de candidats pour la recherche tolérante. */
+    public function findSuggestionCandidates(string $query, int $limit = 80): array
     {
+        $query = trim($query);
+        $fragment = function_exists('mb_substr') ? mb_substr($query, 0, 3) : substr($query, 0, 3);
         $statement = $this->database->prepare(
-            $this->selectSql()
+            $this->selectSql(true)
             . " WHERE LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"
-            . ' ORDER BY avis_count DESC, note DESC, p.date_creation DESC LIMIT :limit',
+            . ' AND (
+                    p.nom LIKE :candidate_name
+                    OR c.nom LIKE :candidate_category
+                    OR p.nom LIKE :candidate_fragment
+                    OR SOUNDEX(p.nom) = SOUNDEX(:candidate_soundex)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM `valeur_caractéristique` sv
+                        INNER JOIN `caractéristique` sc ON sc.id_caracteristique = sv.id_caracteristique
+                        WHERE sv.id_produit = p.id_produit
+                          AND LOWER(sc.nom) IN (\'marque\', \'marques\', \'brand\', \'fabricant\')
+                          AND (sv.valeur LIKE :candidate_brand OR sv.valeur LIKE :candidate_brand_fragment)
+                    )
+                )
+                ORDER BY
+                    CASE
+                        WHEN p.nom LIKE :candidate_prefix THEN 0
+                        WHEN p.nom LIKE :candidate_order_name THEN 1
+                        ELSE 2
+                    END,
+                    avis_count DESC,
+                    note DESC,
+                    p.date_creation DESC
+                LIMIT :limit',
         );
+        $statement->bindValue(':candidate_name', '%' . $query . '%');
+        $statement->bindValue(':candidate_category', '%' . $query . '%');
+        $statement->bindValue(':candidate_fragment', '%' . $fragment . '%');
+        $statement->bindValue(':candidate_soundex', $query);
+        $statement->bindValue(':candidate_brand', '%' . $query . '%');
+        $statement->bindValue(':candidate_brand_fragment', '%' . $fragment . '%');
+        $statement->bindValue(':candidate_prefix', $query . '%');
+        $statement->bindValue(':candidate_order_name', '%' . $query . '%');
         $statement->bindValue(':limit', max(1, min(100, $limit)), PDO::PARAM_INT);
         $statement->execute();
 
         return $statement->fetchAll();
     }
 
+    /** Compte les produits correspondant aux mêmes filtres que le catalogue. */
     public function countCatalog(array $filters): int
     {
         [$where, $parameters] = $this->buildFilters($filters);
@@ -62,6 +101,7 @@ final class Product
         return (int) $statement->fetchColumn();
     }
 
+    /** Recherche un produit précis par son identifiant. */
     public function findById(int $productId): ?array
     {
         $statement = $this->database->prepare($this->selectSql() . ' WHERE p.id_produit = :product_id LIMIT 1');
@@ -72,6 +112,7 @@ final class Product
         return is_array($product) ? $product : null;
     }
 
+    /** Recherche plusieurs produits à partir des identifiants reçus. */
     public function findByIds(array $productIds): array
     {
         if ($productIds === []) {
@@ -98,6 +139,7 @@ final class Product
         return $statement->fetchAll();
     }
 
+    /** Retourne les catégories réellement utilisées par les produits. */
     public function categories(): array
     {
         $statement = $this->database->query(
@@ -110,9 +152,17 @@ final class Product
         return $statement->fetchAll();
     }
 
-    private function selectSql(): string
+    /** Construit la sélection SQL commune aux différentes lectures de produits. */
+    private function selectSql(bool $includeSearchAttributes = false): string
     {
         $promotionCondition = self::ACTIVE_PROMOTION;
+        $searchAttributes = $includeSearchAttributes
+            ? "COALESCE((SELECT GROUP_CONCAT(DISTINCT vc.valeur SEPARATOR ' ')
+                         FROM `valeur_caractéristique` vc
+                         INNER JOIN `caractéristique` cc ON cc.id_caracteristique = vc.id_caracteristique
+                         WHERE vc.id_produit = p.id_produit
+                           AND LOWER(cc.nom) IN ('marque', 'marques', 'brand', 'fabricant')), '')"
+            : "''";
 
         return "SELECT
                     p.id_produit,
@@ -124,6 +174,7 @@ final class Product
                     c.nom AS categorie,
                     c.slug_ AS categorie_slug,
                     i.chemin AS image,
+                    {$searchAttributes} AS search_attributes,
                     COALESCE((SELECT AVG(a.note) FROM avis a WHERE a.id_produit = p.id_produit AND LOWER(a.status) NOT IN ('rejete', 'rejected')), 0) AS note,
                     (SELECT COUNT(*) FROM avis a WHERE a.id_produit = p.id_produit AND LOWER(a.status) NOT IN ('rejete', 'rejected')) AS avis_count,
                     COALESCE((SELECT SUM(v.stock) FROM variante_produit v WHERE v.id_produit = p.id_produit AND LOWER(v.status) NOT IN ('inactif', 'inactive')), 0) AS stock,
@@ -136,17 +187,29 @@ final class Product
                 LEFT JOIN image_produit i ON i.id_image = p.id_image";
     }
 
+    /** Transforme les filtres validés en clauses SQL et paramètres préparés. */
     private function buildFilters(array $filters): array
     {
         $conditions = ["LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"];
         $parameters = [];
 
         if (($filters['search'] ?? '') !== '') {
-            $conditions[] = '(p.nom LIKE :search_name OR p.description LIKE :search_description OR c.nom LIKE :search_category)';
+            $conditions[] = '(p.nom LIKE :search_name
+                OR p.description LIKE :search_description
+                OR c.nom LIKE :search_category
+                OR EXISTS (
+                    SELECT 1
+                    FROM `valeur_caractéristique` sv
+                    INNER JOIN `caractéristique` sc ON sc.id_caracteristique = sv.id_caracteristique
+                    WHERE sv.id_produit = p.id_produit
+                      AND LOWER(sc.nom) IN (\'marque\', \'marques\', \'brand\', \'fabricant\')
+                      AND sv.valeur LIKE :search_brand
+                ))';
             $search = '%' . $filters['search'] . '%';
             $parameters['search_name'] = $search;
             $parameters['search_description'] = $search;
             $parameters['search_category'] = $search;
+            $parameters['search_brand'] = $search;
         }
 
         if (($filters['categories'] ?? []) !== []) {
@@ -216,6 +279,7 @@ final class Product
         return [' WHERE ' . implode(' AND ', $conditions), $parameters];
     }
 
+    /** Traduit les statuts métier en conditions SQL. */
     private function statusConditions(array $statuses): array
     {
         $conditions = [];
@@ -236,17 +300,20 @@ final class Product
         return $conditions;
     }
 
+    /** Retourne uniquement une clause de tri appartenant à la liste autorisée. */
     private function sortSql(string $sort): string
     {
         return match ($sort) {
             'price-asc' => 'p.prix_base ASC, p.nom ASC',
             'price-desc' => 'p.prix_base DESC, p.nom ASC',
             'popular' => 'avis_count DESC, note DESC, p.date_creation DESC',
+            'rating' => 'note DESC, avis_count DESC, p.date_creation DESC',
             'promotion' => 'reduction DESC, p.date_creation DESC',
             default => 'p.date_creation DESC, p.id_produit DESC',
         };
     }
 
+    /** Lie chaque valeur avec le type PDO adapté avant l'exécution. */
     private function bindParameters(\PDOStatement $statement, array $parameters): void
     {
         foreach ($parameters as $key => $value) {

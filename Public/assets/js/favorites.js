@@ -1,3 +1,4 @@
+// Charge et maintient la page des favoris à partir du stockage partagé.
 (() => {
   const page = document.querySelector("[data-favorites-page]");
 
@@ -10,12 +11,14 @@
   const loader = page.querySelector("[data-favorites-loader]");
   let requestController;
 
+  // Réactive icônes, animations et interactions après un rendu dynamique.
   const refreshEnhancements = () => {
     window.lucide?.createIcons();
     window.MotionSystem?.refresh(content);
     window.dispatchEvent(new Event("favorites:sync"));
   };
 
+  // Présente une erreur discrète lorsque la sélection ne peut pas être chargée.
   const showError = () => {
     window.MotionSystem?.fire({
       icon: "error",
@@ -29,6 +32,7 @@
     });
   };
 
+  // Demande au serveur les cartes correspondant aux favoris enregistrés.
   const loadFavorites = async () => {
     requestController?.abort();
     const controller = new AbortController();

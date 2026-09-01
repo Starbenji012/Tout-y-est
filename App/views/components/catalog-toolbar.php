@@ -1,5 +1,7 @@
 <?php
 
+// Affiche les outils qui permettent de rechercher, trier et changer la vue du catalogue.
+
 $catalogToolbarConfig = $catalogToolbar ?? [];
 $catalogResultCount = max(0, (int) ($catalogToolbarConfig['resultCount'] ?? 0));
 $catalogSortOptions = $catalogToolbarConfig['sortOptions'] ?? [];
@@ -7,13 +9,14 @@ $catalogActiveFilters = $catalogToolbarConfig['filters'] ?? [];
 $catalogSearch = (string) ($catalogActiveFilters['search'] ?? '');
 $catalogSort = (string) ($catalogActiveFilters['sort'] ?? 'newest');
 $catalogSearchNotice = $catalogToolbarConfig['searchNotice'] ?? null;
+$catalogResultLabel = $catalogResultCount === 1 ? 'produit trouvé' : 'produits trouvés';
 ?>
 
 <div class="catalog-toolbar" data-catalog-toolbar data-motion="down">
     <form class="catalog-search" action="/boutique" method="get" role="search" data-catalog-search>
         <label class="visually-hidden" for="catalog-search-input">Rechercher dans la boutique</label>
         <i data-lucide="search" aria-hidden="true"></i>
-        <input id="catalog-search-input" type="search" name="q" value="<?= htmlspecialchars($catalogSearch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" placeholder="Rechercher un produit, une catégorie..." autocomplete="off">
+        <input id="catalog-search-input" type="search" name="q" value="<?= htmlspecialchars($catalogSearch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" placeholder="Produit, marque ou catégorie..." autocomplete="off">
         <button class="btn btn-primary" type="submit">Rechercher</button>
     </form>
 
@@ -25,7 +28,7 @@ $catalogSearchNotice = $catalogToolbarConfig['searchNotice'] ?? null;
         <button class="btn btn-outline catalog-toolbar__filter-button" type="button" aria-controls="catalog-filters" aria-expanded="false" data-catalog-filter-open>
             <i data-lucide="sliders-horizontal" aria-hidden="true"></i>Filtres
         </button>
-        <p class="catalog-toolbar__count" aria-live="polite" data-catalog-count><strong><?= $catalogResultCount ?></strong> produits trouvés</p>
+        <p class="catalog-toolbar__count" aria-live="polite" data-catalog-count><strong><?= $catalogResultCount ?></strong> <?= $catalogResultLabel ?></p>
         <div class="catalog-view-switch" role="group" aria-label="Mode d’affichage">
             <button class="catalog-view-switch__button is-active" type="button" aria-label="Affichage en grille" aria-pressed="true" data-catalog-view="grid"><i data-lucide="grid-2x2" aria-hidden="true"></i></button>
             <button class="catalog-view-switch__button" type="button" aria-label="Affichage en liste" aria-pressed="false" data-catalog-view="list"><i data-lucide="list" aria-hidden="true"></i></button>
@@ -41,4 +44,4 @@ $catalogSearchNotice = $catalogToolbarConfig['searchNotice'] ?? null;
     </div>
 </div>
 
-<?php unset($catalogToolbar, $catalogToolbarConfig, $catalogResultCount, $catalogSortOptions, $catalogActiveFilters, $catalogSearch, $catalogSort, $catalogSearchNotice, $value, $label); ?>
+<?php unset($catalogToolbar, $catalogToolbarConfig, $catalogResultCount, $catalogSortOptions, $catalogActiveFilters, $catalogSearch, $catalogSort, $catalogSearchNotice, $catalogResultLabel, $value, $label); ?>

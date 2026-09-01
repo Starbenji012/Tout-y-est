@@ -12,8 +12,10 @@ use App\Middleware\CsrfMiddleware;
 use App\Services\AuthService;
 use App\Services\LoginThrottleService;
 
+/** Coordonne les écrans et les actions de connexion et d'inscription. */
 final class AuthController extends Controller
 {
+    /** Reçoit les services nécessaires sans créer de dépendance dans le contrôleur. */
     public function __construct(
         private readonly AuthService $authService,
         private readonly Request $request,
@@ -21,6 +23,7 @@ final class AuthController extends Controller
     ) {
     }
 
+    /** Affiche le formulaire ou traite la tentative d'authentification reçue. */
     public function index(): void
     {
         if (is_array(Session::get('user'))) {
@@ -76,6 +79,7 @@ final class AuthController extends Controller
         }
 
         Session::regenerate();
+        CsrfMiddleware::refresh();
         Session::set('user', $result['user']);
 
         if (!empty($input['remember'])) {
@@ -86,6 +90,7 @@ final class AuthController extends Controller
         Response::redirect($returnTo ?? '/compte');
     }
 
+    /** Ferme la session courante puis renvoie l'utilisateur vers la connexion. */
     public function logout(): void
     {
         if ($this->request->isPost() && CsrfMiddleware::isValid($this->request->postParameters()['_token'] ?? null)) {
@@ -95,6 +100,7 @@ final class AuthController extends Controller
         Response::redirect('/');
     }
 
+    /** Centralise les données communes envoyées à la page d'authentification. */
     private function renderPage(array $errors = [], array $old = [], array $context = []): void
     {
         unset($old['_token'], $old['password'], $old['password_confirmation']);
@@ -117,6 +123,7 @@ final class AuthController extends Controller
         ]);
     }
 
+    /** Présente un message clair lorsque trop de tentatives ont été effectuées. */
     private function renderThrottleResponse(array $input, array $throttle, ?string $advice = null): void
     {
         $retryAfter = max(1, (int) $throttle['retryAfter']);
@@ -134,6 +141,7 @@ final class AuthController extends Controller
         );
     }
 
+    /** Accepte uniquement une destination interne sûre après authentification. */
     private function safeReturnPath(string $path): ?string
     {
         return in_array($path, ['/favoris', '/panier', '/boutique'], true) ? $path : null;

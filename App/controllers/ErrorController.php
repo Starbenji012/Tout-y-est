@@ -6,8 +6,10 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 
+/** Affiche les pages d'erreur publiques de manière cohérente. */
 final class ErrorController extends Controller
 {
+    /** Rend la page 404 lorsqu'aucune route ne correspond. */
     public function notFound(): void
     {
         http_response_code(404);

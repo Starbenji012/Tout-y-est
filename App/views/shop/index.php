@@ -23,12 +23,14 @@ $productSection = [
         ],
         'sortOptions' => [
             'newest' => 'Nouveautés',
+            'rating' => 'Mieux notés',
             'price-asc' => 'Prix croissant',
             'price-desc' => 'Prix décroissant',
             'popular' => 'Popularité',
             'promotion' => 'Promotions',
         ],
     ],
+    'breadcrumb' => $catalogBreadcrumb ?? [],
     'emptyState' => [
         'title' => 'Aucun produit disponible',
         'text' => 'Le catalogue sera enrichi très prochainement.',

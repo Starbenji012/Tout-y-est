@@ -1,16 +1,20 @@
+// Regroupe les interactions communes à toutes les cartes et fiches produit.
 (() => {
   const quickViewHost = document.querySelector("[data-quick-view-host]");
 
+  // Affiche un retour discret après une action de l'utilisateur.
   const notify = (title, icon = "success") => {
     window.MotionSystem?.fire({ toast: true, position: "bottom-end", icon, title, showConfirmButton: false, timer: 2200, timerProgressBar: true });
   };
 
+  // Maintient la quantité dans les limites autorisées par le produit.
   const normalizeQuantity = (input, value) => {
     const minimum = Number(input.min) || 1;
     const maximum = Number(input.max) || Number.MAX_SAFE_INTEGER;
     return Math.min(maximum, Math.max(minimum, Number(value) || minimum));
   };
 
+  // Remplace l'image principale et synchronise l'état des miniatures.
   const changeGalleryImage = (thumbnail) => {
     const gallery = thumbnail.closest(".quick-view__gallery, .product-detail__media");
     const mainImage = gallery?.querySelector("[data-gallery-main]");
@@ -27,6 +31,7 @@
     });
   };
 
+  // Reflète l'état réel des favoris sur tous les boutons visibles.
   const syncFavoriteButtons = (root = document) => {
     if (!window.FavoriteStore) {
       return;
@@ -43,6 +48,7 @@
     });
   };
 
+  // Ajoute ou retire un produit des favoris puis informe l'utilisateur.
   const toggleFavorite = (button, productCard) => {
     const active = window.FavoriteStore?.toggle(Number(productCard.dataset.productId)) ?? false;
     button.setAttribute("aria-pressed", String(active));
@@ -55,6 +61,7 @@
     }
   };
 
+  // Enregistre le produit dans le panier et donne un retour immédiat.
   const confirmCart = (button, productCard) => {
     const quantity = Number(productCard.querySelector("[data-quantity-input]")?.value) || 1;
     window.CartStore?.add(Number(productCard.dataset.productId), quantity);
@@ -64,6 +71,7 @@
     notify(`${quantity} × ${button.dataset.productName || "Produit"} ajouté au panier`);
   };
 
+  // Ferme l'aperçu une seule fois, après son animation de sortie.
   const closeQuickView = (dialog) => {
     if (!dialog?.open || dialog.dataset.closing === "true") {
       return;
@@ -80,6 +88,7 @@
     }
   };
 
+  // Ouvre la modale et rend ensuite le focus au bouton d'origine.
   const revealQuickView = (dialog, trigger) => {
     dialog.showModal();
     dialog.addEventListener("cancel", (event) => {
@@ -99,6 +108,7 @@
     window.MotionSystem?.modalIn(dialog);
   };
 
+  // Charge l'aperçu depuis le serveur sans recharger la page courante.
   const openQuickView = async (productId, button) => {
     if (!quickViewHost || button.disabled) {
       return;
@@ -131,6 +141,7 @@
     }
   });
 
+  // Une seule écoute gère les actions des cartes ajoutées maintenant ou plus tard.
   document.addEventListener("click", (event) => {
     const closeButton = event.target.closest("[data-quick-view-close]");
     if (closeButton) {

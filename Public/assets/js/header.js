@@ -1,3 +1,4 @@
+// Gère uniquement le menu mobile et l'état sticky du Header.
 const header = document.querySelector('[data-header]');
 
 if (header) {
@@ -5,18 +6,29 @@ if (header) {
   const openButton = header.querySelector('[data-menu-open]');
   const closeButton = header.querySelector('[data-menu-close]');
   const overlay = header.querySelector('[data-menu-overlay]');
+  const categoriesTrigger = header.querySelector('[data-categories-trigger]');
+  const categoryNavigation = header.querySelector('[data-category-navigation]');
   const mobileBreakpoint = window.matchMedia('(max-width: 48rem)');
+  // Referme le panneau Catégories et remet son état accessible à zéro.
+  const resetCategoryNavigation = () => {
+    if (categoryNavigation) categoryNavigation.hidden = true;
+    categoriesTrigger?.setAttribute('aria-expanded', 'false');
+  };
+
+  // Ferme le drawer mobile et rend éventuellement le focus au bouton d'ouverture.
   const closeMenu = (restoreFocus = true) => {
     header.classList.remove('is-menu-open');
     document.body.classList.remove('menu-open');
     openButton.setAttribute('aria-expanded', 'false');
     overlay.setAttribute('aria-hidden', 'true');
+    resetCategoryNavigation();
 
     if (restoreFocus) {
       openButton.focus();
     }
   };
 
+  // Ouvre le drawer mobile et place le focus sur son bouton de fermeture.
   const openMenu = () => {
     header.classList.add('is-menu-open');
     document.body.classList.add('menu-open');
@@ -59,12 +71,16 @@ if (header) {
   mobileBreakpoint.addEventListener('change', (event) => {
     if (!event.matches) {
       closeMenu(false);
+      return;
     }
+
+    resetCategoryNavigation();
   });
 
   let scrollUpdatePending = false;
   let hasLeftPageTop = window.scrollY > 96;
 
+  // Met à jour le Header une seule fois par frame pendant le défilement.
   const updateStickyState = () => {
     const scrollPosition = window.scrollY;
 

@@ -62,7 +62,8 @@
 .top-bar__highlights,
 .top-bar__contacts,
 .top-bar__item,
-.top-bar__contacts a {
+.top-bar__contacts a,
+.top-bar__social-placeholder {
   display: flex;
   align-items: center;
 }
@@ -79,7 +80,8 @@
 }
 
 .top-bar__item,
-.top-bar__contacts a {
+.top-bar__contacts a,
+.top-bar__social-placeholder {
   gap: var(--space-2);
 }
 

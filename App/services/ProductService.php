@@ -8,10 +8,12 @@ use App\Models\CharacteristicValue;
 use App\Models\Product;
 use App\Models\Review;
 
+/** Prépare toutes les données produit destinées aux vues et aux API. */
 final class ProductService
 {
     private ?bool $databaseHasProducts = null;
 
+    /** Reçoit les modèles sans créer de connexion ou de requête dans le service. */
     public function __construct(
         private readonly ?Product $productModel = null,
         private readonly ?CharacteristicValue $characteristicValueModel = null,
@@ -19,11 +21,13 @@ final class ProductService
     ) {
     }
 
+    /** Retourne les produits présentés comme nouveautés sur l'accueil. */
     public function getNewArrivals(): array
     {
         return $this->withBadge(array_slice($this->allProducts(), 0, 8), 'Nouveau', 'new');
     }
 
+    /** Retourne une sélection variée pour la section de recommandations. */
     public function getRecommendations(): array
     {
         $products = $this->usesDatabase()
@@ -33,6 +37,7 @@ final class ProductService
         return $this->withBadge($products, 'Populaire', 'popular');
     }
 
+    /** Retourne les produits bénéficiant actuellement d'une réduction. */
     public function getPromotions(): array
     {
         $products = array_filter(
@@ -43,11 +48,13 @@ final class ProductService
         return $this->withBadge(array_values($products), 'Promotion', 'promotion');
     }
 
+    /** Limite les promotions au nombre nécessaire sur la page d'accueil. */
     public function getPromotionPreview(): array
     {
         return array_slice($this->getPromotions(), 0, 4);
     }
 
+    /** Retourne un aperçu représentatif de l'ensemble du catalogue. */
     public function getCatalogPreview(): array
     {
         return $this->usesDatabase()
@@ -55,11 +62,61 @@ final class ProductService
             : $this->withCatalogBadges($this->select([6, 2, 5, 8, 1, 7, 4, 9]));
     }
 
+    /** Retourne le catalogue complet dans son ordre par défaut. */
     public function getCatalog(): array
     {
         return $this->searchCatalog([])['products'];
     }
 
+    /** Choisit les produits courts affichés dans le méga menu. */
+    public function getNavigationHighlights(?string $categorySlug = null): array
+    {
+        $categorySlug = trim((string) $categorySlug);
+        $groups = [
+            ['label' => 'Nouveauté', 'parameters' => ['sort' => 'newest', 'statuses' => ['new']]],
+            ['label' => 'Promotion', 'parameters' => ['sort' => 'promotion', 'statuses' => ['promotion']]],
+            ['label' => 'Offre limitée', 'parameters' => ['statuses' => ['limited']]],
+            ['label' => 'Populaire', 'parameters' => ['sort' => 'popular']],
+        ];
+        $highlights = [];
+        $selectedProductIds = [];
+
+        foreach ($groups as $group) {
+            $parameters = $group['parameters'];
+
+            if ($categorySlug !== '') {
+                $parameters['categories'] = [$categorySlug];
+            }
+
+            $product = null;
+
+            foreach ($this->catalogProducts($parameters, 4) as $candidate) {
+                $candidateId = (int) ($candidate['id'] ?? 0);
+
+                if (!in_array($candidateId, $selectedProductIds, true)) {
+                    $product = $candidate;
+                    $selectedProductIds[] = $candidateId;
+                    break;
+                }
+            }
+
+            if ($product === null) {
+                continue;
+            }
+
+            $highlights[] = [
+                'label' => $group['label'],
+                'name' => (string) $product['name'],
+                'image' => (string) $product['image'],
+                'alt' => (string) $product['alt'],
+                'url' => (string) $product['url'],
+            ];
+        }
+
+        return $highlights;
+    }
+
+    /** Applique recherche, filtres, tri et pagination au catalogue. */
     public function searchCatalog(array $parameters): array
     {
         $filters = $this->normalizeFilters($parameters);
@@ -120,6 +177,7 @@ final class ProductService
         ];
     }
 
+    /** Prépare les filtres réellement disponibles pour les catégories sélectionnées. */
     public function catalogFacets(array $categorySlugs = []): array
     {
         if (!$this->usesDatabase() || $this->characteristicValueModel === null) {
@@ -132,6 +190,10 @@ final class ProductService
             'couleur' => 'Couleur',
             'taille' => 'Taille',
             'pointure' => 'Pointure',
+            'capacite' => 'Capacité',
+            'stockage' => 'Capacité',
+            'memoire' => 'Mémoire',
+            'matiere' => 'Matière',
             'etat' => 'État',
             'condition' => 'État',
         ];
@@ -165,6 +227,7 @@ final class ProductService
         return $facets;
     }
 
+    /** Classe les meilleures suggestions en tolérant les petites fautes de saisie. */
     public function searchSuggestions(string $query, int $limit = 5): array
     {
         $query = trim($query);
@@ -187,7 +250,7 @@ final class ProductService
 
             $candidates = array_map(
                 fn (array $product): array => $this->mapDatabaseProduct($product),
-                $this->productModel->findSuggestionCandidates(),
+                $this->productModel->findSuggestionCandidates($query),
             );
             $suggestionsById = [];
 
@@ -205,6 +268,7 @@ final class ProductService
         );
     }
 
+    /** Retourne un produit normalisé, quelle que soit sa source de données. */
     public function findProduct(int $productId): ?array
     {
         if ($productId < 1) {
@@ -226,6 +290,7 @@ final class ProductService
         return null;
     }
 
+    /** Retourne plusieurs produits dans l'ordre des identifiants demandés. */
     public function findProductsByIds(array $productIds): array
     {
         $productIds = array_values(array_unique(array_slice(array_filter(
@@ -255,6 +320,7 @@ final class ProductService
         )));
     }
 
+    /** Sélectionne des produits proches sans inclure le produit consulté. */
     public function getRelatedProducts(array $product, int $limit = 4): array
     {
         $productId = (int) ($product['id'] ?? 0);
@@ -274,6 +340,7 @@ final class ProductService
         return array_slice($products, 0, max(1, $limit));
     }
 
+    /** Enrichit un produit avec sa galerie, ses caractéristiques et ses avis. */
     public function getProductDetails(int $productId): ?array
     {
         $product = $this->findProduct($productId);
@@ -290,6 +357,7 @@ final class ProductService
         return $product;
     }
 
+    /** Prépare les choix affichables, comme les couleurs et les tailles. */
     public function getProductOptions(array $product): array
     {
         $options = [];
@@ -305,6 +373,7 @@ final class ProductService
         return array_map('array_values', array_map('array_unique', $options));
     }
 
+    /** Retourne la liste normalisée des catégories disponibles. */
     public function catalogCategories(): array
     {
         if ($this->usesDatabase()) {
@@ -328,6 +397,7 @@ final class ProductService
         return $categories;
     }
 
+    /** Extrait une sélection précise depuis la source de produits courante. */
     private function select(array $ids): array
     {
         $productsById = [];
@@ -342,6 +412,7 @@ final class ProductService
         )));
     }
 
+    /** Charge tous les produits puis applique l'ordre demandé. */
     private function allProducts(string $sort = 'newest'): array
     {
         if (!$this->usesDatabase()) {
@@ -353,6 +424,26 @@ final class ProductService
         return array_map(fn (array $row): array => $this->mapDatabaseProduct($row), $rows);
     }
 
+    /** Charge uniquement la page de résultats demandée. */
+    private function catalogProducts(array $parameters, int $limit): array
+    {
+        $filters = $this->normalizeFilters($parameters);
+        $limit = max(1, min(8, $limit));
+
+        if ($this->usesDatabase()) {
+            return array_map(
+                fn (array $row): array => $this->mapDatabaseProduct($row),
+                $this->productModel->findCatalog($filters, $filters['sort'], $limit, 0),
+            );
+        }
+
+        return array_slice($this->filterDemoProducts(
+            $this->withCatalogBadges($this->demoProducts()),
+            $filters,
+        ), 0, $limit);
+    }
+
+    /** Indique si une base exploitable peut remplacer les données de démonstration. */
     private function usesDatabase(): bool
     {
         if ($this->databaseHasProducts === null) {
@@ -362,12 +453,13 @@ final class ProductService
         return $this->databaseHasProducts;
     }
 
+    /** Nettoie les paramètres externes avant de les transmettre au modèle. */
     private function normalizeFilters(array $parameters): array
     {
         $categories = is_array($parameters['categories'] ?? null) ? $parameters['categories'] : [];
         $statuses = is_array($parameters['statuses'] ?? null) ? $parameters['statuses'] : [];
         $allowedStatuses = ['promotion', 'new', 'limited'];
-        $allowedSorts = ['newest', 'price-asc', 'price-desc', 'popular', 'promotion'];
+        $allowedSorts = ['newest', 'price-asc', 'price-desc', 'popular', 'rating', 'promotion'];
         $allowedAvailability = ['in-stock', 'out-of-stock'];
         $sort = (string) ($parameters['sort'] ?? 'newest');
         $availability = (string) ($parameters['availability'] ?? '');
@@ -376,7 +468,7 @@ final class ProductService
         $rating = filter_var($parameters['rating'] ?? 0, FILTER_VALIDATE_INT);
         $attributes = [];
 
-        foreach (['marque', 'marques', 'couleur', 'taille', 'pointure', 'etat', 'condition'] as $attribute) {
+        foreach (['marque', 'marques', 'couleur', 'taille', 'pointure', 'capacite', 'stockage', 'memoire', 'matiere', 'etat', 'condition'] as $attribute) {
             $values = is_array($parameters['attributes'][$attribute] ?? null)
                 ? $parameters['attributes'][$attribute]
                 : [];
@@ -401,6 +493,7 @@ final class ProductService
         ];
     }
 
+    /** Convertit une ligne SQL vers le format unique compris par les composants. */
     private function mapDatabaseProduct(array $product): array
     {
         $basePrice = (float) $product['prix_base'];
@@ -422,6 +515,7 @@ final class ProductService
             'description' => trim((string) $product['description']) !== ''
                 ? (string) $product['description']
                 : 'Un produit sélectionné avec soin pour répondre à vos besoins du quotidien.',
+            'searchTerms' => (string) ($product['search_attributes'] ?? ''),
             'category' => (string) $product['categorie'],
             'categorySlug' => (string) $product['categorie_slug'],
             'price' => $this->formatPrice($currentPrice),
@@ -443,6 +537,7 @@ final class ProductService
         ] + $badge;
     }
 
+    /** Transforme les caractéristiques brutes en groupes faciles à afficher. */
     private function productCharacteristics(array $product): array
     {
         if ($this->usesDatabase()) {
@@ -460,6 +555,7 @@ final class ProductService
         ];
     }
 
+    /** Détermine le badge prioritaire à partir de la promotion et du stock. */
     private function databaseBadge(array $product, float $discount, int $stock): array
     {
         if ($discount > 0) {
@@ -477,10 +573,16 @@ final class ProductService
         return [];
     }
 
+    /** Reproduit les filtres du catalogue sur les données de démonstration. */
     private function filterDemoProducts(array $products, array $filters): array
     {
         $products = array_values(array_filter($products, function (array $product) use ($filters): bool {
-            $searchableText = $this->normalizeText(implode(' ', [$product['name'], $product['category'], $product['description'] ?? '']));
+            $searchableText = $this->normalizeText(implode(' ', [
+                $product['name'],
+                $product['category'],
+                $product['description'] ?? '',
+                $product['searchTerms'] ?? '',
+            ]));
             $matchesSearch = $filters['search'] === '' || str_contains($searchableText, $this->normalizeText($filters['search']));
             $matchesCategory = $filters['categories'] === [] || in_array($this->slugify($product['category']), $filters['categories'], true);
             $price = $this->priceValue((string) $product['price']);
@@ -502,6 +604,7 @@ final class ProductService
                 'price-asc' => $this->priceValue($first['price']) <=> $this->priceValue($second['price']),
                 'price-desc' => $this->priceValue($second['price']) <=> $this->priceValue($first['price']),
                 'popular' => [$second['reviews'], $second['rating']] <=> [$first['reviews'], $first['rating']],
+                'rating' => [$second['rating'], $second['reviews']] <=> [$first['rating'], $first['reviews']],
                 'promotion' => ($second['discount'] ?? 0) <=> ($first['discount'] ?? 0),
                 default => (int) $second['id'] <=> (int) $first['id'],
             };
@@ -510,6 +613,7 @@ final class ProductService
         return $products;
     }
 
+    /** Vérifie qu'un produit de démonstration correspond aux statuts sélectionnés. */
     private function matchesDemoStatuses(array $product, array $statuses): bool
     {
         if ($statuses === []) {
@@ -521,21 +625,25 @@ final class ProductService
             || (in_array('limited', $statuses, true) && ($product['badgeVariant'] ?? '') === 'limited');
     }
 
+    /** Convertit un prix affiché en nombre utilisable pour les calculs. */
     private function priceValue(string $price): float
     {
         return (float) preg_replace('/[^0-9.]+/', '', str_replace(',', '.', $price));
     }
 
+    /** Formate un montant selon la présentation commune de la boutique. */
     private function formatPrice(float $price): string
     {
         return number_format($price, 0, ',', ' ') . ' FCFA';
     }
 
+    /** Transforme un libellé en identifiant lisible dans une URL. */
     private function slugify(string $value): string
     {
         return trim((string) preg_replace('/[^a-z0-9]+/', '-', $this->normalizeText($value)), '-');
     }
 
+    /** Simplifie un texte pour rendre les comparaisons plus tolérantes. */
     private function normalizeText(string $value): string
     {
         $value = strtr($value, [
@@ -550,6 +658,7 @@ final class ProductService
         return strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value);
     }
 
+    /** Attribue un score aux candidats et place les plus pertinents en premier. */
     private function rankSuggestions(array $products, string $query): array
     {
         $normalizedQuery = $this->normalizeText($query);
@@ -561,6 +670,7 @@ final class ProductService
                 $product['name'],
                 $product['category'],
                 $product['description'] ?? '',
+                $product['searchTerms'] ?? '',
             ]));
             $score = str_contains($searchable, $normalizedQuery) ? 100 : 0;
             $candidateWords = array_values(array_filter(preg_split('/[^a-z0-9]+/', $searchable) ?: []));
@@ -592,6 +702,7 @@ final class ProductService
         return array_column($ranked, 'product');
     }
 
+    /** Ajoute un même badge à une sélection sans modifier les données d'origine. */
     private function withBadge(array $products, string $label, string $variant): array
     {
         return array_map(
@@ -603,6 +714,7 @@ final class ProductService
         );
     }
 
+    /** Applique à chaque produit le badge adapté à son état. */
     private function withCatalogBadges(array $products): array
     {
         $badges = [
@@ -619,6 +731,7 @@ final class ProductService
         );
     }
 
+    /** Calcule les remises visibles à partir des prix actuels et anciens. */
     private function withDiscounts(array $products): array
     {
         return array_map(
@@ -635,6 +748,7 @@ final class ProductService
         );
     }
 
+    /** Fournit les produits temporaires utilisés tant que la base est vide. */
     private function demoProducts(): array
     {
         $products = $this->withDiscounts([
@@ -796,6 +910,7 @@ final class ProductService
         ]), $products);
     }
 
+    /** Construit une galerie cohérente pour les fiches de démonstration. */
     private function demoGallery(int $productId, string $mainImage): array
     {
         $alternates = [

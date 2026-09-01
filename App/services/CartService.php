@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+/** Transforme les articles mémorisés côté client en un panier fiable. */
 final class CartService
 {
+    /** Reçoit le service produit utilisé pour vérifier les prix et disponibilités. */
     public function __construct(private readonly ProductService $productService)
     {
     }
 
+    /** Reconstruit le panier à partir des données sérialisées du navigateur. */
     public function buildCart(string $serializedItems): array
     {
         $requestedItems = $this->normalizeItems($serializedItems);
@@ -54,6 +57,7 @@ final class CartService
         ];
     }
 
+    /** Ignore les lignes invalides et normalise identifiants et quantités. */
     private function normalizeItems(string $serializedItems): array
     {
         $items = [];
@@ -74,6 +78,7 @@ final class CartService
         return $items;
     }
 
+    /** Formate un montant de manière cohérente avec les cartes produits. */
     private function formatPrice(float $price): string
     {
         return number_format($price, 0, ',', ' ') . ' FCFA';

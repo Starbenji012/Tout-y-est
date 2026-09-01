@@ -7,12 +7,15 @@ namespace App\Services;
 use App\Models\User;
 use PDOException;
 
+/** Regroupe les règles métier de connexion et d'inscription. */
 final class AuthService
 {
+    /** Reçoit le modèle utilisateur lorsqu'une base de données est disponible. */
     public function __construct(private readonly ?User $userModel)
     {
     }
 
+    /** Valide les identifiants puis retourne un résultat sans gérer l'affichage. */
     public function login(array $input): array
     {
         $email = strtolower(trim((string) ($input['email'] ?? '')));
@@ -51,6 +54,7 @@ final class AuthService
         return ['success' => true, 'user' => $this->publicUser($user), 'errors' => []];
     }
 
+    /** Valide et crée un compte avec un mot de passe correctement chiffré. */
     public function register(array $input): array
     {
         $data = $this->registrationData($input);
@@ -98,6 +102,7 @@ final class AuthService
         ];
     }
 
+    /** Nettoie et normalise les champs reçus du formulaire d'inscription. */
     private function registrationData(array $input): array
     {
         return [
@@ -109,6 +114,7 @@ final class AuthService
         ];
     }
 
+    /** Produit les messages de validation associés à chaque champ incorrect. */
     private function registrationErrors(array $data): array
     {
         $errors = [];
@@ -132,6 +138,7 @@ final class AuthService
         return $errors;
     }
 
+    /** Vérifie qu'un nom contient uniquement des caractères humains attendus. */
     private function validName(string $name): bool
     {
         $length = function_exists('mb_strlen') ? mb_strlen($name) : strlen($name);
@@ -139,6 +146,7 @@ final class AuthService
         return $length >= 2 && $length <= 100;
     }
 
+    /** Retire les informations sensibles avant de placer l'utilisateur en session. */
     private function publicUser(array $user): array
     {
         return [
@@ -150,6 +158,7 @@ final class AuthService
         ];
     }
 
+    /** Uniformise les réponses d'échec retournées au contrôleur. */
     private function failure(string $message, string $reason = 'validation_failed', ?string $advice = null): array
     {
         return [

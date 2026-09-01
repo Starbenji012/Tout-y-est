@@ -1,7 +1,7 @@
 <footer class="site-footer">
     <div class="container footer-container">
         <div class="footer-grid" data-motion="section">
-            <section class="footer-about-container" aria-labelledby="footer-about-title">
+            <section class="footer-about-container" id="footer-about" aria-labelledby="footer-about-title">
                 <h2 class="visually-hidden" id="footer-about-title">À propos de Tout y est</h2>
                 <div class="footer-brand-container">
                     <?php require __DIR__ . '/brand.php'; ?>
@@ -18,37 +18,37 @@
                     <li><a href="/">Accueil</a></li>
                     <li><a href="/boutique">Boutique</a></li>
                     <li><a href="/promotions">Promotions</a></li>
-                    <li><a href="/a-propos">À propos</a></li>
-                    <li><a href="/contact">Contact</a></li>
+                    <li><a href="/#footer-about">À propos</a></li>
+                    <li><a href="/#footer-contact">Contact</a></li>
                 </ul>
             </nav>
 
-            <nav class="footer-information-container" aria-labelledby="footer-information-title">
+            <section class="footer-information-container" aria-labelledby="footer-information-title">
                 <h2 class="footer-title" id="footer-information-title">Informations utiles</h2>
                 <ul class="footer-links">
-                    <li><a href="/livraison">Livraison</a></li>
-                    <li><a href="/modes-de-paiement">Modes de paiement</a></li>
-                    <li><a href="/politique-de-retour">Politique de retour</a></li>
-                    <li><a href="/conditions-generales">Conditions générales</a></li>
-                    <li><a href="/faq">FAQ</a></li>
+                    <li><span class="footer-link-placeholder">Livraison</span></li>
+                    <li><span class="footer-link-placeholder">Modes de paiement</span></li>
+                    <li><span class="footer-link-placeholder">Politique de retour</span></li>
+                    <li><span class="footer-link-placeholder">Conditions générales</span></li>
+                    <li><span class="footer-link-placeholder">FAQ</span></li>
                 </ul>
-            </nav>
+            </section>
 
-            <section class="footer-contact-container" aria-labelledby="footer-contact-title">
+            <section class="footer-contact-container" id="footer-contact" aria-labelledby="footer-contact-title">
                 <h2 class="footer-title" id="footer-contact-title">Contact</h2>
                 <address class="footer-contact-list">
-                    <a href="/contact" aria-label="Nous contacter par téléphone">
+                    <span class="footer-contact-placeholder">
                         <i data-lucide="phone" aria-hidden="true"></i>
                         <span>Téléphone</span>
-                    </a>
-                    <a href="/contact" aria-label="Nous contacter sur WhatsApp">
+                    </span>
+                    <span class="footer-contact-placeholder">
                         <i data-lucide="message-circle" aria-hidden="true"></i>
                         <span>WhatsApp</span>
-                    </a>
-                    <a href="/contact" aria-label="Nous contacter par e-mail">
+                    </span>
+                    <span class="footer-contact-placeholder">
                         <i data-lucide="mail" aria-hidden="true"></i>
                         <span>E-mail</span>
-                    </a>
+                    </span>
                     <span class="footer-contact-address">
                         <i data-lucide="map-pin" aria-hidden="true"></i>
                         <span>Adresse à renseigner</span>
@@ -57,16 +57,16 @@
 
                 <div class="footer-social-container">
                     <p class="footer-social-title">Suivez-nous</p>
-                    <div class="footer-social-links" role="group" aria-label="Réseaux sociaux">
-                        <a href="#" aria-label="Facebook">
+                    <div class="footer-social-links">
+                        <span class="footer-social-placeholder" aria-label="Facebook, lien à venir">
                             <i data-lucide="thumbs-up" aria-hidden="true"></i>
-                        </a>
-                        <a href="#" aria-label="Instagram">
+                        </span>
+                        <span class="footer-social-placeholder" aria-label="Instagram, lien à venir">
                             <i data-lucide="camera" aria-hidden="true"></i>
-                        </a>
-                        <a href="#" aria-label="TikTok">
+                        </span>
+                        <span class="footer-social-placeholder" aria-label="TikTok, lien à venir">
                             <i data-lucide="music-2" aria-hidden="true"></i>
-                        </a>
+                        </span>
                     </div>
                 </div>
             </section>
@@ -90,7 +90,7 @@
                     Support client
                 </li>
             </ul>
-            <a href="/mentions-legales">Mentions légales</a>
+            <span class="footer-legal-placeholder">Mentions légales</span>
         </div>
     </div>
 </footer>

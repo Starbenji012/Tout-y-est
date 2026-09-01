@@ -7,22 +7,35 @@ namespace App\Services;
 use App\Models\Category;
 use Throwable;
 
+/** Prépare les catégories et sélections utilisées par le méga menu. */
 final class CategoryService
 {
+    /** Reçoit les sources de données sans laisser le contrôleur les manipuler. */
     public function __construct(
         private readonly ?Category $categoryModel,
         private readonly ProductService $productService,
     ) {
     }
 
+    /** Assemble la hiérarchie et les produits mis en avant au premier affichage. */
     public function navigation(): array
     {
+        $categories = $this->categories();
+        $firstCategory = $categories[0]['slug'] ?? null;
+
         return [
-            'categories' => $this->categories(),
-            'highlights' => $this->highlights(),
+            'categories' => $categories,
+            'highlights' => $this->highlights(is_string($firstCategory) ? $firstCategory : null),
         ];
     }
 
+    /** Retourne les mises en avant adaptées à une catégorie sélectionnée. */
+    public function highlights(?string $categorySlug = null): array
+    {
+        return $this->productService->getNavigationHighlights($categorySlug);
+    }
+
+    /** Utilise la base quand elle est disponible, sinon les données de démonstration. */
     private function categories(): array
     {
         try {
@@ -85,31 +98,4 @@ final class CategoryService
         return array_map($buildBranch, $rootIds);
     }
 
-    private function highlights(): array
-    {
-        $groups = [
-            ['label' => 'Nouveauté', 'products' => $this->productService->getNewArrivals()],
-            ['label' => 'Promotion', 'products' => $this->productService->getPromotionPreview()],
-            ['label' => 'Populaire', 'products' => $this->productService->getRecommendations()],
-        ];
-        $highlights = [];
-
-        foreach ($groups as $group) {
-            $product = $group['products'][0] ?? null;
-
-            if (!is_array($product)) {
-                continue;
-            }
-
-            $highlights[] = [
-                'label' => $group['label'],
-                'name' => (string) $product['name'],
-                'image' => (string) $product['image'],
-                'alt' => (string) $product['alt'],
-                'url' => (string) $product['url'],
-            ];
-        }
-
-        return $highlights;
-    }
 }

@@ -1,3 +1,4 @@
+// Gère le zoom simple de la galerie sur la fiche produit.
 (() => {
   const product = document.querySelector("[data-product-detail]");
   const zoomButton = product?.querySelector("[data-product-zoom]");

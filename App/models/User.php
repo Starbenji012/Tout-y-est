@@ -6,12 +6,15 @@ namespace App\Models;
 
 use PDO;
 
+/** Effectue uniquement les opérations de persistance des utilisateurs. */
 final class User
 {
+    /** Reçoit la connexion PDO centralisée. */
     public function __construct(private readonly PDO $database)
     {
     }
 
+    /** Recherche un utilisateur grâce à son adresse e-mail normalisée. */
     public function findByEmail(string $email): ?array
     {
         $statement = $this->database->prepare(
@@ -26,6 +29,7 @@ final class User
         return is_array($user) ? $user : null;
     }
 
+    /** Vérifie l'unicité d'une adresse avant l'inscription. */
     public function emailExists(string $email): bool
     {
         $statement = $this->database->prepare(
@@ -36,6 +40,7 @@ final class User
         return (int) $statement->fetchColumn() > 0;
     }
 
+    /** Enregistre un nouvel utilisateur et retourne son identifiant. */
     public function create(array $user): int
     {
         $statement = $this->database->prepare(

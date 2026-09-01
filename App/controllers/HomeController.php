@@ -7,12 +7,15 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Services\ProductService;
 
+/** Compose la page d'accueil à partir des sélections de produits. */
 final class HomeController extends Controller
 {
+    /** Injecte le service produit utilisé par toutes les sections d'accueil. */
     public function __construct(private readonly ProductService $productService)
     {
     }
 
+    /** Prépare puis affiche le Hero et les différentes sélections de produits. */
     public function index(): void
     {
         $this->render('home/index', [

@@ -1,3 +1,4 @@
+<?php // Structure vide que JavaScript remplit avec les catégories reçues de l'API. ?>
 <div class="category-navigation" id="category-navigation" data-category-navigation hidden>
     <div class="container category-navigation__panel">
         <p class="category-navigation__status" role="status" data-category-navigation-status>
@@ -10,6 +11,7 @@
             </section>
             <section class="category-navigation__highlights" aria-labelledby="category-highlights-title">
                 <h2 id="category-highlights-title">À découvrir</h2>
+                <p class="visually-hidden" role="status" data-category-highlights-status></p>
                 <div data-category-highlights></div>
             </section>
         </div>

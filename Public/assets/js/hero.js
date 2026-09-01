@@ -1,3 +1,4 @@
+// Initialise le carrousel Hero avec les bibliothèques déjà chargées par le projet.
 (() => {
   const slider = document.querySelector("[data-hero-slider]");
 
@@ -12,6 +13,7 @@
     return;
   }
 
+  // Confie l'animation de la diapositive active au Motion System central.
   const animateActiveSlide = (swiper) => {
     const activeSlide = swiper.slides[swiper.activeIndex];
     window.MotionSystem?.heroSlide(activeSlide);

@@ -1,3 +1,4 @@
+// Gère les interactions propres à la page Panier.
 (() => {
   const page = document.querySelector("[data-cart-page]");
 
@@ -10,6 +11,7 @@
   const loader = page.querySelector("[data-cart-loader]");
   let requestController;
 
+  // Recharge le contenu validé par le serveur à partir du panier local.
   const loadCart = async () => {
     requestController?.abort();
     const controller = new AbortController();
@@ -59,6 +61,7 @@
     }
   };
 
+  // Applique une quantité sûre puis relance le calcul du panier.
   const updateQuantity = (item, quantity) => {
     const input = item.querySelector("[data-cart-quantity-input]");
     const minimum = Number(input.min) || 1;

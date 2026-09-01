@@ -6,12 +6,15 @@ namespace App\Models;
 
 use PDO;
 
+/** Lit les caractéristiques associées aux produits. */
 final class CharacteristicValue
 {
+    /** Reçoit la connexion PDO centralisée. */
     public function __construct(private readonly PDO $database)
     {
     }
 
+    /** Retourne les caractéristiques affichables d'un produit. */
     public function findByProduct(int $productId): array
     {
         $statement = $this->database->prepare(
@@ -27,6 +30,7 @@ final class CharacteristicValue
         return $statement->fetchAll();
     }
 
+    /** Retourne les valeurs disponibles pour construire les filtres contextuels. */
     public function findCatalogFacets(array $categorySlugs = []): array
     {
         $conditions = ["LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"];

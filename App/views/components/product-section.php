@@ -1,5 +1,7 @@
 <?php
 
+// Compose une section produit à partir de composants communs et d'une configuration.
+
 $productSectionConfig = $productSection ?? [];
 $productSectionId = (string) ($productSectionConfig['id'] ?? 'products-title');
 $productSectionClass = trim('product-section ' . (string) ($productSectionConfig['class'] ?? ''));
@@ -10,10 +12,18 @@ $productSectionFooterAction = $productSectionConfig['footerAction'] ?? null;
 $productSectionCatalog = $productSectionConfig['catalog'] ?? null;
 $productSectionEmptyState = $productSectionConfig['emptyState'] ?? [];
 $productSectionPagination = $productSectionConfig['pagination'] ?? null;
+$productSectionBreadcrumb = $productSectionConfig['breadcrumb'] ?? [];
 ?>
 
 <section class="<?= htmlspecialchars($productSectionClass, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-labelledby="<?= htmlspecialchars($productSectionId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-product-section>
     <div class="container product-section__container">
+        <?php if ($productSectionBreadcrumb !== []): ?>
+            <div data-catalog-breadcrumb>
+                <?php $breadcrumb = ['items' => $productSectionBreadcrumb]; ?>
+                <?php require __DIR__ . '/breadcrumb.php'; ?>
+            </div>
+        <?php endif; ?>
+
         <?php $sectionHeader = ['id' => $productSectionId] + $productSectionHeader; ?>
         <?php require __DIR__ . '/section-header.php'; ?>
 
@@ -55,4 +65,4 @@ $productSectionPagination = $productSectionConfig['pagination'] ?? null;
     </div>
 </section>
 
-<?php unset($productSection, $productSectionConfig, $productSectionId, $productSectionClass, $productSectionProducts, $productSectionHeader, $productSectionBanner, $productSectionFooterAction, $productSectionCatalog, $productSectionEmptyState, $productSectionPagination, $catalogToolbar, $catalogFilters, $productResults, $loader); ?>
+<?php unset($productSection, $productSectionConfig, $productSectionId, $productSectionClass, $productSectionProducts, $productSectionHeader, $productSectionBanner, $productSectionFooterAction, $productSectionCatalog, $productSectionEmptyState, $productSectionPagination, $productSectionBreadcrumb, $catalogToolbar, $catalogFilters, $productResults, $loader); ?>

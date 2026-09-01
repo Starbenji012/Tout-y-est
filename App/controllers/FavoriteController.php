@@ -6,8 +6,10 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 
+/** Affiche la sélection de favoris du visiteur. */
 final class FavoriteController extends Controller
 {
+    /** Rend la page des favoris, alimentée ensuite par le stockage côté client. */
     public function index(): void
     {
         $this->render('account/favorites', [

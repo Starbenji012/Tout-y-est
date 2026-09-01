@@ -1,3 +1,4 @@
+// Invite un visiteur non connecté à s'authentifier avant une action personnelle.
 (() => {
   const isAuthenticated = document.body.dataset.authenticated === "true";
   const invitationKey = "tout-y-est:favorite-login-invitation";
@@ -6,6 +7,7 @@
     return;
   }
 
+  // Affiche une invitation cohérente avec le système de notifications du site.
   const showInvitation = (options) => {
     if (!window.Swal || !window.MotionSystem?.fire) {
       options.onUnavailable?.();
@@ -29,6 +31,7 @@
     });
   };
 
+  // Confirme qu'un favori local a été mémorisé malgré l'absence de connexion.
   const favoriteSaved = () => {
     try {
       if (window.sessionStorage.getItem(invitationKey) === "shown") {

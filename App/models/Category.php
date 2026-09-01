@@ -6,14 +6,17 @@ namespace App\Models;
 
 use PDO;
 
+/** Lit les catégories actives et leur éventuelle hiérarchie en base. */
 final class Category
 {
     private ?array $columns = null;
 
+    /** Reçoit la connexion PDO centralisée. */
     public function __construct(private readonly PDO $database)
     {
     }
 
+    /** Retourne les catégories actives sous une forme exploitable par la navigation. */
     public function findActiveHierarchy(): array
     {
         $columns = $this->columns();
@@ -43,6 +46,7 @@ final class Category
         return $statement->fetchAll();
     }
 
+    /** Détecte les colonnes réellement disponibles dans la table des catégories. */
     private function columns(): array
     {
         if ($this->columns === null) {
@@ -54,6 +58,7 @@ final class Category
         return $this->columns;
     }
 
+    /** Choisit la première colonne compatible parmi plusieurs noms possibles. */
     private function firstAvailableColumn(array $candidates): ?string
     {
         foreach ($candidates as $candidate) {

@@ -1,5 +1,7 @@
 <?php
 
+// Prépare les deux formulaires d'authentification à partir des données du contrôleur.
+
 $authErrors = $authErrors ?? [];
 $oldInput = $oldInput ?? [];
 $activeMode = ($oldInput['mode'] ?? '') === 'register' ? 'register' : 'login';

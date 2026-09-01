@@ -1,5 +1,7 @@
 <?php
 
+// Définit les diapositives de démonstration du Hero avant leur future alimentation dynamique.
+
 $heroSlides = $heroSlides ?? [
     [
         'badge' => 'Nouvelle collection',

@@ -1,3 +1,4 @@
+// Améliore les formulaires de connexion et d'inscription sans remplacer la validation PHP.
 (() => {
   const view = document.querySelector("[data-auth-view]");
 
@@ -9,6 +10,7 @@
   const status = view.querySelector("[data-auth-status]");
   const validation = window.ValidationSystem?.create(view);
 
+  // Estime simplement la robustesse selon la longueur et la variété des caractères.
   const passwordStrength = (password) => {
     let score = 0;
 
@@ -21,6 +23,7 @@
     return Math.min(4, score);
   };
 
+  // Met à jour l'indicateur visuel lié au mot de passe saisi.
   const updateStrength = (input) => {
     const indicator = view.querySelector("[data-password-strength]");
 
@@ -34,6 +37,7 @@
     indicator.querySelector("small").textContent = labels[score];
   };
 
+  // Alterne l'affichage du mot de passe tout en gardant un libellé accessible.
   const togglePassword = (toggle) => {
     const input = toggle.closest(".account-password")?.querySelector("[data-password-input]");
 
@@ -52,6 +56,7 @@
     window.lucide?.createIcons();
   };
 
+  // Passe entre connexion et inscription sans recharger la page.
   const switchPanel = (mode) => {
     if (switching || !["login", "register"].includes(mode)) {
       return;
@@ -68,6 +73,7 @@
     view.dataset.activeMode = mode;
     window.history.replaceState({}, "", mode === "register" ? "#inscription" : window.location.pathname);
 
+    // Finalise l'état du panneau après la transition du Motion System.
     const completeSwitch = () => {
       switching = false;
       if (status) {
@@ -88,6 +94,7 @@
     completeSwitch();
   };
 
+  // Empêche les doubles envois et indique que le formulaire est en traitement.
   const setLoading = (form) => {
     const button = form.querySelector("[data-auth-submit]");
 
@@ -101,6 +108,7 @@
     button.textContent = button.dataset.loadingLabel || "Chargement…";
   };
 
+  // Actualise le compte à rebours avant une nouvelle tentative de connexion.
   const initializeRetry = () => {
     const retryMessage = view.querySelector("[data-auth-retry]");
     const submitButton = view.querySelector("[data-auth-panel='login'] [data-auth-submit]");
@@ -113,6 +121,7 @@
     const originalContent = submitButton.innerHTML;
     submitButton.disabled = true;
 
+    // Rafraîchit le délai visible jusqu'à la fin du blocage.
     const update = () => {
       retryMessage.textContent = remaining > 0
         ? `Nouvelle tentative disponible dans ${remaining} seconde${remaining > 1 ? "s" : ""}.`

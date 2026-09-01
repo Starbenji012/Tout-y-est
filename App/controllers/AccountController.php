@@ -9,8 +9,10 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Middleware\CsrfMiddleware;
 
+/** Affiche l'espace personnel de l'utilisateur connecté. */
 final class AccountController extends Controller
 {
+    /** Prépare les informations nécessaires au tableau de bord du compte. */
     public function index(): void
     {
         $user = Session::get('user');

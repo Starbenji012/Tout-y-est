@@ -1,12 +1,15 @@
+// Centralise les favoris locaux afin qu'ils restent synchronisés entre les pages.
 (() => {
   const STORAGE_KEY = "tout-y-est:favorites";
 
+  // Conserve uniquement des identifiants valides et supprime les doublons.
   const normalize = (values) => [...new Set(
     (Array.isArray(values) ? values : [])
       .map(Number)
       .filter((value) => Number.isInteger(value) && value > 0),
   )].slice(0, 40);
 
+  // Lit les favoris sans propager une erreur de stockage au reste du site.
   const read = () => {
     try {
       return normalize(JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]"));
@@ -15,6 +18,7 @@
     }
   };
 
+  // Met à jour le nombre de favoris affiché dans le Header.
   const updateHeader = (ids) => {
     const count = ids.length;
     const label = `Favoris, ${count} article${count > 1 ? "s" : ""}`;
@@ -27,6 +31,7 @@
     });
   };
 
+  // Sauvegarde la liste normalisée et annonce sa modification aux composants.
   const write = (values) => {
     const ids = normalize(values);
 
