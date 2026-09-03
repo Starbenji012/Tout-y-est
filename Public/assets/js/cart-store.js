@@ -41,7 +41,7 @@
   };
 
   // Enregistre le panier normalisé puis informe les composants concernés.
-  const write = (values) => {
+  const write = (values, notify = true) => {
     const items = normalize(values);
 
     try {
@@ -51,13 +51,15 @@
     }
 
     updateHeader(items);
-    window.dispatchEvent(new CustomEvent("cart:updated", { detail: { items } }));
+    if (notify) {
+      window.dispatchEvent(new CustomEvent("cart:updated", { detail: { items } }));
+    }
     return items;
   };
 
   window.CartStore = Object.freeze({
     items: read,
-    replace: write,
+    replace: (values, notify = true) => write(values, notify),
     serialize: () => read().map((item) => `${item.id}:${item.quantity}`).join(","),
     add: (productId, quantity = 1) => {
       const id = Number(productId);

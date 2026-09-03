@@ -39,6 +39,7 @@ final class ProductController extends Controller
             'catalogCategories' => $catalog['categories'],
             'catalogFacets' => $catalog['facets'],
             'catalogSearchNotice' => $catalog['searchNotice'],
+            'catalogEmptyState' => $this->catalogEmptyState(),
             'activeFilters' => $catalog['filters'],
             'catalogBreadcrumb' => $this->catalogBreadcrumb($catalog),
         ]);

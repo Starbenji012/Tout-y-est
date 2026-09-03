@@ -31,7 +31,7 @@ $productSection = [
         ],
     ],
     'breadcrumb' => $catalogBreadcrumb ?? [],
-    'emptyState' => [
+    'emptyState' => $catalogEmptyState ?? [
         'title' => 'Aucun produit disponible',
         'text' => 'Le catalogue sera enrichi très prochainement.',
         'action' => ['label' => 'Retour à l’accueil', 'variant' => 'secondary', 'href' => '/'],

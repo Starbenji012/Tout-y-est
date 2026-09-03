@@ -15,6 +15,7 @@
   const searchNotice = document.querySelector("[data-catalog-search-notice]");
   const breadcrumb = document.querySelector("[data-catalog-breadcrumb]");
   const searchInput = searchForm?.querySelector("input[type='search']");
+  const resetButton = filtersForm?.querySelector("[data-catalog-filter-reset]");
 
   if (!panel || !openButton || !filtersForm || !searchForm || !sortSelect || !results || !content || !loader || !count) {
     return;
@@ -100,36 +101,54 @@
     results.setAttribute("aria-busy", String(isLoading));
   };
 
+  // Affiche la remise à zéro seulement lorsqu'un filtre modifie le catalogue.
+  const syncResetButton = () => {
+    if (!resetButton) return;
+
+    const values = new FormData(filtersForm);
+    const hasActiveFilter = [...values.entries()].some(([name, value]) => {
+      if (name === "availability") return value !== "";
+      if (name === "rating") return value !== "0";
+      return String(value).trim() !== "";
+    });
+
+    resetButton.hidden = !hasActiveFilter;
+  };
+
+  // Retire les caractéristiques devenues incompatibles avec la catégorie.
+  const clearContextualFilters = () => {
+    contextFilters?.querySelectorAll("input:checked").forEach((input) => {
+      input.checked = false;
+    });
+  };
+
+  // Efface aussi les valeurs provenant de l'URL, contrairement au reset natif.
+  const clearFilters = () => {
+    filtersForm.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.checked = false;
+    });
+    filtersForm.querySelectorAll('input[type="number"]').forEach((input) => {
+      input.value = "";
+    });
+    const defaultAvailability = filtersForm.querySelector('[name="availability"][value=""]');
+    const defaultRating = filtersForm.querySelector('[name="rating"][value="0"]');
+    if (defaultAvailability) defaultAvailability.checked = true;
+    if (defaultRating) defaultRating.checked = true;
+  };
+
   // Réactive les icônes et animations après un remplacement dynamique du HTML.
   const refreshEnhancements = () => {
     window.lucide?.createIcons();
     window.MotionSystem?.refresh(content);
   };
 
-  // Ajoute une page de produits sans recréer toute la grille existante.
-  const appendCatalog = (html) => {
-    const template = document.createElement("template");
-    template.innerHTML = html.trim();
-    const currentGrid = content.querySelector(".product-section__grid");
-    const nextGrid = template.content.querySelector(".product-section__grid");
-
-    if (!currentGrid || !nextGrid) {
-      content.innerHTML = html;
-      return;
-    }
-
-    currentGrid.append(...nextGrid.children);
-    content.querySelector(".product-section__pagination")?.remove();
-    const nextPagination = template.content.querySelector(".product-section__pagination");
-    if (nextPagination) content.append(nextPagination);
-  };
-
   // Demande le catalogue filtré et ignore proprement toute réponse dépassée.
-  const updateCatalog = async (page = 1, append = false) => {
+  const updateCatalog = async (page = 1) => {
     requestController?.abort();
     const controller = new AbortController();
     requestController = controller;
     const parameters = buildParameters(page);
+    let updated = false;
     setLoading(true);
 
     try {
@@ -143,15 +162,11 @@
       }
 
       const catalog = await response.json();
-      if (append) {
-        appendCatalog(catalog.html);
-      } else {
-        content.innerHTML = catalog.html;
-      }
-      if (!append && contextFilters && typeof catalog.facetsHtml === "string") {
+      content.innerHTML = catalog.html;
+      if (contextFilters && typeof catalog.facetsHtml === "string") {
         contextFilters.innerHTML = catalog.facetsHtml;
       }
-      if (!append && breadcrumb && typeof catalog.breadcrumbHtml === "string") {
+      if (breadcrumb && typeof catalog.breadcrumbHtml === "string") {
         breadcrumb.innerHTML = catalog.breadcrumbHtml;
       }
       const resultLabel = catalog.count === 1 ? "produit trouvé" : "produits trouvés";
@@ -161,11 +176,9 @@
         searchNotice.hidden = !catalog.searchNotice;
       }
       window.history.replaceState({}, "", `/boutique?${parameters.toString()}`);
+      syncResetButton();
       refreshEnhancements();
-
-      if (window.matchMedia("(max-width: 64rem)").matches) {
-        closeFilters(false);
-      }
+      updated = true;
     } catch (error) {
       if (error.name !== "AbortError") {
         window.MotionSystem?.fire({ toast: true, position: "bottom-end", icon: "error", title: "Impossible de mettre à jour le catalogue", showConfirmButton: false, timer: 2600 });
@@ -175,6 +188,8 @@
         setLoading(false);
       }
     }
+
+    return updated;
   };
 
   openButton.addEventListener("click", openFilters);
@@ -188,26 +203,43 @@
     window.clearTimeout(priceTimer);
     priceTimer = window.setTimeout(() => updateCatalog(), 320);
   });
+  // Un nouveau tri repart de la première page sans perdre les critères actifs.
   sortSelect.addEventListener("change", () => updateCatalog());
+  filtersForm.addEventListener("input", (event) => {
+    if (!event.target.matches('[name="price_min"], [name="price_max"]')) return;
+
+    syncResetButton();
+    window.clearTimeout(priceTimer);
+    priceTimer = window.setTimeout(() => updateCatalog(), 350);
+  });
   filtersForm.addEventListener("change", (event) => {
+    if (event.target.matches('[name="categories[]"]')) {
+      clearContextualFilters();
+    }
+    syncResetButton();
+
     if (event.target.matches('[name="price_min"], [name="price_max"]')) {
-      window.clearTimeout(priceTimer);
-      priceTimer = window.setTimeout(() => updateCatalog(), 350);
       return;
     }
     updateCatalog();
   });
-  filtersForm.addEventListener("reset", () => window.requestAnimationFrame(() => updateCatalog()));
-  content.addEventListener("click", (event) => {
+  filtersForm.addEventListener("reset", (event) => {
+    event.preventDefault();
+    clearFilters();
+    syncResetButton();
+    updateCatalog();
+  });
+  // Charge la page choisie puis replace doucement les résultats dans la vue.
+  content.addEventListener("click", async (event) => {
     const pageLink = event.target.closest("[data-page]");
     if (!pageLink || pageLink.getAttribute("aria-disabled") === "true") {
       return;
     }
     event.preventDefault();
     const page = Number(pageLink.dataset.page) || 1;
-    const loadMore = pageLink.matches("[data-load-more]");
-    updateCatalog(page, loadMore);
-    if (!loadMore) results.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (await updateCatalog(page)) {
+      results.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   });
   // Garde la navigation clavier à l'intérieur du panneau mobile ouvert.
   document.addEventListener("keydown", (event) => {
@@ -216,7 +248,7 @@
     }
 
     if (event.key === "Tab" && panel.classList.contains("is-open")) {
-      const focusableElements = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), [href]')];
+      const focusableElements = [...panel.querySelectorAll('button:not([disabled]):not([hidden]), input:not([disabled]), select:not([disabled]), summary, [href]')];
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -236,4 +268,5 @@
   });
 
   applyView(readStoredView() || "grid");
+  syncResetButton();
 })();

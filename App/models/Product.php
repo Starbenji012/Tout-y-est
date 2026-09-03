@@ -300,15 +300,18 @@ final class Product
         return $conditions;
     }
 
-    /** Retourne uniquement une clause de tri appartenant à la liste autorisée. */
+    /** Construit un ordre stable à partir d'un tri autorisé. */
     private function sortSql(string $sort): string
     {
+        // Le prix affiché tient compte de la meilleure promotion active.
+        $effectivePrice = 'p.prix_base * (1 - (COALESCE(reduction, 0) / 100))';
+
         return match ($sort) {
-            'price-asc' => 'p.prix_base ASC, p.nom ASC',
-            'price-desc' => 'p.prix_base DESC, p.nom ASC',
-            'popular' => 'avis_count DESC, note DESC, p.date_creation DESC',
-            'rating' => 'note DESC, avis_count DESC, p.date_creation DESC',
-            'promotion' => 'reduction DESC, p.date_creation DESC',
+            'price-asc' => $effectivePrice . ' ASC, p.nom ASC, p.id_produit DESC',
+            'price-desc' => $effectivePrice . ' DESC, p.nom ASC, p.id_produit DESC',
+            'popular' => 'avis_count DESC, note DESC, p.date_creation DESC, p.id_produit DESC',
+            'rating' => 'note DESC, avis_count DESC, p.date_creation DESC, p.id_produit DESC',
+            'promotion' => 'reduction DESC, p.date_creation DESC, p.id_produit DESC',
             default => 'p.date_creation DESC, p.id_produit DESC',
         };
     }

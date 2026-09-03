@@ -20,20 +20,23 @@ final class CartService
         $items = [];
         $subtotal = 0.0;
         $count = 0;
+        $quantityAdjusted = false;
 
         foreach ($products as $product) {
             $productId = (int) $product['id'];
             $stock = max(0, (int) ($product['stock'] ?? 0));
             $quantity = min($requestedItems[$productId], $stock > 0 ? $stock : 1);
+            $available = $stock > 0;
             $unitPrice = (float) ($product['priceValue'] ?? 0);
-            $lineTotal = $unitPrice * $quantity;
-            $subtotal += $lineTotal;
+            $availability = $this->availability($stock);
+            $quantityAdjusted = $quantityAdjusted || $quantity !== $requestedItems[$productId];
+            $subtotal += $available ? $unitPrice * $quantity : 0.0;
             $count += $quantity;
             $items[] = [
                 'product' => $product,
                 'quantity' => $quantity,
-                'available' => $stock > 0,
-                'lineTotal' => $this->formatPrice($lineTotal),
+                'available' => $available,
+                'availability' => $availability,
             ];
         }
 
@@ -54,7 +57,28 @@ final class CartService
                 ],
                 $items,
             ),
+            'notice' => $quantityAdjusted
+                ? 'Certaines quantités ont été ajustées selon le stock disponible.'
+                : null,
         ];
+    }
+
+    /** Prépare un message de stock précis uniquement lorsqu'il reste cinq articles ou moins. */
+    private function availability(int $stock): array
+    {
+        if ($stock < 1) {
+            return ['state' => 'unavailable', 'label' => 'Rupture de stock', 'icon' => 'circle-x'];
+        }
+
+        if ($stock <= 5) {
+            return [
+                'state' => 'limited',
+                'label' => 'Plus que ' . $stock . ' disponible' . ($stock > 1 ? 's' : ''),
+                'icon' => 'triangle-alert',
+            ];
+        }
+
+        return ['state' => 'available', 'label' => 'En stock', 'icon' => 'circle-check'];
     }
 
     /** Ignore les lignes invalides et normalise identifiants et quantités. */

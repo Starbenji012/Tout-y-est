@@ -1,5 +1,6 @@
 <?php
 
+// Prépare une pagination courte qui garde toujours la première et la dernière page.
 $paginationConfig = $pagination ?? [];
 $paginationCurrent = max(1, (int) ($paginationConfig['current'] ?? 1));
 $paginationTotal = max(1, (int) ($paginationConfig['total'] ?? 1));
@@ -13,22 +14,29 @@ $paginationPreviousPage = null;
 
 <nav class="pagination" aria-label="Pagination">
     <ul class="pagination__list">
-        <li><a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, max(1, $paginationCurrent - 1)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Page précédente" <?= $paginationCurrent === 1 ? 'aria-disabled="true"' : '' ?> data-page="<?= max(1, $paginationCurrent - 1) ?>"><i data-lucide="chevron-left" aria-hidden="true"></i></a></li>
+        <!-- Le lien précédent n'est utile qu'après la première page. -->
+        <?php if ($paginationCurrent > 1): ?>
+            <li><a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, $paginationCurrent - 1), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Page précédente" data-page="<?= $paginationCurrent - 1 ?>"><i data-lucide="chevron-left" aria-hidden="true"></i></a></li>
+        <?php endif; ?>
+        <!-- La page actuelle reste visible mais n'est pas cliquable. -->
         <?php foreach ($paginationPages as $page): ?>
             <?php if ($paginationPreviousPage !== null && $page > $paginationPreviousPage + 1): ?>
                 <li class="pagination__ellipsis" aria-hidden="true">…</li>
             <?php endif; ?>
-            <li><a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, $page), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $page === $paginationCurrent ? 'aria-current="page"' : '' ?> data-page="<?= $page ?>"><?= $page ?></a></li>
+            <li>
+                <?php if ($page === $paginationCurrent): ?>
+                    <span class="pagination__link" aria-current="page"><?= $page ?></span>
+                <?php else: ?>
+                    <a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, $page), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-page="<?= $page ?>"><?= $page ?></a>
+                <?php endif; ?>
+            </li>
             <?php $paginationPreviousPage = $page; ?>
         <?php endforeach; ?>
-        <li><a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, min($paginationTotal, $paginationCurrent + 1)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Page suivante" <?= $paginationCurrent === $paginationTotal ? 'aria-disabled="true"' : '' ?> data-page="<?= min($paginationTotal, $paginationCurrent + 1) ?>"><i data-lucide="chevron-right" aria-hidden="true"></i></a></li>
+        <!-- Le lien suivant disparaît lorsque le catalogue est terminé. -->
+        <?php if ($paginationCurrent < $paginationTotal): ?>
+            <li><a class="pagination__link" href="<?= htmlspecialchars(sprintf($paginationUrl, $paginationCurrent + 1), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Page suivante" data-page="<?= $paginationCurrent + 1 ?>"><i data-lucide="chevron-right" aria-hidden="true"></i></a></li>
+        <?php endif; ?>
     </ul>
-    <?php if ($paginationCurrent < $paginationTotal): ?>
-        <button class="btn btn-secondary pagination__more" type="button" data-load-more data-page="<?= $paginationCurrent + 1 ?>">
-            Voir plus de produits
-            <i data-lucide="chevron-down" aria-hidden="true"></i>
-        </button>
-    <?php endif; ?>
 </nav>
 
 <?php unset($pagination, $paginationConfig, $paginationCurrent, $paginationTotal, $paginationUrl, $paginationPages, $paginationPreviousPage, $page); ?>

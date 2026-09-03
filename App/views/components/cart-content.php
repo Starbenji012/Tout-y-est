@@ -33,10 +33,17 @@ $cartItems = $cartConfig['items'] ?? [];
             <dl>
                 <div><dt>Sous-total</dt><dd><?= htmlspecialchars((string) $cartConfig['subtotal'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></dd></div>
                 <div><dt>Livraison</dt><dd>Calculée à l’étape suivante</dd></div>
-                <div class="cart-summary__total"><dt>Total provisoire</dt><dd><?= htmlspecialchars((string) $cartConfig['total'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></dd></div>
+                <div class="cart-summary__total"><dt>Total estimé</dt><dd><?= htmlspecialchars((string) $cartConfig['total'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></dd></div>
             </dl>
-            <?php $button = ['label' => 'Passer la commande', 'variant' => 'primary', 'icon' => 'arrow-right', 'class' => 'cart-summary__checkout', 'attributes' => ['data-cart-checkout' => true, 'disabled' => !$cartConfig['canCheckout']]]; ?>
-            <?php require __DIR__ . '/button.php'; ?>
+            <?php if (!$cartConfig['canCheckout']): ?>
+                <p class="cart-summary__notice"><i data-lucide="triangle-alert" aria-hidden="true"></i>Retirez les articles indisponibles pour continuer.</p>
+            <?php endif; ?>
+            <div class="cart-summary__actions">
+                <?php $button = ['label' => 'Commander', 'variant' => 'primary', 'icon' => 'arrow-right', 'class' => 'cart-summary__checkout', 'attributes' => ['data-cart-checkout' => true, 'disabled' => !$cartConfig['canCheckout']]]; ?>
+                <?php require __DIR__ . '/button.php'; ?>
+                <?php $button = ['label' => 'Continuer les achats', 'variant' => 'secondary', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start']; ?>
+                <?php require __DIR__ . '/button.php'; ?>
+            </div>
             <p class="cart-summary__trust"><i data-lucide="shield-check" aria-hidden="true"></i>Paiement sécurisé et informations protégées</p>
         </aside>
     </div>

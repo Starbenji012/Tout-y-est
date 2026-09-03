@@ -608,6 +608,7 @@ textarea:focus {
 .loader__dot:nth-child(2) { animation-delay: var(--duration-fast); }
 .loader__dot:nth-child(3) { animation-delay: var(--duration-normal); }
 
+/* Pagination du catalogue */
 .pagination,
 .pagination__list {
   display: flex;
@@ -618,14 +619,6 @@ textarea:focus {
 .pagination {
   gap: var(--spacing-md);
   flex-wrap: wrap;
-}
-
-.pagination__more svg {
-  transition: transform var(--transition-normal);
-}
-
-.pagination__more:hover svg {
-  transform: translateY(var(--space-1));
 }
 
 .pagination__list {
@@ -658,11 +651,6 @@ textarea:focus {
   border-color: var(--color-gold);
   background-color: var(--color-gold);
   color: var(--color-anthracite);
-}
-
-.pagination__link[aria-disabled="true"] {
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 /* Navigation contextuelle */

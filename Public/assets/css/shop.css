@@ -294,6 +294,58 @@
   display: none;
 }
 
+.catalog-filters__context-hint {
+  padding: var(--spacing-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  border: var(--border);
+  border-radius: var(--radius-small);
+}
+
+.catalog-filter-group--context {
+  display: block;
+}
+
+.catalog-filter-group--context summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--control-height);
+  color: var(--color-anthracite);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.catalog-filter-group--context summary::-webkit-details-marker {
+  display: none;
+}
+
+.catalog-filter-group--context summary::after {
+  content: "+";
+  color: var(--color-gold-dark);
+  transition: transform var(--transition-normal);
+}
+
+.catalog-filter-group--context[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.catalog-filter-group--context fieldset {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+}
+
+.catalog-filters__reset {
+  width: 100%;
+}
+
+.catalog-filters__reset[hidden] {
+  display: none;
+}
+
 .catalog-price-range {
   display: grid;
   gap: var(--spacing-sm);

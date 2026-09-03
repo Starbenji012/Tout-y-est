@@ -14,6 +14,26 @@
   let requestController;
   const historyKey = "tout-y-est:recent-searches";
 
+  // Ajoute une mise en évidence sans injecter de HTML dans la page.
+  const appendHighlightedText = (element, text, query) => {
+    const normalizedText = text.toLocaleLowerCase("fr");
+    const normalizedQuery = query.trim().toLocaleLowerCase("fr");
+    const matchIndex = normalizedQuery === "" ? -1 : normalizedText.indexOf(normalizedQuery);
+
+    if (matchIndex < 0) {
+      element.textContent = text;
+      return;
+    }
+
+    const highlight = document.createElement("mark");
+    highlight.textContent = text.slice(matchIndex, matchIndex + query.trim().length);
+    element.append(
+      document.createTextNode(text.slice(0, matchIndex)),
+      highlight,
+      document.createTextNode(text.slice(matchIndex + query.trim().length)),
+    );
+  };
+
   // Lit l'historique local sans bloquer la recherche si le stockage est refusé.
   const recentSearches = () => {
     try {
@@ -41,6 +61,8 @@
   const closeSuggestions = () => {
     suggestionsPanel.hidden = true;
     suggestionsPanel.replaceChildren();
+    suggestionsPanel.setAttribute("role", "listbox");
+    suggestionsPanel.setAttribute("aria-busy", "false");
     input.setAttribute("aria-expanded", "false");
     input.removeAttribute("aria-activedescendant");
     activeIndex = -1;
@@ -63,7 +85,7 @@
   };
 
   // Construit une suggestion avec des nœuds sûrs plutôt qu'avec du HTML injecté.
-  const createSuggestion = (product, index) => {
+  const createSuggestion = (product, index, query) => {
     const link = document.createElement("a");
     const image = document.createElement("img");
     const information = document.createElement("span");
@@ -81,8 +103,9 @@
     image.height = 56;
     image.loading = "lazy";
     information.className = "header-search__suggestion-info";
-    name.textContent = product.name;
-    details.textContent = `${product.category} · ${product.price}`;
+    appendHighlightedText(name, product.name, query);
+    appendHighlightedText(details, product.category, query);
+    details.append(document.createTextNode(` · ${product.price}`));
     information.append(name, details);
     link.append(image, information);
 
@@ -90,24 +113,41 @@
   };
 
   // Affiche les produits reçus ou un message clair si aucun ne correspond.
-  const renderSuggestions = (products) => {
+  const renderSuggestions = (products, query) => {
     suggestions = products;
     activeIndex = -1;
     suggestionsPanel.replaceChildren();
+    suggestionsPanel.setAttribute("aria-busy", "false");
 
     if (products.length === 0) {
       const emptyMessage = document.createElement("p");
-      emptyMessage.className = "header-search__empty";
-      emptyMessage.textContent = "Aucun produit correspondant.";
-      emptyMessage.setAttribute("role", "option");
-      emptyMessage.setAttribute("aria-disabled", "true");
+      emptyMessage.className = "header-search__empty header-search__status";
+      emptyMessage.textContent = "Aucun produit trouvé. Essayez un nom, une marque ou une catégorie.";
+      suggestionsPanel.setAttribute("role", "status");
       suggestionsPanel.append(emptyMessage);
     } else {
-      products.forEach((product, index) => suggestionsPanel.append(createSuggestion(product, index)));
+      suggestionsPanel.setAttribute("role", "listbox");
+      products.forEach((product, index) => suggestionsPanel.append(createSuggestion(product, index, query)));
     }
 
     suggestionsPanel.hidden = false;
     input.setAttribute("aria-expanded", "true");
+  };
+
+  // Informe discrètement l'utilisateur pendant une recherche ou après une erreur.
+  const renderSearchStatus = (message, state) => {
+    suggestions = [];
+    activeIndex = -1;
+    const status = document.createElement("p");
+    status.className = "header-search__status";
+    status.dataset.state = state;
+    status.textContent = message;
+    suggestionsPanel.replaceChildren(status);
+    suggestionsPanel.setAttribute("role", "status");
+    suggestionsPanel.setAttribute("aria-busy", String(state === "loading"));
+    suggestionsPanel.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    input.removeAttribute("aria-activedescendant");
   };
 
   // Propose l'historique lorsque le champ ne contient pas encore de recherche.
@@ -121,6 +161,8 @@
 
     suggestions = searches.map((query) => ({ url: `/boutique?q=${encodeURIComponent(query)}` }));
     activeIndex = -1;
+    suggestionsPanel.setAttribute("role", "listbox");
+    suggestionsPanel.setAttribute("aria-busy", "false");
     const title = document.createElement("p");
     title.className = "header-search__recent-title";
     title.textContent = "Recherches récentes";
@@ -150,6 +192,7 @@
     requestController?.abort();
     const controller = new AbortController();
     requestController = controller;
+    renderSearchStatus("Recherche en cours…", "loading");
 
     try {
       const response = await fetch(`/api/recherche?q=${encodeURIComponent(query)}`, {
@@ -164,25 +207,28 @@
       const payload = await response.json();
 
       if (input.value.trim() === query) {
-        renderSuggestions(payload.suggestions);
+        renderSuggestions(payload.suggestions, query);
       }
     } catch (error) {
       if (error.name !== "AbortError") {
-        closeSuggestions();
+        renderSearchStatus("La recherche est momentanément indisponible.", "error");
       }
+    } finally {
+      if (requestController === controller) requestController = null;
     }
   };
 
   input.addEventListener("input", () => {
     window.clearTimeout(searchTimer);
+    requestController?.abort();
     const query = input.value.trim();
 
     if (query.length < 2) {
-      requestController?.abort();
       renderRecentSearches();
       return;
     }
 
+    renderSearchStatus("Recherche en cours…", "loading");
     searchTimer = window.setTimeout(() => search(query), 240);
   });
 
@@ -198,6 +244,11 @@
 
   // Permet de parcourir et choisir les suggestions sans utiliser la souris.
   input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !suggestionsPanel.hidden) {
+      closeSuggestions();
+      return;
+    }
+
     if (suggestionsPanel.hidden || suggestions.length === 0) {
       return;
     }
@@ -209,8 +260,6 @@
     } else if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
       window.location.assign(suggestions[activeIndex].url);
-    } else if (event.key === "Escape") {
-      closeSuggestions();
     }
   });
 

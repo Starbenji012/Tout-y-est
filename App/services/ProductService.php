@@ -180,7 +180,7 @@ final class ProductService
     /** Prépare les filtres réellement disponibles pour les catégories sélectionnées. */
     public function catalogFacets(array $categorySlugs = []): array
     {
-        if (!$this->usesDatabase() || $this->characteristicValueModel === null) {
+        if (count($categorySlugs) !== 1 || !$this->usesDatabase() || $this->characteristicValueModel === null) {
             return [];
         }
 
@@ -231,8 +231,10 @@ final class ProductService
     public function searchSuggestions(string $query, int $limit = 5): array
     {
         $query = trim($query);
+        $query = function_exists('mb_substr') ? mb_substr($query, 0, 100) : substr($query, 0, 100);
+        $queryLength = function_exists('mb_strlen') ? mb_strlen($query) : strlen($query);
 
-        if (strlen($query) < 2) {
+        if ($queryLength < 2) {
             return [];
         }
 
@@ -463,6 +465,9 @@ final class ProductService
         $allowedAvailability = ['in-stock', 'out-of-stock'];
         $sort = (string) ($parameters['sort'] ?? 'newest');
         $availability = (string) ($parameters['availability'] ?? '');
+        $normalizedCategories = array_values(array_unique(array_slice(array_filter(
+            array_map(static fn (mixed $value): string => substr(trim((string) $value), 0, 120), $categories),
+        ), 0, 10)));
         $priceMin = filter_var($parameters['price_min'] ?? null, FILTER_VALIDATE_FLOAT);
         $priceMax = filter_var($parameters['price_max'] ?? null, FILTER_VALIDATE_FLOAT);
         $rating = filter_var($parameters['rating'] ?? 0, FILTER_VALIDATE_INT);
@@ -480,15 +485,13 @@ final class ProductService
 
         return [
             'search' => substr(trim((string) ($parameters['q'] ?? '')), 0, 100),
-            'categories' => array_values(array_unique(array_slice(array_filter(
-                array_map(static fn (mixed $value): string => substr(trim((string) $value), 0, 120), $categories),
-            ), 0, 10))),
+            'categories' => $normalizedCategories,
             'statuses' => array_values(array_intersect($allowedStatuses, $statuses)),
             'priceMin' => $priceMin !== false && $priceMin !== null && $priceMin >= 0 ? (float) $priceMin : null,
             'priceMax' => $priceMax !== false && $priceMax !== null && $priceMax >= 0 ? (float) $priceMax : null,
             'availability' => in_array($availability, $allowedAvailability, true) ? $availability : '',
             'rating' => $rating !== false ? min(5, max(0, (int) $rating)) : 0,
-            'attributes' => array_filter($attributes),
+            'attributes' => count($normalizedCategories) === 1 ? array_filter($attributes) : [],
             'sort' => in_array($sort, $allowedSorts, true) ? $sort : 'newest',
         ];
     }
@@ -599,13 +602,19 @@ final class ProductService
                 && $matchesStatus && $matchesAvailability && $matchesRating;
         }));
 
+        // Garde le même ordre que MySQL lorsque le catalogue de démonstration est utilisé.
         usort($products, function (array $first, array $second) use ($filters): int {
             return match ($filters['sort']) {
-                'price-asc' => $this->priceValue($first['price']) <=> $this->priceValue($second['price']),
-                'price-desc' => $this->priceValue($second['price']) <=> $this->priceValue($first['price']),
-                'popular' => [$second['reviews'], $second['rating']] <=> [$first['reviews'], $first['rating']],
-                'rating' => [$second['rating'], $second['reviews']] <=> [$first['rating'], $first['reviews']],
-                'promotion' => ($second['discount'] ?? 0) <=> ($first['discount'] ?? 0),
+                'price-asc' => [$this->priceValue($first['price']), $first['name'], -$first['id']]
+                    <=> [$this->priceValue($second['price']), $second['name'], -$second['id']],
+                'price-desc' => [$this->priceValue($second['price']), $first['name'], -$first['id']]
+                    <=> [$this->priceValue($first['price']), $second['name'], -$second['id']],
+                'popular' => [$second['reviews'], $second['rating'], $second['id']]
+                    <=> [$first['reviews'], $first['rating'], $first['id']],
+                'rating' => [$second['rating'], $second['reviews'], $second['id']]
+                    <=> [$first['rating'], $first['reviews'], $first['id']],
+                'promotion' => [$second['discount'] ?? 0, $second['id']]
+                    <=> [$first['discount'] ?? 0, $first['id']],
                 default => (int) $second['id'] <=> (int) $first['id'],
             };
         });

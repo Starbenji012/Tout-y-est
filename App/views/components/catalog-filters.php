@@ -9,6 +9,14 @@ $activeCategories = $catalogActiveFilters['categories'] ?? [];
 $activeStatuses = $catalogActiveFilters['statuses'] ?? [];
 $activeAvailability = (string) ($catalogActiveFilters['availability'] ?? '');
 $activeRating = (int) ($catalogActiveFilters['rating'] ?? 0);
+$activeAttributes = array_filter($catalogActiveFilters['attributes'] ?? []);
+$hasActiveFilters = $activeCategories !== []
+    || $activeStatuses !== []
+    || ($catalogActiveFilters['priceMin'] ?? null) !== null
+    || ($catalogActiveFilters['priceMax'] ?? null) !== null
+    || $activeAvailability !== ''
+    || $activeRating > 0
+    || $activeAttributes !== [];
 ?>
 
 <aside class="catalog-filters" id="catalog-filters" aria-labelledby="catalog-filters-title" data-catalog-filters-panel>
@@ -52,9 +60,21 @@ $activeRating = (int) ($catalogActiveFilters['rating'] ?? 0);
                 <label class="catalog-filter-option"><input type="radio" name="rating" value="<?= $value ?>"<?= $value === $activeRating ? ' checked' : '' ?>><span><?= $label ?></span></label>
             <?php endforeach; ?>
         </fieldset>
-        <?php $button = ['label' => 'Réinitialiser', 'variant' => 'ghost', 'type' => 'reset']; require __DIR__ . '/button.php'; ?>
+        <?php
+        $button = [
+            'label' => 'Effacer tous les filtres',
+            'variant' => 'ghost',
+            'type' => 'reset',
+            'class' => 'catalog-filters__reset',
+            'attributes' => [
+                'data-catalog-filter-reset' => true,
+                'hidden' => !$hasActiveFilters,
+            ],
+        ];
+        require __DIR__ . '/button.php';
+        ?>
     </form>
 </aside>
 <button class="catalog-filters-overlay" type="button" aria-label="Fermer les filtres" data-catalog-filter-close tabindex="-1"></button>
 
-<?php unset($catalogFilters, $catalogFiltersConfig, $catalogCategories, $catalogStatuses, $catalogFacets, $catalogActiveFilters, $activeCategories, $activeStatuses, $activeAvailability, $activeRating, $catalogContextFilters, $value, $label, $button); ?>
+<?php unset($catalogFilters, $catalogFiltersConfig, $catalogCategories, $catalogStatuses, $catalogFacets, $catalogActiveFilters, $activeCategories, $activeStatuses, $activeAvailability, $activeRating, $activeAttributes, $hasActiveFilters, $catalogContextFilters, $value, $label, $button); ?>

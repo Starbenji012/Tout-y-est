@@ -41,6 +41,7 @@ final class CartController extends Controller
             'html' => $this->renderPartial('components/cart-content', ['cart' => $cart]),
             'count' => $cart['count'],
             'items' => $cart['storedItems'],
+            'notice' => $cart['notice'],
         ]);
     }
 }
