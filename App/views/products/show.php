@@ -1,6 +1,13 @@
 <?php
 
 // Prépare les informations détaillées utilisées pour aider à la décision d'achat.
+if (!isset($product) || !is_array($product)) {
+    $product = [];
+}
+
+if (!isset($relatedProducts) || !is_array($relatedProducts)) {
+    $relatedProducts = [];
+}
 
 $productName = (string) $product['name'];
 $productStock = (int) ($product['stock'] ?? 0);
