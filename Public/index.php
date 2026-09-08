@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Database;
 use App\Core\Request;
+use App\Core\Router;
 use App\Core\Session;
 use App\Controllers\ErrorController;
 use App\Controllers\CategoryController;
@@ -31,10 +32,14 @@ if (PHP_SAPI === 'cli-server') {
 // Charge les classes actuellement utilisées par l'application.
 require_once dirname(__DIR__) . '/App/core/Database.php';
 require_once dirname(__DIR__) . '/App/core/Request.php';
+require_once dirname(__DIR__) . '/App/core/Router.php';
 require_once dirname(__DIR__) . '/App/core/Response.php';
 require_once dirname(__DIR__) . '/App/core/Controller.php';
 require_once dirname(__DIR__) . '/App/core/Session.php';
 require_once dirname(__DIR__) . '/App/middleware/CsrfMiddleware.php';
+require_once dirname(__DIR__) . '/App/middleware/AuthMiddleware.php';
+require_once dirname(__DIR__) . '/App/middleware/GuestMiddleware.php';
+require_once dirname(__DIR__) . '/App/middleware/AdminMiddleware.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
 require_once dirname(__DIR__) . '/App/models/Category.php';
 require_once dirname(__DIR__) . '/App/models/CharacteristicValue.php';
@@ -87,5 +92,4 @@ if ($route === null) {
     return;
 }
 
-[$controller, $action] = $route;
-$controller->{$action}();
+Router::dispatch($routes, $requestPath);

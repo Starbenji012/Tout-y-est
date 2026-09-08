@@ -2,7 +2,7 @@
 
 $cartItemConfig = $cartItem ?? [];
 $cartItemProduct = $cartItemConfig['product'] ?? [];
-$cartItemId = (int) ($cartItemProduct['id'] ?? 0);
+$cartItemId = (int) ($cartItemProduct['variantId'] ?? $cartItemProduct['id'] ?? 0);
 $cartItemName = (string) ($cartItemProduct['name'] ?? 'Produit');
 $cartItemQuantity = (int) ($cartItemConfig['quantity'] ?? 1);
 $cartItemStock = max(0, (int) ($cartItemProduct['stock'] ?? 0));
@@ -10,7 +10,7 @@ $cartItemAvailable = (bool) ($cartItemConfig['available'] ?? false);
 $cartItemAvailability = $cartItemConfig['availability'] ?? [];
 ?>
 
-<article class="cart-item<?= $cartItemAvailable ? '' : ' is-unavailable' ?>" data-cart-item data-product-id="<?= $cartItemId ?>" data-motion="card">
+<article class="cart-item<?= $cartItemAvailable ? '' : ' is-unavailable' ?>" data-cart-item data-product-id="<?= (int) ($cartItemProduct['id'] ?? 0) ?>" data-product-variant-id="<?= $cartItemId ?>" data-motion="card">
     <a class="cart-item__media" href="<?= htmlspecialchars((string) ($cartItemProduct['url'] ?? '/boutique'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
         <img src="<?= htmlspecialchars((string) ($cartItemProduct['image'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($cartItemProduct['alt'] ?? $cartItemName), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="160" height="160" loading="lazy">
     </a>

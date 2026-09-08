@@ -15,15 +15,16 @@
   let requestController;
 
   // Affiche un retour bref sans interrompre la navigation.
-  const notify = (title, icon = "success") => window.MotionSystem?.fire({
-    toast: true,
-    position: "bottom-end",
-    icon,
-    title,
-    showConfirmButton: false,
-    timer: 2400,
-    timerProgressBar: true,
-  });
+  const notify = (title, icon = "success") =>
+    window.MotionSystem?.fire({
+      toast: true,
+      position: "bottom-end",
+      icon,
+      title,
+      showConfirmButton: false,
+      timer: 2400,
+      timerProgressBar: true,
+    });
 
   // Recharge les prix et les stocks validés par le serveur.
   const loadCart = async () => {
@@ -36,10 +37,13 @@
     loader.hidden = false;
 
     try {
-      const response = await fetch(`/api/panier?items=${encodeURIComponent(window.CartStore.serialize())}`, {
-        headers: { Accept: "application/json" },
-        signal: controller.signal,
-      });
+      const response = await fetch(
+        `/api/panier?items=${encodeURIComponent(window.CartStore.serialize())}`,
+        {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        },
+      );
 
       if (!response.ok) {
         throw new Error("Cart unavailable");
@@ -101,14 +105,19 @@
       notify("Quantité ajustée selon le stock disponible.", "warning");
     }
 
-    window.CartStore.setQuantity(Number(item.dataset.productId), normalized);
+    window.CartStore.setQuantity(
+      Number(item.dataset.productVariantId || item.dataset.productId),
+      normalized,
+    );
   };
 
   // Affiche l’étape d’identification sans perdre le panier invité.
   const openCheckoutGate = () => {
     overview.hidden = true;
     checkoutGate.hidden = false;
-    checkoutGate.querySelector("#cart-checkout-gate-title")?.focus({ preventScroll: true });
+    checkoutGate
+      .querySelector("#cart-checkout-gate-title")
+      ?.focus({ preventScroll: true });
     checkoutGate.scrollIntoView({ behavior: "smooth", block: "start" });
     window.lucide?.createIcons();
     window.MotionSystem?.refresh(checkoutGate);
@@ -116,7 +125,10 @@
 
   page.addEventListener("change", (event) => {
     if (event.target.matches("[data-cart-quantity-input]")) {
-      updateQuantity(event.target.closest("[data-cart-item]"), event.target.value);
+      updateQuantity(
+        event.target.closest("[data-cart-item]"),
+        event.target.value,
+      );
     }
   });
 
@@ -126,12 +138,17 @@
 
     if (item && quantityButton) {
       const input = item.querySelector("[data-cart-quantity-input]");
-      updateQuantity(item, Number(input.value) + Number(quantityButton.dataset.cartQuantityChange));
+      updateQuantity(
+        item,
+        Number(input.value) + Number(quantityButton.dataset.cartQuantityChange),
+      );
       return;
     }
 
     if (item && event.target.closest("[data-cart-remove]")) {
-      window.CartStore.remove(Number(item.dataset.productId));
+      window.CartStore.remove(
+        Number(item.dataset.productVariantId || item.dataset.productId),
+      );
       notify("Produit retiré du panier.");
       return;
     }

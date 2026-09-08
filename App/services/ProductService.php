@@ -322,6 +322,38 @@ final class ProductService
         )));
     }
 
+    /** Retourne les produits correspondant aux variantes demandées par le panier. */
+    public function findProductsByVariantIds(array $variantIds): array
+    {
+        $variantIds = array_values(array_unique(array_slice(array_filter(
+            array_map(static fn (mixed $variantId): int => (int) $variantId, $variantIds),
+            static fn (int $variantId): bool => $variantId > 0,
+        ), 0, 40)));
+
+        if ($variantIds === []) {
+            return [];
+        }
+
+        if ($this->usesDatabase()) {
+            $products = array_map(
+                fn (array $product): array => $this->mapDatabaseProduct($product),
+                $this->productModel->findByVariantIds($variantIds),
+            );
+        } else {
+            $products = $this->withCatalogBadges($this->demoProducts());
+        }
+
+        $productsByVariantId = [];
+        foreach ($products as $product) {
+            $productsByVariantId[(int) ($product['variantId'] ?? 0)] = $product;
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (int $variantId): ?array => $productsByVariantId[$variantId] ?? null,
+            $variantIds,
+        )));
+    }
+
     /** Sélectionne des produits proches sans inclure le produit consulté. */
     public function getRelatedProducts(array $product, int $limit = 4): array
     {
@@ -351,10 +383,8 @@ final class ProductService
             return null;
         }
 
-        $product['characteristics'] = $this->productCharacteristics($product);
-        $product['reviewItems'] = $this->usesDatabase()
-            ? ($this->reviewModel?->findPublishedByProduct($productId) ?? [])
-            : [];
+        $product['characteristics'] = $this->usesDatabase() ? [] : $this->productCharacteristics($product);
+        $product['reviewItems'] = [];
 
         return $product;
     }
@@ -382,7 +412,7 @@ final class ProductService
             $categories = [];
 
             foreach ($this->productModel->categories() as $category) {
-                $categories[(string) $category['slug_']] = (string) $category['nom'];
+                $categories[(string) $category['slug']] = (string) $category['nom'];
             }
 
             return $categories;
@@ -499,7 +529,7 @@ final class ProductService
     /** Convertit une ligne SQL vers le format unique compris par les composants. */
     private function mapDatabaseProduct(array $product): array
     {
-        $basePrice = (float) $product['prix_base'];
+        $basePrice = (float) $product['prix_reference'];
         $discount = max(0, min(100, (float) ($product['reduction'] ?? 0)));
         $currentPrice = $discount > 0 ? $basePrice * (1 - ($discount / 100)) : $basePrice;
         $stock = (int) ($product['stock'] ?? 0);
@@ -514,6 +544,8 @@ final class ProductService
 
         return [
             'id' => (int) $product['id_produit'],
+            'variantId' => (int) $product['id_variante'],
+            'sku' => (string) $product['sku'],
             'name' => (string) $product['nom'],
             'description' => trim((string) $product['description']) !== ''
                 ? (string) $product['description']
@@ -543,14 +575,6 @@ final class ProductService
     /** Transforme les caractéristiques brutes en groupes faciles à afficher. */
     private function productCharacteristics(array $product): array
     {
-        if ($this->usesDatabase()) {
-            return array_map(static fn (array $characteristic): array => [
-                'name' => (string) $characteristic['nom'],
-                'type' => (string) $characteristic['type'],
-                'value' => (string) $characteristic['valeur'],
-            ], $this->characteristicValueModel?->findByProduct((int) $product['id']) ?? []);
-        }
-
         return [
             ['name' => 'Référence', 'type' => 'text', 'value' => 'TYE-' . str_pad((string) $product['id'], 4, '0', STR_PAD_LEFT)],
             ['name' => 'Catégorie', 'type' => 'text', 'value' => (string) $product['category']],
@@ -735,7 +759,9 @@ final class ProductService
         ];
 
         return array_map(
-            static fn (array $product): array => $product + ($badges[$product['id']] ?? []),
+            static fn (array $product): array => $product + [
+                'variantId' => (int) ($product['variantId'] ?? $product['id']),
+            ] + ($badges[$product['id']] ?? []),
             $products,
         );
     }

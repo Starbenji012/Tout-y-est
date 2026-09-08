@@ -62,7 +62,7 @@ final class CategoryService
 
         foreach ($rows as $row) {
             $id = (int) $row['id_categorie'];
-            $slug = (string) $row['slug_'];
+            $slug = (string) $row['slug'];
             $parentId = isset($row['parent_id']) ? (int) $row['parent_id'] : 0;
             $categories[$id] = [
                 'id' => $id,

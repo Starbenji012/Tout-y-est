@@ -2,12 +2,18 @@
 
 // Normalise les données nécessaires à l'unique carte produit réutilisée sur le site.
 
+if (!isset($product) || !is_array($product)) {
+    $product = [];
+}
+
+$productCardAnimationDelay = (int) ($productCardAnimationDelay ?? 0);
+
 $productId = (string) ($product['id'] ?? '');
 $productName = (string) ($product['name'] ?? 'Produit');
 $productUrl = (string) ($product['url'] ?? '/boutique');
 ?>
 
-<article class="product-card" data-product-card data-product-id="<?= htmlspecialchars($productId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-motion="card" data-motion-delay="<?= (int) ($productCardAnimationDelay ?? 0) ?>">
+<article class="product-card" data-product-card data-product-id="<?= htmlspecialchars($productId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-product-variant-id="<?= (int) ($product['variantId'] ?? $productId) ?>" data-motion="card" data-motion-delay="<?= (int) ($productCardAnimationDelay ?? 0) ?>">
     <div class="product-card__media">
         <a class="product-card__image-link" href="<?= htmlspecialchars($productUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Voir <?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
             <img

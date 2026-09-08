@@ -15,7 +15,7 @@ $quickViewOptions = $productOptions ?? [];
 
 <dialog class="quick-view" aria-labelledby="quick-view-title" data-quick-view-dialog>
     <button class="quick-view__close" type="button" aria-label="Fermer l’aperçu" data-quick-view-close><i data-lucide="x" aria-hidden="true"></i></button>
-    <div class="quick-view__layout" data-product-card data-product-id="<?= $quickViewId ?>">
+    <div class="quick-view__layout" data-product-card data-product-id="<?= $quickViewId ?>" data-product-variant-id="<?= (int) ($quickViewProduct['variantId'] ?? $quickViewId) ?>">
         <div class="quick-view__gallery">
             <div class="quick-view__media">
                 <img data-gallery-main src="<?= htmlspecialchars((string) $quickViewGallery[0]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $quickViewGallery[0]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) ($quickViewProduct['width'] ?? 1000) ?>" height="<?= (int) ($quickViewProduct['height'] ?? 1000) ?>">

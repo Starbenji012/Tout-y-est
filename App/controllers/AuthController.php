@@ -26,10 +26,6 @@ final class AuthController extends Controller
     /** Affiche le formulaire ou traite la tentative d'authentification reçue. */
     public function index(): void
     {
-        if (is_array(Session::get('user'))) {
-            Response::redirect('/compte');
-        }
-
         if (!$this->request->isPost()) {
             $this->renderPage();
             return;

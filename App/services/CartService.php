@@ -16,20 +16,20 @@ final class CartService
     public function buildCart(string $serializedItems): array
     {
         $requestedItems = $this->normalizeItems($serializedItems);
-        $products = $this->productService->findProductsByIds(array_keys($requestedItems));
+        $products = $this->productService->findProductsByVariantIds(array_keys($requestedItems));
         $items = [];
         $subtotal = 0.0;
         $count = 0;
         $quantityAdjusted = false;
 
         foreach ($products as $product) {
-            $productId = (int) $product['id'];
+            $variantId = (int) ($product['variantId'] ?? $product['id']);
             $stock = max(0, (int) ($product['stock'] ?? 0));
-            $quantity = min($requestedItems[$productId], $stock > 0 ? $stock : 1);
+            $quantity = min($requestedItems[$variantId], $stock > 0 ? $stock : 1);
             $available = $stock > 0;
             $unitPrice = (float) ($product['priceValue'] ?? 0);
             $availability = $this->availability($stock);
-            $quantityAdjusted = $quantityAdjusted || $quantity !== $requestedItems[$productId];
+            $quantityAdjusted = $quantityAdjusted || $quantity !== $requestedItems[$variantId];
             $subtotal += $available ? $unitPrice * $quantity : 0.0;
             $count += $quantity;
             $items[] = [
@@ -52,7 +52,8 @@ final class CartService
             ),
             'storedItems' => array_map(
                 static fn (array $item): array => [
-                    'id' => (int) $item['product']['id'],
+                    'id' => (int) ($item['product']['variantId'] ?? $item['product']['id']),
+                    'variantId' => (int) ($item['product']['variantId'] ?? $item['product']['id']),
                     'quantity' => (int) $item['quantity'],
                 ],
                 $items,

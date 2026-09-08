@@ -25,7 +25,7 @@ $breadcrumb = ['items' => [
     <div class="container">
         <?php require dirname(__DIR__) . '/components/breadcrumb.php'; ?>
 
-        <div class="product-detail__layout" data-product-card data-product-id="<?= (int) $product['id'] ?>">
+        <div class="product-detail__layout" data-product-card data-product-id="<?= (int) $product['id'] ?>" data-product-variant-id="<?= (int) ($product['variantId'] ?? $product['id']) ?>">
             <div class="product-detail__media" data-motion="side">
                 <div class="product-detail__image-container">
                     <img data-gallery-main src="<?= htmlspecialchars((string) $productGallery[0]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $productGallery[0]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) $product['width'] ?>" height="<?= (int) $product['height'] ?>" fetchpriority="high">

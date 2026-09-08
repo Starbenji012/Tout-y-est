@@ -35,7 +35,7 @@ final class Category
             ? 'c.`' . $parentColumn . '` AS parent_id'
             : 'NULL AS parent_id';
         $statement = $this->database->query(
-            'SELECT c.id_categorie, c.nom, c.slug_, ' . $parentSelect . ',
+            'SELECT c.id_categorie, c.nom, c.slug, ' . $parentSelect . ',
                     (SELECT COUNT(*) FROM produit p
                      WHERE p.id_categorie = c.id_categorie
                        AND LOWER(p.statut) NOT IN (\'inactif\', \'inactive\', \'brouillon\', \'archive\', \'supprime\')) AS product_count

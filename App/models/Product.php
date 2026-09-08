@@ -41,23 +41,13 @@ final class Product
     public function findSuggestionCandidates(string $query, int $limit = 80): array
     {
         $query = trim($query);
-        $fragment = function_exists('mb_substr') ? mb_substr($query, 0, 3) : substr($query, 0, 3);
         $statement = $this->database->prepare(
             $this->selectSql(true)
             . " WHERE LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"
             . ' AND (
                     p.nom LIKE :candidate_name
                     OR c.nom LIKE :candidate_category
-                    OR p.nom LIKE :candidate_fragment
-                    OR SOUNDEX(p.nom) = SOUNDEX(:candidate_soundex)
-                    OR EXISTS (
-                        SELECT 1
-                        FROM `valeur_caractéristique` sv
-                        INNER JOIN `caractéristique` sc ON sc.id_caracteristique = sv.id_caracteristique
-                        WHERE sv.id_produit = p.id_produit
-                          AND LOWER(sc.nom) IN (\'marque\', \'marques\', \'brand\', \'fabricant\')
-                          AND (sv.valeur LIKE :candidate_brand OR sv.valeur LIKE :candidate_brand_fragment)
-                    )
+                    OR p.description LIKE :candidate_description
                 )
                 ORDER BY
                     CASE
@@ -65,17 +55,12 @@ final class Product
                         WHEN p.nom LIKE :candidate_order_name THEN 1
                         ELSE 2
                     END,
-                    avis_count DESC,
-                    note DESC,
                     p.date_creation DESC
                 LIMIT :limit',
         );
         $statement->bindValue(':candidate_name', '%' . $query . '%');
         $statement->bindValue(':candidate_category', '%' . $query . '%');
-        $statement->bindValue(':candidate_fragment', '%' . $fragment . '%');
-        $statement->bindValue(':candidate_soundex', $query);
-        $statement->bindValue(':candidate_brand', '%' . $query . '%');
-        $statement->bindValue(':candidate_brand_fragment', '%' . $fragment . '%');
+        $statement->bindValue(':candidate_description', '%' . $query . '%');
         $statement->bindValue(':candidate_prefix', $query . '%');
         $statement->bindValue(':candidate_order_name', '%' . $query . '%');
         $statement->bindValue(':limit', max(1, min(100, $limit)), PDO::PARAM_INT);
@@ -92,7 +77,7 @@ final class Product
             'SELECT COUNT(DISTINCT p.id_produit)
              FROM produit p
              INNER JOIN categorie c ON c.id_categorie = p.id_categorie
-             LEFT JOIN image_produit i ON i.id_image = p.id_image' . $where,
+             INNER JOIN variante_produit v ON v.id_produit = p.id_produit' . $where,
         );
 
         $this->bindParameters($statement, $parameters);
@@ -139,14 +124,41 @@ final class Product
         return $statement->fetchAll();
     }
 
+    /** Recherche les produits correspondant aux variantes demandées. */
+    public function findByVariantIds(array $variantIds): array
+    {
+        if ($variantIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $parameters = [];
+
+        foreach (array_values($variantIds) as $index => $variantId) {
+            $key = 'variant_id_' . $index;
+            $placeholders[] = ':' . $key;
+            $parameters[$key] = (int) $variantId;
+        }
+
+        $statement = $this->database->prepare(
+            $this->selectSql()
+            . ' WHERE v.id_variante IN (' . implode(', ', $placeholders) . ')'
+            . " AND LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')",
+        );
+        $this->bindParameters($statement, $parameters);
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
     /** Retourne les catégories réellement utilisées par les produits. */
     public function categories(): array
     {
         $statement = $this->database->query(
-            "SELECT c.slug_, c.nom
+            "SELECT c.slug, c.nom
              FROM categorie c
              WHERE LOWER(c.statut) NOT IN ('inactif', 'inactive', 'archive')
-             ORDER BY c.nom",
+               ORDER BY c.nom",
         );
 
         return $statement->fetchAll();
@@ -157,11 +169,7 @@ final class Product
     {
         $promotionCondition = self::ACTIVE_PROMOTION;
         $searchAttributes = $includeSearchAttributes
-            ? "COALESCE((SELECT GROUP_CONCAT(DISTINCT vc.valeur SEPARATOR ' ')
-                         FROM `valeur_caractéristique` vc
-                         INNER JOIN `caractéristique` cc ON cc.id_caracteristique = vc.id_caracteristique
-                         WHERE vc.id_produit = p.id_produit
-                           AND LOWER(cc.nom) IN ('marque', 'marques', 'brand', 'fabricant')), '')"
+            ? "''"
             : "''";
 
         return "SELECT
@@ -169,22 +177,28 @@ final class Product
                     p.nom,
                     p.slug,
                     p.description,
-                    p.prix_base,
+                    v.id_variante,
+                    v.sku,
+                    v.prix_reference,
                     p.date_creation,
                     c.nom AS categorie,
-                    c.slug_ AS categorie_slug,
-                    i.chemin AS image,
+                    c.slug AS categorie_slug,
+                    '' AS image,
                     {$searchAttributes} AS search_attributes,
-                    COALESCE((SELECT AVG(a.note) FROM avis a WHERE a.id_produit = p.id_produit AND LOWER(a.status) NOT IN ('rejete', 'rejected')), 0) AS note,
-                    (SELECT COUNT(*) FROM avis a WHERE a.id_produit = p.id_produit AND LOWER(a.status) NOT IN ('rejete', 'rejected')) AS avis_count,
-                    COALESCE((SELECT SUM(v.stock) FROM variante_produit v WHERE v.id_produit = p.id_produit AND LOWER(v.status) NOT IN ('inactif', 'inactive')), 0) AS stock,
+                    0 AS note,
+                    0 AS avis_count,
+                    COALESCE((SELECT SUM(vs.stock) FROM variante_produit vs WHERE vs.id_produit = p.id_produit AND LOWER(vs.statut) NOT IN ('inactif', 'inactive')), 0) AS stock,
                     (SELECT MAX(pr.pourcentage)
-                     FROM benefici b
+                     FROM beneficier b
                      INNER JOIN promotion pr ON pr.id_promotion = b.id_promotion
                      WHERE b.id_produit = p.id_produit AND {$promotionCondition}) AS reduction
                 FROM produit p
                 INNER JOIN categorie c ON c.id_categorie = p.id_categorie
-                LEFT JOIN image_produit i ON i.id_image = p.id_image";
+                INNER JOIN variante_produit v ON v.id_variante = (
+                    SELECT MIN(vr.id_variante)
+                    FROM variante_produit vr
+                    WHERE vr.id_produit = p.id_produit
+                )";
     }
 
     /** Transforme les filtres validés en clauses SQL et paramètres préparés. */
@@ -196,20 +210,11 @@ final class Product
         if (($filters['search'] ?? '') !== '') {
             $conditions[] = '(p.nom LIKE :search_name
                 OR p.description LIKE :search_description
-                OR c.nom LIKE :search_category
-                OR EXISTS (
-                    SELECT 1
-                    FROM `valeur_caractéristique` sv
-                    INNER JOIN `caractéristique` sc ON sc.id_caracteristique = sv.id_caracteristique
-                    WHERE sv.id_produit = p.id_produit
-                      AND LOWER(sc.nom) IN (\'marque\', \'marques\', \'brand\', \'fabricant\')
-                      AND sv.valeur LIKE :search_brand
-                ))';
+                OR c.nom LIKE :search_category)';
             $search = '%' . $filters['search'] . '%';
             $parameters['search_name'] = $search;
             $parameters['search_description'] = $search;
             $parameters['search_category'] = $search;
-            $parameters['search_brand'] = $search;
         }
 
         if (($filters['categories'] ?? []) !== []) {
@@ -221,16 +226,16 @@ final class Product
                 $parameters[$key] = $category;
             }
 
-            $conditions[] = 'c.slug_ IN (' . implode(', ', $placeholders) . ')';
+            $conditions[] = 'c.slug IN (' . implode(', ', $placeholders) . ')';
         }
 
         if ($filters['priceMin'] !== null) {
-            $conditions[] = 'p.prix_base >= :price_min';
+            $conditions[] = 'v.prix_reference >= :price_min';
             $parameters['price_min'] = $filters['priceMin'];
         }
 
         if ($filters['priceMax'] !== null) {
-            $conditions[] = 'p.prix_base <= :price_max';
+            $conditions[] = 'v.prix_reference <= :price_max';
             $parameters['price_max'] = $filters['priceMax'];
         }
 
@@ -246,36 +251,6 @@ final class Product
             $conditions[] = 'NOT EXISTS (SELECT 1 FROM variante_produit v WHERE v.id_produit = p.id_produit AND v.stock > 0)';
         }
 
-        if (($filters['rating'] ?? 0) > 0) {
-            $conditions[] = 'COALESCE((SELECT AVG(a.note) FROM avis a WHERE a.id_produit = p.id_produit), 0) >= :rating';
-            $parameters['rating'] = $filters['rating'];
-        }
-
-        foreach ($filters['attributes'] ?? [] as $attribute => $values) {
-            if ($values === []) {
-                continue;
-            }
-
-            $valuePlaceholders = [];
-
-            foreach ($values as $index => $value) {
-                $key = 'attribute_' . $attribute . '_' . $index;
-                $valuePlaceholders[] = ':' . $key;
-                $parameters[$key] = $value;
-            }
-
-            $nameKey = 'attribute_name_' . $attribute;
-            $parameters[$nameKey] = '%' . $attribute . '%';
-            $conditions[] = 'EXISTS (
-                SELECT 1
-                FROM `valeur_caractéristique` vf
-                INNER JOIN `caractéristique` cf ON cf.id_caracteristique = vf.id_caracteristique
-                WHERE vf.id_produit = p.id_produit
-                  AND LOWER(cf.nom) LIKE :' . $nameKey . '
-                  AND vf.valeur IN (' . implode(', ', $valuePlaceholders) . ')
-            )';
-        }
-
         return [' WHERE ' . implode(' AND ', $conditions), $parameters];
     }
 
@@ -286,7 +261,7 @@ final class Product
         $promotionCondition = self::ACTIVE_PROMOTION;
 
         if (in_array('promotion', $statuses, true)) {
-            $conditions[] = "EXISTS (SELECT 1 FROM benefici b INNER JOIN promotion pr ON pr.id_promotion = b.id_promotion WHERE b.id_produit = p.id_produit AND {$promotionCondition})";
+            $conditions[] = "EXISTS (SELECT 1 FROM beneficier b INNER JOIN promotion pr ON pr.id_promotion = b.id_promotion WHERE b.id_produit = p.id_produit AND {$promotionCondition})";
         }
 
         if (in_array('new', $statuses, true)) {
@@ -294,7 +269,7 @@ final class Product
         }
 
         if (in_array('limited', $statuses, true)) {
-            $conditions[] = '(SELECT COALESCE(SUM(v.stock), 0) FROM variante_produit v WHERE v.id_produit = p.id_produit) BETWEEN 1 AND 5';
+            $conditions[] = '(SELECT COALESCE(SUM(vs.stock), 0) FROM variante_produit vs WHERE vs.id_produit = p.id_produit) BETWEEN 1 AND 5';
         }
 
         return $conditions;
@@ -304,7 +279,7 @@ final class Product
     private function sortSql(string $sort): string
     {
         // Le prix affiché tient compte de la meilleure promotion active.
-        $effectivePrice = 'p.prix_base * (1 - (COALESCE(reduction, 0) / 100))';
+        $effectivePrice = 'v.prix_reference * (1 - (COALESCE(reduction, 0) / 100))';
 
         return match ($sort) {
             'price-asc' => $effectivePrice . ' ASC, p.nom ASC, p.id_produit DESC',

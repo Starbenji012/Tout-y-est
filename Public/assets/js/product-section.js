@@ -4,7 +4,15 @@
 
   // Affiche un retour discret après une action de l'utilisateur.
   const notify = (title, icon = "success") => {
-    window.MotionSystem?.fire({ toast: true, position: "bottom-end", icon, title, showConfirmButton: false, timer: 2200, timerProgressBar: true });
+    window.MotionSystem?.fire({
+      toast: true,
+      position: "bottom-end",
+      icon,
+      title,
+      showConfirmButton: false,
+      timer: 2200,
+      timerProgressBar: true,
+    });
   };
 
   // Maintient la quantité dans les limites autorisées par le produit.
@@ -16,7 +24,9 @@
 
   // Remplace l'image principale et synchronise l'état des miniatures.
   const changeGalleryImage = (thumbnail) => {
-    const gallery = thumbnail.closest(".quick-view__gallery, .product-detail__media");
+    const gallery = thumbnail.closest(
+      ".quick-view__gallery, .product-detail__media",
+    );
     const mainImage = gallery?.querySelector("[data-gallery-main]");
     if (!mainImage) {
       return;
@@ -37,24 +47,39 @@
       return;
     }
 
-    root.querySelectorAll("[data-product-action='favorite']").forEach((button) => {
-      const productCard = button.closest("[data-product-card]");
-      const productId = Number(productCard?.dataset.productId);
-      const active = window.FavoriteStore.has(productId);
-      const productName = productCard?.querySelector(".product-card__title, .quick-view__title, .product-detail__title")?.textContent?.trim() || "ce produit";
-      button.setAttribute("aria-pressed", String(active));
-      button.setAttribute("aria-label", `${active ? "Retirer" : "Ajouter"} ${productName} ${active ? "des" : "aux"} favoris`);
-      button.classList.toggle("is-active", active);
-    });
+    root
+      .querySelectorAll("[data-product-action='favorite']")
+      .forEach((button) => {
+        const productCard = button.closest("[data-product-card]");
+        const productId = Number(productCard?.dataset.productId);
+        const active = window.FavoriteStore.has(productId);
+        const productName =
+          productCard
+            ?.querySelector(
+              ".product-card__title, .quick-view__title, .product-detail__title",
+            )
+            ?.textContent?.trim() || "ce produit";
+        button.setAttribute("aria-pressed", String(active));
+        button.setAttribute(
+          "aria-label",
+          `${active ? "Retirer" : "Ajouter"} ${productName} ${active ? "des" : "aux"} favoris`,
+        );
+        button.classList.toggle("is-active", active);
+      });
   };
 
   // Ajoute ou retire un produit des favoris puis informe l'utilisateur.
   const toggleFavorite = (button, productCard) => {
-    const active = window.FavoriteStore?.toggle(Number(productCard.dataset.productId)) ?? false;
+    const active =
+      window.FavoriteStore?.toggle(Number(productCard.dataset.productId)) ??
+      false;
     button.setAttribute("aria-pressed", String(active));
     button.classList.toggle("is-active", active);
     syncFavoriteButtons(productCard);
-    notify(active ? "Produit ajouté aux favoris" : "Produit retiré des favoris", active ? "success" : "info");
+    notify(
+      active ? "Produit ajouté aux favoris" : "Produit retiré des favoris",
+      active ? "success" : "info",
+    );
 
     if (active) {
       window.AuthPrompt?.favoriteSaved();
@@ -63,12 +88,20 @@
 
   // Enregistre le produit dans le panier et donne un retour immédiat.
   const confirmCart = (button, productCard) => {
-    const quantity = Number(productCard.querySelector("[data-quantity-input]")?.value) || 1;
-    window.CartStore?.add(Number(productCard.dataset.productId), quantity);
+    const quantity =
+      Number(productCard.querySelector("[data-quantity-input]")?.value) || 1;
+    window.CartStore?.add(
+      Number(
+        productCard.dataset.productVariantId || productCard.dataset.productId,
+      ),
+      quantity,
+    );
     button.classList.remove("is-feedback");
     window.requestAnimationFrame(() => button.classList.add("is-feedback"));
     window.setTimeout(() => button.classList.remove("is-feedback"), 500);
-    notify(`${quantity} × ${button.dataset.productName || "Produit"} ajouté au panier`);
+    notify(
+      `${quantity} × ${button.dataset.productName || "Produit"} ajouté au panier`,
+    );
   };
 
   // Ferme l'aperçu une seule fois, après son animation de sortie.
@@ -95,15 +128,19 @@
       event.preventDefault();
       closeQuickView(dialog);
     });
-    dialog.addEventListener("close", () => {
-      if (quickViewHost) {
-        quickViewHost.innerHTML = "";
-      }
+    dialog.addEventListener(
+      "close",
+      () => {
+        if (quickViewHost) {
+          quickViewHost.innerHTML = "";
+        }
 
-      if (trigger?.isConnected) {
-        trigger.focus();
-      }
-    }, { once: true });
+        if (trigger?.isConnected) {
+          trigger.focus();
+        }
+      },
+      { once: true },
+    );
 
     window.MotionSystem?.modalIn(dialog);
   };
@@ -116,7 +153,10 @@
 
     button.disabled = true;
     try {
-      const response = await fetch(`/api/produit/apercu?id=${encodeURIComponent(productId)}`, { headers: { Accept: "application/json" } });
+      const response = await fetch(
+        `/api/produit/apercu?id=${encodeURIComponent(productId)}`,
+        { headers: { Accept: "application/json" } },
+      );
       if (!response.ok) {
         throw new Error("Aperçu indisponible");
       }
@@ -137,7 +177,9 @@
 
   document.addEventListener("change", (event) => {
     if (event.target.matches("[data-quantity-input]")) {
-      event.target.value = String(normalizeQuantity(event.target, event.target.value));
+      event.target.value = String(
+        normalizeQuantity(event.target, event.target.value),
+      );
     }
   });
 
@@ -163,9 +205,16 @@
 
     const quantityButton = event.target.closest("[data-quantity-change]");
     if (quantityButton) {
-      const input = quantityButton.closest(".quantity-control")?.querySelector("[data-quantity-input]");
+      const input = quantityButton
+        .closest(".quantity-control")
+        ?.querySelector("[data-quantity-input]");
       if (input) {
-        input.value = String(normalizeQuantity(input, Number(input.value) + Number(quantityButton.dataset.quantityChange)));
+        input.value = String(
+          normalizeQuantity(
+            input,
+            Number(input.value) + Number(quantityButton.dataset.quantityChange),
+          ),
+        );
       }
       return;
     }
@@ -185,7 +234,14 @@
       openQuickView(productCard.dataset.productId, actionButton);
     }
 
-    productCard.closest("[data-product-section]")?.dispatchEvent(new CustomEvent("product:action", { bubbles: true, detail: { action, productId: productCard.dataset.productId } }));
+    productCard
+      .closest("[data-product-section]")
+      ?.dispatchEvent(
+        new CustomEvent("product:action", {
+          bubbles: true,
+          detail: { action, productId: productCard.dataset.productId },
+        }),
+      );
   });
 
   window.addEventListener("favorites:updated", () => syncFavoriteButtons());

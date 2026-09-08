@@ -22,8 +22,14 @@ $productController = new ProductController($productService, $request);
 // Chaque chemin public pointe vers une seule action de contrôleur.
 return [
     '/' => [$homeController, 'index'],
-    '/compte' => [$accountController, 'index'],
-    '/connexion' => [$authController, 'index'],
+    '/compte' => [
+        'handler' => [$accountController, 'index'],
+        'middleware' => ['auth'],
+    ],
+    '/connexion' => [
+        'handler' => [$authController, 'index'],
+        'middleware' => ['guest'],
+    ],
     '/deconnexion' => [$authController, 'logout'],
     '/panier' => [$cartController, 'index'],
     '/boutique' => [$productController, 'index'],
