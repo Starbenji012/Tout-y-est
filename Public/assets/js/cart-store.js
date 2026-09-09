@@ -2,6 +2,14 @@
 (() => {
   const STORAGE_KEY = "tout-y-est:cart";
 
+  if (document.body.dataset.cartFusionCompleted === "true") {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Le panier serveur reste disponible même si le stockage local est inaccessible.
+    }
+  }
+
   // Nettoie les identifiants et quantités avant toute sauvegarde.
   const normalize = (values) => {
     const items = new Map();

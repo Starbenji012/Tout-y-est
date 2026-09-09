@@ -8,6 +8,7 @@ use App\Core\Router;
 use App\Core\Session;
 use App\Controllers\ErrorController;
 use App\Controllers\CategoryController;
+use App\Models\Cart;
 use App\Models\Category;
 use App\Models\User;
 use App\Services\AuthService;
@@ -40,6 +41,7 @@ require_once dirname(__DIR__) . '/App/middleware/CsrfMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/AuthMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/GuestMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/AdminMiddleware.php';
+require_once dirname(__DIR__) . '/App/models/Cart.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
 require_once dirname(__DIR__) . '/App/models/Category.php';
 require_once dirname(__DIR__) . '/App/models/CharacteristicValue.php';
@@ -79,7 +81,10 @@ $request = new Request();
 $authService = new AuthService($database instanceof PDO ? new User($database) : null);
 $loginThrottleService = new LoginThrottleService();
 $categoryService = new CategoryService($database instanceof PDO ? new Category($database) : null, $productService);
-$cartService = new CartService($productService);
+$cartService = new CartService(
+    $productService,
+    $database instanceof PDO ? new Cart($database) : null,
+);
 
 // Associe l'adresse demandée au contrôleur chargé de produire la réponse.
 $routes = require dirname(__DIR__) . '/Routes/web.php';

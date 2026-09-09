@@ -12,7 +12,7 @@ use App\Controllers\ProductController;
 
 // Réunit ici les contrôleurs déjà configurés par le point d'entrée.
 $accountController = new AccountController();
-$authController = new AuthController($authService, $request, $loginThrottleService);
+$authController = new AuthController($authService, $request, $loginThrottleService, $cartService);
 $cartController = new CartController($cartService, $request);
 $categoryController = new CategoryController($categoryService, $request);
 $homeController = new HomeController($productService);

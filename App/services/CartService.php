@@ -4,18 +4,94 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Cart;
+
 /** Transforme les articles mémorisés côté client en un panier fiable. */
 final class CartService
 {
-    /** Reçoit le service produit utilisé pour vérifier les prix et disponibilités. */
-    public function __construct(private readonly ProductService $productService)
+    /** Reçoit les dépendances du panier invité et du panier connecté. */
+    public function __construct(
+        private readonly ProductService $productService,
+        private readonly ?Cart $connectedCart = null,
+    )
     {
+    }
+
+    /** Reconstruit le panier connecté depuis les lignes persistées et le catalogue courant. */
+    public function buildConnectedCart(int $userId): array
+    {
+        if ($this->connectedCart === null || $userId < 1) {
+            return $this->emptyCart();
+        }
+
+        $cartId = $this->connectedCart->findOrCreateForUser($userId);
+        $requestedItems = [];
+
+        foreach ($this->connectedCart->lines($cartId) as $line) {
+            $variantId = (int) ($line['variant_id'] ?? 0);
+            $quantity = min(99, max(1, (int) ($line['quantity'] ?? 0)));
+
+            if ($variantId > 0 && $quantity > 0) {
+                $requestedItems[$variantId] = $quantity;
+            }
+        }
+
+        return $this->buildFromRequestedItems($requestedItems);
+    }
+
+    /** Fusionne une seule fois le panier invité avec le panier persistant. */
+    public function mergeGuestCart(int $userId, string $serializedItems): bool
+    {
+        if ($this->connectedCart === null || $userId < 1) {
+            return false;
+        }
+
+        $cartId = $this->connectedCart->findOrCreateForUser($userId);
+        if ($cartId < 1) {
+            return false;
+        }
+
+        $guestItems = $this->normalizeItems($serializedItems);
+        $connectedItems = [];
+        foreach ($this->connectedCart->lines($cartId) as $line) {
+            $variantId = (int) ($line['variant_id'] ?? 0);
+            $quantity = min(99, max(1, (int) ($line['quantity'] ?? 0)));
+            if ($variantId > 0 && $quantity > 0) {
+                $connectedItems[$variantId] = $quantity;
+            }
+        }
+
+        $combinedItems = $connectedItems;
+        foreach ($guestItems as $variantId => $quantity) {
+            $combinedItems[$variantId] = min(99, ($combinedItems[$variantId] ?? 0) + $quantity);
+        }
+
+        $products = $this->productService->findProductsByVariantIds(array_keys($combinedItems));
+        $validQuantities = [];
+        foreach ($products as $product) {
+            $variantId = (int) ($product['variantId'] ?? 0);
+            $stock = max(0, (int) ($product['stock'] ?? 0));
+            if ($variantId < 1 || $stock < 1 || !isset($combinedItems[$variantId])) {
+                continue;
+            }
+            $validQuantities[$variantId] = min($combinedItems[$variantId], $stock);
+        }
+
+        $this->connectedCart->mergeLines($cartId, $validQuantities);
+
+        return true;
     }
 
     /** Reconstruit le panier à partir des données sérialisées du navigateur. */
     public function buildCart(string $serializedItems): array
     {
         $requestedItems = $this->normalizeItems($serializedItems);
+        return $this->buildFromRequestedItems($requestedItems);
+    }
+
+    /** Recalcule prix, promotions, stock et totaux depuis les variantes actuelles. */
+    private function buildFromRequestedItems(array $requestedItems): array
+    {
         $products = $this->productService->findProductsByVariantIds(array_keys($requestedItems));
         $items = [];
         $subtotal = 0.0;
@@ -24,6 +100,9 @@ final class CartService
 
         foreach ($products as $product) {
             $variantId = (int) ($product['variantId'] ?? $product['id']);
+            if (!isset($requestedItems[$variantId])) {
+                continue;
+            }
             $stock = max(0, (int) ($product['stock'] ?? 0));
             $quantity = min($requestedItems[$variantId], $stock > 0 ? $stock : 1);
             $available = $stock > 0;
@@ -61,6 +140,20 @@ final class CartService
             'notice' => $quantityAdjusted
                 ? 'Certaines quantités ont été ajustées selon le stock disponible.'
                 : null,
+        ];
+    }
+
+    /** Retourne une structure stable lorsque le panier connecté est indisponible. */
+    private function emptyCart(): array
+    {
+        return [
+            'items' => [],
+            'count' => 0,
+            'subtotal' => $this->formatPrice(0),
+            'total' => $this->formatPrice(0),
+            'canCheckout' => false,
+            'storedItems' => [],
+            'notice' => null,
         ];
     }
 

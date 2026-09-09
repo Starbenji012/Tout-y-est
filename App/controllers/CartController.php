@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Services\CartService;
 
 /** Fournit les vues du panier sans contenir les règles de calcul. */
@@ -35,7 +36,10 @@ final class CartController extends Controller
     /** Retourne seulement le fragment actualisable par Fetch API. */
     public function content(): void
     {
-        $cart = $this->cartService->buildCart((string) ($this->request->queryParameters()['items'] ?? ''));
+        $user = Session::get('user');
+        $cart = is_array($user) && (int) ($user['id'] ?? 0) > 0
+            ? $this->cartService->buildConnectedCart((int) $user['id'])
+            : $this->cartService->buildCart((string) ($this->request->queryParameters()['items'] ?? ''));
 
         Response::json([
             'html' => $this->renderPartial('components/cart-content', ['cart' => $cart]),

@@ -141,8 +141,9 @@ final class Product
         }
 
         $statement = $this->database->prepare(
-            $this->selectSql()
+            $this->selectSql(false, true)
             . ' WHERE v.id_variante IN (' . implode(', ', $placeholders) . ')'
+            . " AND LOWER(v.statut) NOT IN ('inactif', 'inactive', 'archive', 'supprime')"
             . " AND LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')",
         );
         $this->bindParameters($statement, $parameters);
@@ -165,12 +166,22 @@ final class Product
     }
 
     /** Construit la sélection SQL commune aux différentes lectures de produits. */
-    private function selectSql(bool $includeSearchAttributes = false): string
+    private function selectSql(bool $includeSearchAttributes = false, bool $exactVariant = false): string
     {
         $promotionCondition = self::ACTIVE_PROMOTION;
         $searchAttributes = $includeSearchAttributes
             ? "''"
             : "''";
+        $stockSelection = $exactVariant
+            ? 'v.stock'
+            : "COALESCE((SELECT SUM(vs.stock) FROM variante_produit vs WHERE vs.id_produit = p.id_produit AND LOWER(vs.statut) NOT IN ('inactif', 'inactive')), 0)";
+        $variantJoin = $exactVariant
+            ? 'v.id_variante'
+            : '(SELECT vr.id_variante
+                    FROM variante_produit vr
+                WHERE vr.id_produit = p.id_produit
+                ORDER BY vr.id_variante
+                LIMIT 1)';
 
         return "SELECT
                     p.id_produit,
@@ -187,18 +198,14 @@ final class Product
                     {$searchAttributes} AS search_attributes,
                     0 AS note,
                     0 AS avis_count,
-                    COALESCE((SELECT SUM(vs.stock) FROM variante_produit vs WHERE vs.id_produit = p.id_produit AND LOWER(vs.statut) NOT IN ('inactif', 'inactive')), 0) AS stock,
+                    {$stockSelection} AS stock,
                     (SELECT MAX(pr.pourcentage)
                      FROM beneficier b
                      INNER JOIN promotion pr ON pr.id_promotion = b.id_promotion
                      WHERE b.id_produit = p.id_produit AND {$promotionCondition}) AS reduction
                 FROM produit p
                 INNER JOIN categorie c ON c.id_categorie = p.id_categorie
-                INNER JOIN variante_produit v ON v.id_variante = (
-                    SELECT MIN(vr.id_variante)
-                    FROM variante_produit vr
-                    WHERE vr.id_produit = p.id_produit
-                )";
+                INNER JOIN variante_produit v ON v.id_variante = {$variantJoin}";
     }
 
     /** Transforme les filtres validés en clauses SQL et paramètres préparés. */

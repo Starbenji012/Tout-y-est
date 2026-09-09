@@ -32,14 +32,22 @@
     }
 
     const score = passwordStrength(input.value);
-    const labels = ["Mot de passe à compléter", "Faible", "Correct", "Bon", "Robuste"];
+    const labels = [
+      "Mot de passe à compléter",
+      "Faible",
+      "Correct",
+      "Bon",
+      "Robuste",
+    ];
     indicator.dataset.strength = String(score);
     indicator.querySelector("small").textContent = labels[score];
   };
 
   // Alterne l'affichage du mot de passe tout en gardant un libellé accessible.
   const togglePassword = (toggle) => {
-    const input = toggle.closest(".account-password")?.querySelector("[data-password-input]");
+    const input = toggle
+      .closest(".account-password")
+      ?.querySelector("[data-password-input]");
 
     if (!input) {
       return;
@@ -48,7 +56,10 @@
     const visible = input.type === "password";
     input.type = visible ? "text" : "password";
     toggle.setAttribute("aria-pressed", String(visible));
-    toggle.setAttribute("aria-label", visible ? "Masquer le mot de passe" : "Afficher le mot de passe");
+    toggle.setAttribute(
+      "aria-label",
+      visible ? "Masquer le mot de passe" : "Afficher le mot de passe",
+    );
     const icon = document.createElement("i");
     icon.dataset.lucide = visible ? "eye-off" : "eye";
     icon.setAttribute("aria-hidden", "true");
@@ -71,15 +82,20 @@
 
     switching = true;
     view.dataset.activeMode = mode;
-    window.history.replaceState({}, "", mode === "register" ? "#inscription" : window.location.pathname);
+    window.history.replaceState(
+      {},
+      "",
+      mode === "register" ? "#inscription" : window.location.pathname,
+    );
 
     // Finalise l'état du panneau après la transition du Motion System.
     const completeSwitch = () => {
       switching = false;
       if (status) {
-        status.textContent = mode === "register"
-          ? "Formulaire de création de compte affiché."
-          : "Formulaire de connexion affiché.";
+        status.textContent =
+          mode === "register"
+            ? "Formulaire de création de compte affiché."
+            : "Formulaire de connexion affiché.";
       }
       nextPanel.querySelector("input:not([type='hidden'])")?.focus();
     };
@@ -111,7 +127,9 @@
   // Actualise le compte à rebours avant une nouvelle tentative de connexion.
   const initializeRetry = () => {
     const retryMessage = view.querySelector("[data-auth-retry]");
-    const submitButton = view.querySelector("[data-auth-panel='login'] [data-auth-submit]");
+    const submitButton = view.querySelector(
+      "[data-auth-panel='login'] [data-auth-submit]",
+    );
     let remaining = Number(retryMessage?.dataset.authRetry) || 0;
 
     if (!retryMessage || !submitButton || remaining < 1) {
@@ -123,9 +141,10 @@
 
     // Rafraîchit le délai visible jusqu'à la fin du blocage.
     const update = () => {
-      retryMessage.textContent = remaining > 0
-        ? `Nouvelle tentative disponible dans ${remaining} seconde${remaining > 1 ? "s" : ""}.`
-        : "Vous pouvez maintenant réessayer.";
+      retryMessage.textContent =
+        remaining > 0
+          ? `Nouvelle tentative disponible dans ${remaining} seconde${remaining > 1 ? "s" : ""}.`
+          : "Vous pouvez maintenant réessayer.";
 
       if (remaining < 1) {
         submitButton.disabled = false;
@@ -159,7 +178,8 @@
     if (event.target.matches("[data-register-password]")) {
       updateStrength(event.target);
       const confirmation = view.querySelector("[data-password-confirmation]");
-      if (confirmation?.dataset.touched === "true") validation?.validateField(confirmation, true);
+      if (confirmation?.dataset.touched === "true")
+        validation?.validateField(confirmation, true);
     }
   });
 
@@ -177,7 +197,8 @@
     }
 
     if (event.target.closest("[data-forgot-password]")) {
-      const recoveryMessage = "Contactez le support Tout y est afin de vérifier votre identité et récupérer l’accès à votre compte.";
+      const recoveryMessage =
+        "Contactez le support Tout y est afin de vérifier votre identité et récupérer l’accès à votre compte.";
 
       if (!window.Swal || !window.MotionSystem?.fire) {
         window.alert(recoveryMessage);
@@ -194,7 +215,8 @@
     }
 
     if (event.target.closest("[data-google-auth]")) {
-      const googleMessage = "La connexion Google nécessite encore les identifiants OAuth et un stockage sécurisé de l’identifiant fournisseur.";
+      const googleMessage =
+        "La connexion Google nécessite encore les identifiants OAuth et un stockage sécurisé de l’identifiant fournisseur.";
 
       if (!window.Swal || !window.MotionSystem?.fire) {
         window.alert(googleMessage);
@@ -217,7 +239,10 @@
       return;
     }
 
-    const result = validation?.validateForm(form) || { valid: true, fields: [] };
+    const result = validation?.validateForm(form) || {
+      valid: true,
+      fields: [],
+    };
 
     if (!result.valid) {
       event.preventDefault();
@@ -225,10 +250,22 @@
       return;
     }
 
+    let cartField = form.querySelector("[name='cart_items']");
+    if (!cartField) {
+      cartField = document.createElement("input");
+      cartField.type = "hidden";
+      cartField.name = "cart_items";
+      form.append(cartField);
+    }
+    cartField.value = window.CartStore?.serialize?.() || "";
+
     setLoading(form);
   });
 
-  if (window.location.hash === "#inscription" && view.dataset.activeMode !== "register") {
+  if (
+    window.location.hash === "#inscription" &&
+    view.dataset.activeMode !== "register"
+  ) {
     switchPanel("register");
   }
 

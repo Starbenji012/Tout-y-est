@@ -10,6 +10,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Middleware\CsrfMiddleware;
 use App\Services\AuthService;
+use App\Services\CartService;
 use App\Services\LoginThrottleService;
 
 /** Coordonne les écrans et les actions de connexion et d'inscription. */
@@ -20,6 +21,7 @@ final class AuthController extends Controller
         private readonly AuthService $authService,
         private readonly Request $request,
         private readonly LoginThrottleService $loginThrottleService,
+        private readonly CartService $cartService,
     ) {
     }
 
@@ -77,6 +79,17 @@ final class AuthController extends Controller
         Session::regenerate();
         CsrfMiddleware::refresh();
         Session::set('user', $result['user']);
+
+        if (!Session::get('_cart_fusion_done', false)) {
+            $merged = $this->cartService->mergeGuestCart(
+                (int) ($result['user']['id'] ?? 0),
+                (string) ($input['cart_items'] ?? ''),
+            );
+            if ($merged) {
+                Session::set('_cart_fusion_done', true);
+                Session::set('_cart_fusion_completed', true);
+            }
+        }
 
         if (!empty($input['remember'])) {
             Session::remember();
