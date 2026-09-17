@@ -45,7 +45,7 @@ final class CharacteristicValue
                 $parameters[$key] = $slug;
             }
 
-            $conditions[] = 'cat.slug_ IN (' . implode(', ', $placeholders) . ')';
+            $conditions[] = 'cat.slug IN (' . implode(', ', $placeholders) . ')';
         }
 
         $statement = $this->database->prepare(

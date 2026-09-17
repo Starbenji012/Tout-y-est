@@ -198,5 +198,9 @@
   });
 
   window.addEventListener("cart:updated", loadCart);
+  window.addEventListener("cart:server-updated", loadCart);
+  window.addEventListener("cart:mutation-error", () => {
+    notify("Impossible d'enregistrer cette modification.", "error");
+  });
   loadCart();
 })();

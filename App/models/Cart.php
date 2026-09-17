@@ -90,6 +90,68 @@ final class Cart
 		}
 	}
 
+	/** Ajoute une quantité ou fixe une ligne dans une transaction courte. */
+	public function saveLine(int $cartId, int $variantId, int $quantity, int $maximum, bool $increment): int
+	{
+		if (!$this->officialSchemaAvailable || $cartId < 1 || $variantId < 1 || $quantity < 1 || $maximum < 1) {
+			return 0;
+		}
+
+		$this->database->beginTransaction();
+
+		try {
+			$current = 0;
+			$statement = $this->database->prepare(
+				'SELECT quantite FROM ligne_panier WHERE id_panier = :cart_id AND id_variante = :variant_id FOR UPDATE',
+			);
+			$statement->execute(['cart_id' => $cartId, 'variant_id' => $variantId]);
+			$current = (int) $statement->fetchColumn();
+			$next = min($maximum, $increment ? $current + $quantity : $quantity);
+
+			$statement = $this->database->prepare(
+				'INSERT INTO ligne_panier (id_panier, id_variante, quantite)
+				 VALUES (:cart_id, :variant_id, :quantity)
+				 ON DUPLICATE KEY UPDATE quantite = VALUES(quantite)',
+			);
+			$statement->execute([
+				'cart_id' => $cartId,
+				'variant_id' => $variantId,
+				'quantity' => $next,
+			]);
+
+			$this->database->commit();
+
+			return $next;
+		} catch (\Throwable $exception) {
+			$this->database->rollBack();
+			throw $exception;
+		}
+	}
+
+	/** Supprime une variante sans échouer si elle n'est plus présente. */
+	public function removeLine(int $cartId, int $variantId): void
+	{
+		if (!$this->officialSchemaAvailable || $cartId < 1 || $variantId < 1) {
+			return;
+		}
+
+		$statement = $this->database->prepare(
+			'DELETE FROM ligne_panier WHERE id_panier = :cart_id AND id_variante = :variant_id',
+		);
+		$statement->execute(['cart_id' => $cartId, 'variant_id' => $variantId]);
+	}
+
+	/** Vide toutes les lignes du panier actif. */
+	public function clearLines(int $cartId): void
+	{
+		if (!$this->officialSchemaAvailable || $cartId < 1) {
+			return;
+		}
+
+		$statement = $this->database->prepare('DELETE FROM ligne_panier WHERE id_panier = :cart_id');
+		$statement->execute(['cart_id' => $cartId]);
+	}
+
 	/** Attend la migration officielle avant d'activer la persistance du panier. */
 	private function hasOfficialSchema(): bool
 	{

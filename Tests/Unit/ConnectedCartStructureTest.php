@@ -17,7 +17,7 @@ $database = new PDO(
 
 try {
     $database->exec('CREATE TEMPORARY TABLE panier (id_panier BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_utilisateur BIGINT UNSIGNED NOT NULL UNIQUE, date_creation DATETIME, date_modification DATETIME)');
-    $database->exec('CREATE TEMPORARY TABLE ligne_panier (id_ligne_panier BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_panier BIGINT UNSIGNED NOT NULL, id_variante BIGINT UNSIGNED NOT NULL, quantite INT UNSIGNED NOT NULL, date_ajout DATETIME, date_modification DATETIME)');
+    $database->exec('CREATE TEMPORARY TABLE ligne_panier (id_ligne_panier BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_panier BIGINT UNSIGNED NOT NULL, id_variante BIGINT UNSIGNED NOT NULL, quantite INT UNSIGNED NOT NULL, date_ajout DATETIME, date_modification DATETIME, UNIQUE KEY uq_ligne_panier_variante (id_panier, id_variante))');
     $database->exec('CREATE TEMPORARY TABLE categorie (id_categorie BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(100), slug VARCHAR(120), statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE produit (id_produit BIGINT UNSIGNED PRIMARY KEY, id_categorie BIGINT UNSIGNED, nom VARCHAR(180), slug VARCHAR(220), description TEXT, statut VARCHAR(20), date_creation DATETIME)');
     $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20))');
@@ -81,6 +81,56 @@ try {
     }
     if (($mergedByVariant[15] ?? 0) !== 2 || ($mergedByVariant[16] ?? 0) !== 1 || isset($mergedByVariant[999])) {
         throw new RuntimeException('Règles de fusion incorrectes.');
+    }
+
+    $mutationCartId = $cartModel->findOrCreateForUser(44);
+    if (!$cartService->mutateConnectedCart(44, 'add', 15, 1)) {
+        throw new RuntimeException('Ajout d une variante échoué.');
+    }
+    if (!$cartService->mutateConnectedCart(44, 'add', 16, 3)) {
+        throw new RuntimeException('Ajout de plusieurs variantes échoué.');
+    }
+    if (!$cartService->mutateConnectedCart(44, 'add', 15, 1)) {
+        throw new RuntimeException('Double ajout d une variante échoué.');
+    }
+    if (!$cartService->mutateConnectedCart(44, 'set', 15, 99)) {
+        throw new RuntimeException('Modification de quantité échouée.');
+    }
+
+    $mutationLines = [];
+    foreach ($cartModel->lines($mutationCartId) as $line) {
+        $mutationLines[(int) $line['variant_id']] = (int) $line['quantity'];
+    }
+    if (($mutationLines[15] ?? 0) !== 2 || ($mutationLines[16] ?? 0) !== 3) {
+        throw new RuntimeException('Quantités persistées ou plafond de stock incorrects.');
+    }
+
+    $mutationCart = $cartService->buildConnectedCart(44);
+    $mutationItems = [];
+    foreach ($mutationCart['items'] as $item) {
+        $mutationItems[(int) $item['product']['variantId']] = $item;
+    }
+    if ((float) $mutationItems[15]['product']['priceValue'] !== 90.0 || (int) $mutationItems[15]['product']['stock'] !== 2) {
+        throw new RuntimeException('Prix promotionnel ou stock recalculé incorrect.');
+    }
+    if (!$cartService->mutateConnectedCart(44, 'remove', 16)) {
+        throw new RuntimeException('Suppression de variante échouée.');
+    }
+    foreach ($cartModel->lines($mutationCartId) as $line) {
+        if ((int) $line['variant_id'] === 16) {
+            throw new RuntimeException('Suppression de variante échouée.');
+        }
+    }
+    if ($cartService->mutateConnectedCart(44, 'add', 999, 1)) {
+        throw new RuntimeException('Une variante inexistante a été acceptée.');
+    }
+    if (!$cartService->mutateConnectedCart(44, 'clear') || $cartModel->lines($mutationCartId) !== []) {
+        throw new RuntimeException('Vidage du panier échoué.');
+    }
+
+    $guestCart = $cartService->buildCart('15:1');
+    if (count($guestCart['items']) !== 1 || (int) $guestCart['items'][0]['quantity'] !== 1) {
+        throw new RuntimeException('Le panier visiteur a changé de comportement.');
     }
 
     $database->exec("UPDATE promotion SET date_fin = DATE_SUB(NOW(), INTERVAL 1 DAY)");

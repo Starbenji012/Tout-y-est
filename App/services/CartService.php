@@ -82,6 +82,44 @@ final class CartService
         return true;
     }
 
+    /** Applique une mutation validée au panier connecté puis laisse le service le reconstruire. */
+    public function mutateConnectedCart(int $userId, string $action, int $variantId = 0, int $quantity = 1): bool
+    {
+        if ($this->connectedCart === null || $userId < 1 || !in_array($action, ['add', 'set', 'remove', 'clear'], true)) {
+            return false;
+        }
+
+        $cartId = $this->connectedCart->findOrCreateForUser($userId);
+        if ($cartId < 1) {
+            return false;
+        }
+
+        if ($action === 'clear') {
+            $this->connectedCart->clearLines($cartId);
+            return true;
+        }
+
+        if ($variantId < 1) {
+            return false;
+        }
+
+        if ($action === 'remove') {
+            $this->connectedCart->removeLine($cartId, $variantId);
+            return true;
+        }
+
+        $product = $this->productService->findProductsByVariantIds([$variantId])[0] ?? null;
+        $stock = max(0, (int) ($product['stock'] ?? 0));
+        if (!is_array($product) || $stock < 1) {
+            return false;
+        }
+
+        $quantity = min(99, max(1, $quantity));
+        $this->connectedCart->saveLine($cartId, $variantId, $quantity, $stock, $action === 'add');
+
+        return true;
+    }
+
     /** Reconstruit le panier à partir des données sérialisées du navigateur. */
     public function buildCart(string $serializedItems): array
     {

@@ -40,6 +40,10 @@ return [
     '/api/navigation/categories' => [$categoryController, 'navigation'],
     '/api/navigation/highlights' => [$categoryController, 'highlights'],
     '/api/panier' => [$cartController, 'content'],
+    '/api/panier/mutation' => [
+        'handler' => [$cartController, 'mutate'],
+        'middleware' => ['auth'],
+    ],
     '/api/favoris' => [$productController, 'favorites'],
     '/api/recherche' => [$productController, 'suggestions'],
     '/api/produit/apercu' => [$productController, 'quickView'],

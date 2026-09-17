@@ -1,6 +1,7 @@
 // Centralise le panier local afin que toutes les pages partagent les mêmes données.
 (() => {
   const STORAGE_KEY = "tout-y-est:cart";
+  const isAuthenticated = document.body.dataset.authenticated === "true";
 
   if (document.body.dataset.cartFusionCompleted === "true") {
     try {
@@ -28,6 +29,10 @@
 
   // Lit le panier local sans laisser une donnée invalide casser l'interface.
   const read = () => {
+    if (isAuthenticated) {
+      return [];
+    }
+
     try {
       return normalize(
         JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]"),
@@ -54,6 +59,11 @@
   const write = (values, notify = true) => {
     const items = normalize(values);
 
+    if (isAuthenticated) {
+      updateHeader(items);
+      return items;
+    }
+
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {
@@ -69,6 +79,40 @@
     return items;
   };
 
+  // Persiste une mutation uniquement pour un utilisateur connecté.
+  const mutate = async (action, variantId = 0, quantity = 1) => {
+    try {
+      const body = new URLSearchParams({
+        _token:
+          document.querySelector("meta[name='csrf-token']")?.content || "",
+        action,
+        variantId: String(variantId),
+        quantity: String(quantity),
+      });
+      const response = await fetch("/api/panier/mutation", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body,
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Cart mutation failed");
+      }
+
+      updateHeader(payload.items || []);
+      window.dispatchEvent(
+        new CustomEvent("cart:server-updated", { detail: payload }),
+      );
+      return payload;
+    } catch (error) {
+      window.dispatchEvent(
+        new CustomEvent("cart:mutation-error", { detail: error }),
+      );
+      return null;
+    }
+  };
+
   window.CartStore = Object.freeze({
     items: read,
     replace: (values, notify = true) => write(values, notify),
@@ -81,6 +125,10 @@
 
       if (!Number.isInteger(id) || id < 1) {
         return read();
+      }
+
+      if (isAuthenticated) {
+        return mutate("add", id, quantity);
       }
 
       const items = read();
@@ -98,14 +146,18 @@
       return write(items);
     },
     setQuantity: (productId, quantity) =>
-      write(
-        read().map((item) =>
-          item.id === Number(productId) ? { ...item, quantity } : item,
-        ),
-      ),
+      isAuthenticated
+        ? mutate("set", Number(productId), quantity)
+        : write(
+            read().map((item) =>
+              item.id === Number(productId) ? { ...item, quantity } : item,
+            ),
+          ),
     remove: (productId) =>
-      write(read().filter((item) => item.id !== Number(productId))),
-    clear: () => write([]),
+      isAuthenticated
+        ? mutate("remove", Number(productId))
+        : write(read().filter((item) => item.id !== Number(productId))),
+    clear: () => (isAuthenticated ? mutate("clear") : write([])),
   });
 
   updateHeader(read());

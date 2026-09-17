@@ -8,6 +8,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Middleware\CsrfMiddleware;
 use App\Services\CartService;
 
 /** Fournit les vues du panier sans contenir les règles de calcul. */
@@ -43,6 +44,38 @@ final class CartController extends Controller
 
         Response::json([
             'html' => $this->renderPartial('components/cart-content', ['cart' => $cart]),
+            'count' => $cart['count'],
+            'items' => $cart['storedItems'],
+            'notice' => $cart['notice'],
+        ]);
+    }
+
+    /** Persiste une mutation du panier connecté après validation CSRF. */
+    public function mutate(): void
+    {
+        $user = Session::get('user');
+        $input = $this->request->postParameters();
+        $userId = is_array($user) ? (int) ($user['id'] ?? 0) : 0;
+
+        if ($userId < 1 || !CsrfMiddleware::isValid($input['_token'] ?? null)) {
+            Response::json(['error' => 'Requête refusée.'], 419);
+            return;
+        }
+
+        $success = $this->cartService->mutateConnectedCart(
+            $userId,
+            (string) ($input['action'] ?? ''),
+            (int) ($input['variantId'] ?? 0),
+            (int) ($input['quantity'] ?? 1),
+        );
+
+        if (!$success) {
+            Response::json(['error' => 'Variante indisponible ou mutation invalide.'], 422);
+            return;
+        }
+
+        $cart = $this->cartService->buildConnectedCart($userId);
+        Response::json([
             'count' => $cart['count'],
             'items' => $cart['storedItems'],
             'notice' => $cart['notice'],

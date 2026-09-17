@@ -13,6 +13,7 @@ $cartFusionCompleted = (bool) \App\Core\Session::get('_cart_fusion_completed', f
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="<?= htmlspecialchars($metaDescription ?? 'Tout y est, votre boutique en ligne.', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
     <meta name="keywords" content="<?= htmlspecialchars($metaKeywords ?? 'boutique en ligne, e-commerce, Tout y est', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+    <meta name="csrf-token" content="<?= htmlspecialchars(\App\Middleware\CsrfMiddleware::token(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 
     <title><?= htmlspecialchars($title ?? 'Tout y est', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
 
