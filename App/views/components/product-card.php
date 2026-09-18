@@ -7,6 +7,7 @@ if (!isset($product) || !is_array($product)) {
 }
 
 $productCardAnimationDelay = (int) ($productCardAnimationDelay ?? 0);
+$productCardContext = (string) ($productCardContext ?? '');
 
 $productId = (string) ($product['id'] ?? '');
 $productName = (string) ($product['name'] ?? 'Produit');
@@ -78,5 +79,22 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
         ];
         require __DIR__ . '/button.php';
         ?>
+
+        <?php if ($productCardContext === 'favorites'): ?>
+            <?php
+            $button = [
+                'label' => 'Supprimer des favoris',
+                'variant' => 'ghost',
+                'icon' => 'trash-2',
+                'iconPosition' => 'start',
+                'class' => 'product-card__favorite-remove',
+                'attributes' => [
+                    'data-favorite-remove' => true,
+                    'aria-label' => 'Supprimer ' . $productName . ' des favoris',
+                ],
+            ];
+            require __DIR__ . '/button.php';
+            ?>
+        <?php endif; ?>
     </div>
 </article>

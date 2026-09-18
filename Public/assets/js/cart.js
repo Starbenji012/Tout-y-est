@@ -13,6 +13,8 @@
   const checkoutGate = page.querySelector("[data-cart-checkout-gate]");
   const isAuthenticated = document.body.dataset.authenticated === "true";
   let requestController;
+  let clearPending = false;
+  const pendingItems = new WeakSet();
 
   // Affiche un retour bref sans interrompre la navigation.
   const notify = (title, icon = "success") =>
@@ -69,12 +71,14 @@
       window.MotionSystem?.refresh(content);
     } catch (error) {
       if (error.name !== "AbortError") {
-        window.MotionSystem?.fire({
+        const dialog = window.MotionSystem?.fire({
           icon: "error",
           title: "Panier indisponible",
           text: "Impossible de charger votre panier pour le moment.",
           confirmButtonText: "Réessayer",
-        }).then((result) => {
+        });
+
+        dialog?.then((result) => {
           if (result.isConfirmed) {
             loadCart();
           }
@@ -88,11 +92,29 @@
     }
   };
 
+  // Empêche deux mutations simultanées sur la même ligne du panier.
+  const beginItemAction = (item) => {
+    if (!item || pendingItems.has(item)) {
+      return false;
+    }
+
+    pendingItems.add(item);
+    item.setAttribute("aria-busy", "true");
+
+    return true;
+  };
+
+  // Rend la ligne de nouveau disponible après la réponse du stockage.
+  const finishItemAction = (item) => {
+    pendingItems.delete(item);
+    item?.removeAttribute("aria-busy");
+  };
+
   // Limite la quantité à la plage autorisée avant de la sauvegarder.
-  const updateQuantity = (item, quantity) => {
+  const updateQuantity = async (item, quantity) => {
     const input = item?.querySelector("[data-cart-quantity-input]");
 
-    if (!input || input.disabled) {
+    if (!input || input.disabled || !beginItemAction(item)) {
       return;
     }
 
@@ -105,10 +127,16 @@
       notify("Quantité ajustée selon le stock disponible.", "warning");
     }
 
-    window.CartStore.setQuantity(
-      Number(item.dataset.productVariantId || item.dataset.productId),
-      normalized,
-    );
+    try {
+      await window.CartStore.setQuantity(
+        Number(item.dataset.productVariantId || item.dataset.productId),
+        normalized,
+      );
+    } catch (error) {
+      notify(error?.message || "Impossible de modifier cette quantité.", "error");
+    } finally {
+      finishItemAction(item);
+    }
   };
 
   // Affiche l’étape d’identification sans perdre le panier invité.
@@ -145,11 +173,33 @@
       return;
     }
 
-    if (item && event.target.closest("[data-cart-remove]")) {
-      window.CartStore.remove(
-        Number(item.dataset.productVariantId || item.dataset.productId),
-      );
-      notify("Produit retiré du panier.");
+    const removeButton = event.target.closest("[data-cart-remove]");
+
+    if (item && removeButton) {
+      if (!beginItemAction(item)) {
+        return;
+      }
+
+      removeButton.disabled = true;
+      removeButton.setAttribute("aria-busy", "true");
+      let removed = false;
+
+      try {
+        await window.CartStore.remove(
+          Number(item.dataset.productVariantId || item.dataset.productId),
+        );
+        removed = true;
+        notify("Produit retiré du panier.");
+      } catch (error) {
+        notify(error?.message || "Impossible de retirer ce produit.", "error");
+      } finally {
+        finishItemAction(item);
+
+        if (!removed) {
+          removeButton.disabled = false;
+          removeButton.removeAttribute("aria-busy");
+        }
+      }
       return;
     }
 
@@ -158,18 +208,39 @@
       return;
     }
 
-    if (event.target.closest("[data-cart-clear]")) {
-      const result = await window.MotionSystem?.fire({
-        icon: "question",
-        title: "Vider le panier ?",
-        text: "Tous les produits seront retirés de votre panier.",
-        showCancelButton: true,
-        confirmButtonText: "Vider",
-        cancelButtonText: "Annuler",
-      });
+    const clearButton = event.target.closest("[data-cart-clear]");
 
-      if (result?.isConfirmed) {
-        window.CartStore.clear();
+    if (clearButton) {
+      if (clearPending) {
+        return;
+      }
+
+      clearPending = true;
+      clearButton.disabled = true;
+      let cleared = false;
+
+      try {
+        const result = await window.MotionSystem?.fire({
+          icon: "question",
+          title: "Vider le panier ?",
+          text: "Tous les produits seront retirés de votre panier.",
+          showCancelButton: true,
+          confirmButtonText: "Vider",
+          cancelButtonText: "Annuler",
+        });
+
+        if (result?.isConfirmed) {
+          await window.CartStore.clear();
+          cleared = true;
+        }
+      } catch (error) {
+        notify(error?.message || "Impossible de vider le panier.", "error");
+      } finally {
+        clearPending = false;
+
+        if (!cleared) {
+          clearButton.disabled = false;
+        }
       }
       return;
     }
@@ -199,8 +270,5 @@
 
   window.addEventListener("cart:updated", loadCart);
   window.addEventListener("cart:server-updated", loadCart);
-  window.addEventListener("cart:mutation-error", () => {
-    notify("Impossible d'enregistrer cette modification.", "error");
-  });
   loadCart();
 })();

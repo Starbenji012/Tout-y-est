@@ -218,6 +218,12 @@
   display: none;
 }
 
+.product-section--favorites .product-card__favorite-remove {
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--spacing-sm);
+}
+
 @media (max-width: 64rem) {
   .product-section__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

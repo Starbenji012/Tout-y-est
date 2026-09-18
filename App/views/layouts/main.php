@@ -5,6 +5,8 @@ $usesSweetAlert = in_array('sweetalert2', $pageLibraries, true);
 $usesGsap = in_array('gsap', $pageLibraries, true);
 $cartFusionCompleted = (bool) \App\Core\Session::get('_cart_fusion_completed', false);
 \App\Core\Session::remove('_cart_fusion_completed');
+$favoriteFusionCompleted = (bool) \App\Core\Session::get('_favorite_fusion_completed', false);
+\App\Core\Session::remove('_favorite_fusion_completed');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -44,7 +46,7 @@ $cartFusionCompleted = (bool) \App\Core\Session::get('_cart_fusion_completed', f
         <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
     <?php endforeach; ?>
 </head>
-<body data-authenticated="<?= is_array(\App\Core\Session::get('user')) ? 'true' : 'false' ?>" data-cart-fusion-completed="<?= $cartFusionCompleted ? 'true' : 'false' ?>">
+<body data-authenticated="<?= is_array(\App\Core\Session::get('user')) ? 'true' : 'false' ?>" data-cart-fusion-completed="<?= $cartFusionCompleted ? 'true' : 'false' ?>" data-favorite-fusion-completed="<?= $favoriteFusionCompleted ? 'true' : 'false' ?>">
     <!-- En-tête -->
     <?php require dirname(__DIR__) . '/components/header.php'; ?>
 

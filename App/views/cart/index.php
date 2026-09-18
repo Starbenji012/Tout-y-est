@@ -6,6 +6,7 @@ $sectionHeader = [
     'badge' => ['label' => 'Votre commande', 'variant' => 'popular'],
     'title' => 'Mon panier',
     'description' => 'Vérifiez votre sélection, ajustez les quantités et préparez la suite de votre commande.',
+    'action' => ['label' => 'Retour à la boutique', 'variant' => 'secondary', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start'],
 ];
 ?>
 

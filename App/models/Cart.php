@@ -106,7 +106,7 @@ final class Cart
 			);
 			$statement->execute(['cart_id' => $cartId, 'variant_id' => $variantId]);
 			$current = (int) $statement->fetchColumn();
-			$next = min($maximum, $increment ? $current + $quantity : $quantity);
+			$next = min($maximum, 99, $increment ? $current + $quantity : $quantity);
 
 			$statement = $this->database->prepare(
 				'INSERT INTO ligne_panier (id_panier, id_variante, quantite)

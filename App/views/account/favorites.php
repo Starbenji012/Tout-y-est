@@ -6,7 +6,7 @@ $sectionHeader = [
     'badge' => ['label' => 'Votre sélection', 'variant' => 'popular'],
     'title' => 'Mes favoris',
     'description' => 'Gardez sous la main les produits qui vous plaisent et reprenez votre découverte à tout moment.',
-    'action' => ['label' => 'Continuer mes achats', 'variant' => 'secondary', 'href' => '/boutique', 'icon' => 'arrow-right'],
+    'action' => ['label' => 'Retour à la boutique', 'variant' => 'secondary', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start'],
 ];
 ?>
 
@@ -23,7 +23,7 @@ $sectionHeader = [
         </div>
 
         <noscript>
-            <p>JavaScript doit être activé pour afficher les favoris enregistrés sur cet appareil.</p>
+            <p>JavaScript doit être activé pour afficher vos favoris.</p>
         </noscript>
     </div>
 </section>

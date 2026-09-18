@@ -140,29 +140,6 @@ final class ProductController extends Controller
         ]);
     }
 
-    /** Retourne les cartes correspondant aux identifiants favoris reçus. */
-    public function favorites(): void
-    {
-        $rawIds = (string) ($this->request->queryParameters()['ids'] ?? '');
-        $products = $this->productService->findProductsByIds(explode(',', $rawIds));
-        $html = $this->renderPartial('components/product-results', [
-            'productResults' => [
-                'products' => $products,
-                'emptyState' => [
-                    'title' => 'Vos favoris vous attendent',
-                    'text' => 'Ajoutez des produits à votre sélection pour les retrouver facilement ici.',
-                    'action' => ['label' => 'Découvrir la boutique', 'variant' => 'primary', 'href' => '/boutique'],
-                ],
-            ],
-        ]);
-
-        Response::json([
-            'html' => $html,
-            'count' => count($products),
-            'ids' => array_map(static fn (array $product): int => (int) $product['id'], $products),
-        ]);
-    }
-
     /** Retourne les suggestions correspondant au texte saisi dans la recherche. */
     public function suggestions(): void
     {

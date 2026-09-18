@@ -5,12 +5,14 @@ $productResultsProducts = $productResultsConfig['products'] ?? [];
 $productResultsEmptyState = $productResultsConfig['emptyState'] ?? [];
 $productResultsFooterAction = $productResultsConfig['footerAction'] ?? null;
 $productResultsPagination = $productResultsConfig['pagination'] ?? null;
+$productResultsContext = (string) ($productResultsConfig['context'] ?? '');
 ?>
 
 <?php if ($productResultsProducts !== []): ?>
     <div class="product-section__grid">
         <?php foreach ($productResultsProducts as $productIndex => $product): ?>
             <?php $productCardAnimationDelay = min($productIndex % 4, 3) * 70; ?>
+            <?php $productCardContext = $productResultsContext; ?>
             <?php require __DIR__ . '/product-card.php'; ?>
         <?php endforeach; ?>
     </div>
@@ -33,4 +35,4 @@ $productResultsPagination = $productResultsConfig['pagination'] ?? null;
     </div>
 <?php endif; ?>
 
-<?php unset($productResults, $productResultsConfig, $productResultsProducts, $productResultsEmptyState, $productResultsFooterAction, $productResultsPagination, $productIndex, $productCardAnimationDelay, $product, $emptyState, $button, $pagination); ?>
+<?php unset($productResults, $productResultsConfig, $productResultsProducts, $productResultsEmptyState, $productResultsFooterAction, $productResultsPagination, $productResultsContext, $productCardContext, $productIndex, $productCardAnimationDelay, $product, $emptyState, $button, $pagination); ?>

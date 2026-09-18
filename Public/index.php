@@ -10,10 +10,12 @@ use App\Controllers\ErrorController;
 use App\Controllers\CategoryController;
 use App\Models\Cart;
 use App\Models\Category;
+use App\Models\Favorite;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\CartService;
 use App\Services\CategoryService;
+use App\Services\FavoriteService;
 use App\Services\LoginThrottleService;
 use App\Models\CharacteristicValue;
 use App\Models\Product;
@@ -42,6 +44,7 @@ require_once dirname(__DIR__) . '/App/middleware/AuthMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/GuestMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/AdminMiddleware.php';
 require_once dirname(__DIR__) . '/App/models/Cart.php';
+require_once dirname(__DIR__) . '/App/models/Favorite.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
 require_once dirname(__DIR__) . '/App/models/Category.php';
 require_once dirname(__DIR__) . '/App/models/CharacteristicValue.php';
@@ -52,6 +55,7 @@ require_once dirname(__DIR__) . '/App/services/LoginThrottleService.php';
 require_once dirname(__DIR__) . '/App/services/ProductService.php';
 require_once dirname(__DIR__) . '/App/services/CategoryService.php';
 require_once dirname(__DIR__) . '/App/services/CartService.php';
+require_once dirname(__DIR__) . '/App/services/FavoriteService.php';
 require_once dirname(__DIR__) . '/App/controllers/CartController.php';
 require_once dirname(__DIR__) . '/App/controllers/CategoryController.php';
 require_once dirname(__DIR__) . '/App/controllers/AccountController.php';
@@ -84,6 +88,10 @@ $categoryService = new CategoryService($database instanceof PDO ? new Category($
 $cartService = new CartService(
     $productService,
     $database instanceof PDO ? new Cart($database) : null,
+);
+$favoriteService = new FavoriteService(
+    $productService,
+    $database instanceof PDO ? new Favorite($database) : null,
 );
 
 // Associe l'adresse demandée au contrôleur chargé de produire la réponse.

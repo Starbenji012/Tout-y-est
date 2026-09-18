@@ -259,6 +259,15 @@
     }
     cartField.value = window.CartStore?.serialize?.() || "";
 
+    let favoriteField = form.querySelector("[name='favorite_items']");
+    if (!favoriteField) {
+      favoriteField = document.createElement("input");
+      favoriteField.type = "hidden";
+      favoriteField.name = "favorite_items";
+      form.append(favoriteField);
+    }
+    favoriteField.value = window.FavoriteStore?.serialize?.() || "";
+
     setLoading(form);
   });
 

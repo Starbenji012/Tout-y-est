@@ -4,6 +4,9 @@
 # Dépendances PHP installées par Composer
 /vendor/
 
+# Sauvegardes locales de la base de données
+/Storage/backups/
+
 # Fichiers temporaires et logs
 *.log
 *.tmp

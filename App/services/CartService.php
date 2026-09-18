@@ -115,9 +115,13 @@ final class CartService
         }
 
         $quantity = min(99, max(1, $quantity));
-        $this->connectedCart->saveLine($cartId, $variantId, $quantity, $stock, $action === 'add');
-
-        return true;
+        return $this->connectedCart->saveLine(
+            $cartId,
+            $variantId,
+            $quantity,
+            $stock,
+            $action === 'add',
+        ) > 0;
     }
 
     /** Reconstruit le panier à partir des données sérialisées du navigateur. */

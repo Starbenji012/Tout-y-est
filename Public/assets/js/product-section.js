@@ -69,39 +69,72 @@
   };
 
   // Ajoute ou retire un produit des favoris puis informe l'utilisateur.
-  const toggleFavorite = (button, productCard) => {
-    const active =
-      window.FavoriteStore?.toggle(Number(productCard.dataset.productId)) ??
-      false;
-    button.setAttribute("aria-pressed", String(active));
-    button.classList.toggle("is-active", active);
-    syncFavoriteButtons(productCard);
-    notify(
-      active ? "Produit ajouté aux favoris" : "Produit retiré des favoris",
-      active ? "success" : "info",
-    );
+  const toggleFavorite = async (button, productCard) => {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
 
-    if (active) {
-      window.AuthPrompt?.favoriteSaved();
+    try {
+      if (!window.FavoriteStore) {
+        throw new Error("Les favoris ne sont pas disponibles pour le moment.");
+      }
+
+      const active = await window.FavoriteStore.toggle(
+        Number(productCard.dataset.productId),
+      );
+      button.setAttribute("aria-pressed", String(active));
+      button.classList.toggle("is-active", active);
+      syncFavoriteButtons(productCard);
+      notify(
+        active ? "Produit ajouté aux favoris" : "Produit retiré des favoris",
+        active ? "success" : "info",
+      );
+
+      if (active) {
+        window.AuthPrompt?.favoriteSaved();
+      }
+    } catch (error) {
+      notify(
+        error?.message || "Impossible de modifier ce favori.",
+        "error",
+      );
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
     }
   };
 
-  // Enregistre le produit dans le panier et donne un retour immédiat.
-  const confirmCart = (button, productCard) => {
+  // Confirme l'ajout uniquement après la réponse positive du serveur.
+  const confirmCart = async (button, productCard) => {
     const quantity =
       Number(productCard.querySelector("[data-quantity-input]")?.value) || 1;
-    window.CartStore?.add(
-      Number(
-        productCard.dataset.productVariantId || productCard.dataset.productId,
-      ),
-      quantity,
+    const variantId = Number(
+      productCard.dataset.productVariantId || productCard.dataset.productId,
     );
-    button.classList.remove("is-feedback");
-    window.requestAnimationFrame(() => button.classList.add("is-feedback"));
-    window.setTimeout(() => button.classList.remove("is-feedback"), 500);
-    notify(
-      `${quantity} × ${button.dataset.productName || "Produit"} ajouté au panier`,
-    );
+
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+
+    try {
+      if (!window.CartStore) {
+        throw new Error("Le panier n'est pas disponible pour le moment.");
+      }
+
+      await window.CartStore.add(variantId, quantity);
+      button.classList.remove("is-feedback");
+      window.requestAnimationFrame(() => button.classList.add("is-feedback"));
+      window.setTimeout(() => button.classList.remove("is-feedback"), 500);
+      notify(
+        `${quantity} × ${button.dataset.productName || "Produit"} ajouté au panier`,
+      );
+    } catch (error) {
+      notify(
+        error?.message || "Impossible d'ajouter ce produit au panier.",
+        "error",
+      );
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   };
 
   // Ferme l'aperçu une seule fois, après son animation de sortie.

@@ -26,7 +26,7 @@ try {
 
     $database->exec("INSERT INTO categorie VALUES (1, 'Test', 'test', 'actif')");
     $database->exec("INSERT INTO produit VALUES (1, 1, 'Produit connecté', 'produit-connecte', 'Test', 'actif', NOW())");
-    $database->exec("INSERT INTO variante_produit VALUES (15, 1, 'TEST-15', 100, 2, 'actif'), (16, 1, 'TEST-16', 200, 15, 'actif')");
+    $database->exec("INSERT INTO variante_produit VALUES (15, 1, 'TEST-15', 100, 2, 'actif'), (16, 1, 'TEST-16', 200, 15, 'actif'), (17, 1, 'TEST-17', 300, 200, 'actif')");
     $database->exec("INSERT INTO promotion VALUES (1, 10, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 1 DAY), 'actif')");
     $database->exec('INSERT INTO beneficier VALUES (1, 1)');
 
@@ -103,6 +103,18 @@ try {
     }
     if (($mutationLines[15] ?? 0) !== 2 || ($mutationLines[16] ?? 0) !== 3) {
         throw new RuntimeException('Quantités persistées ou plafond de stock incorrects.');
+    }
+
+    if (!$cartService->mutateConnectedCart(44, 'add', 17, 99)
+        || !$cartService->mutateConnectedCart(44, 'add', 17, 99)) {
+        throw new RuntimeException('Ajout de la variante à stock élevé échoué.');
+    }
+    $quantityStatement = $database->prepare(
+        'SELECT quantite FROM ligne_panier WHERE id_panier = :cart_id AND id_variante = :variant_id',
+    );
+    $quantityStatement->execute(['cart_id' => $mutationCartId, 'variant_id' => 17]);
+    if ((int) $quantityStatement->fetchColumn() !== 99) {
+        throw new RuntimeException('La quantité persistée dépasse la limite de 99.');
     }
 
     $mutationCart = $cartService->buildConnectedCart(44);

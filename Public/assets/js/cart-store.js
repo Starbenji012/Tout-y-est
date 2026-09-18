@@ -2,6 +2,7 @@
 (() => {
   const STORAGE_KEY = "tout-y-est:cart";
   const isAuthenticated = document.body.dataset.authenticated === "true";
+  let serverItems = [];
 
   if (document.body.dataset.cartFusionCompleted === "true") {
     try {
@@ -30,7 +31,7 @@
   // Lit le panier local sans laisser une donnée invalide casser l'interface.
   const read = () => {
     if (isAuthenticated) {
-      return [];
+      return serverItems;
     }
 
     try {
@@ -55,11 +56,22 @@
     });
   };
 
+  // Signale que le compteur serveur n'a pas pu être chargé.
+  const markHeaderUnavailable = () => {
+    document.querySelectorAll("[data-cart-count]").forEach((badge) => {
+      badge.textContent = "–";
+    });
+    document.querySelectorAll("[data-cart-link]").forEach((link) => {
+      link.setAttribute("aria-label", "Panier temporairement indisponible");
+    });
+  };
+
   // Enregistre le panier normalisé puis informe les composants concernés.
   const write = (values, notify = true) => {
     const items = normalize(values);
 
     if (isAuthenticated) {
+      serverItems = items;
       updateHeader(items);
       return items;
     }
@@ -79,6 +91,55 @@
     return items;
   };
 
+  // Décode uniquement les réponses JSON attendues de l'API panier.
+  const readJson = async (response) => {
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      if (response.redirected && response.url.includes("/connexion")) {
+        throw new Error("Votre session a expiré. Reconnectez-vous puis réessayez.");
+      }
+
+      throw new Error(
+        response.status >= 500
+          ? "Le serveur ne peut pas modifier le panier pour le moment."
+          : "La réponse du panier est invalide.",
+      );
+    }
+
+    let payload;
+
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error("La réponse du panier est illisible.");
+    }
+
+    if (!response.ok) {
+      const messages = {
+        419: "Votre session a expiré. Actualisez la page puis réessayez.",
+        422: "Cette variante n'est plus disponible.",
+      };
+      throw new Error(
+        payload.error ||
+          messages[response.status] ||
+          "Impossible de modifier le panier.",
+      );
+    }
+
+    return payload;
+  };
+
+  // Charge l'état persistant afin d'initialiser le compteur connecté.
+  const loadServerCart = async () => {
+    const response = await fetch("/api/panier", {
+      headers: { Accept: "application/json" },
+    });
+    const payload = await readJson(response);
+    write(payload.items || [], false);
+    return payload;
+  };
+
   // Persiste une mutation uniquement pour un utilisateur connecté.
   const mutate = async (action, variantId = 0, quantity = 1) => {
     try {
@@ -94,22 +155,19 @@
         headers: { Accept: "application/json" },
         body,
       });
-      const payload = await response.json();
+      const payload = await readJson(response);
 
-      if (!response.ok) {
-        throw new Error(payload.error || "Cart mutation failed");
-      }
-
-      updateHeader(payload.items || []);
+      write(payload.items || [], false);
       window.dispatchEvent(
         new CustomEvent("cart:server-updated", { detail: payload }),
       );
       return payload;
     } catch (error) {
-      window.dispatchEvent(
-        new CustomEvent("cart:mutation-error", { detail: error }),
-      );
-      return null;
+      if (error instanceof TypeError) {
+        throw new Error("Connexion au serveur impossible. Vérifiez votre réseau.");
+      }
+
+      throw error;
     }
   };
 
@@ -158,9 +216,18 @@
         ? mutate("remove", Number(productId))
         : write(read().filter((item) => item.id !== Number(productId))),
     clear: () => (isAuthenticated ? mutate("clear") : write([])),
+    refresh: () =>
+      isAuthenticated
+        ? loadServerCart()
+        : Promise.resolve({ items: read() }),
   });
 
-  updateHeader(read());
+  if (isAuthenticated) {
+    markHeaderUnavailable();
+    loadServerCart().catch(markHeaderUnavailable);
+  } else {
+    updateHeader(read());
+  }
 
   window.addEventListener("storage", (event) => {
     if (event.key !== STORAGE_KEY) {

@@ -11,7 +11,7 @@ use App\Models\Review;
 /** Prépare toutes les données produit destinées aux vues et aux API. */
 final class ProductService
 {
-    private ?bool $databaseHasProducts = null;
+    private ?bool $databaseAvailable = null;
 
     /** Reçoit les modèles sans créer de connexion ou de requête dans le service. */
     public function __construct(
@@ -478,11 +478,11 @@ final class ProductService
     /** Indique si une base exploitable peut remplacer les données de démonstration. */
     private function usesDatabase(): bool
     {
-        if ($this->databaseHasProducts === null) {
-            $this->databaseHasProducts = $this->productModel?->hasProducts() ?? false;
+        if ($this->databaseAvailable === null) {
+            $this->databaseAvailable = $this->productModel !== null;
         }
 
-        return $this->databaseHasProducts;
+        return $this->databaseAvailable;
     }
 
     /** Nettoie les paramètres externes avant de les transmettre au modèle. */

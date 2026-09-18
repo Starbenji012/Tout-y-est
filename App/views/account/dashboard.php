@@ -25,7 +25,7 @@ $accountUser = $accountUser ?? [];
                     <?php endif; ?>
                 </dl>
             </article>
-            <a class="account-dashboard__card" href="/favoris" data-motion="card"><i data-lucide="heart" aria-hidden="true"></i><h2>Mes favoris</h2><p>Retrouvez les produits enregistrés sur cet appareil.</p><span>Voir mes favoris <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>
+            <a class="account-dashboard__card" href="/favoris" data-motion="card"><i data-lucide="heart" aria-hidden="true"></i><h2>Mes favoris</h2><p>Retrouvez les produits enregistrés dans votre compte.</p><span>Voir mes favoris <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>
             <a class="account-dashboard__card" href="/panier" data-motion="card"><i data-lucide="shopping-cart" aria-hidden="true"></i><h2>Mon panier</h2><p>Reprenez rapidement votre sélection en cours.</p><span>Voir mon panier <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>
         </div>
 

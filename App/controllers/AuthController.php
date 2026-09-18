@@ -11,7 +11,9 @@ use App\Core\Session;
 use App\Middleware\CsrfMiddleware;
 use App\Services\AuthService;
 use App\Services\CartService;
+use App\Services\FavoriteService;
 use App\Services\LoginThrottleService;
+use PDOException;
 
 /** Coordonne les écrans et les actions de connexion et d'inscription. */
 final class AuthController extends Controller
@@ -22,6 +24,7 @@ final class AuthController extends Controller
         private readonly Request $request,
         private readonly LoginThrottleService $loginThrottleService,
         private readonly CartService $cartService,
+        private readonly FavoriteService $favoriteService,
     ) {
     }
 
@@ -88,6 +91,22 @@ final class AuthController extends Controller
             if ($merged) {
                 Session::set('_cart_fusion_done', true);
                 Session::set('_cart_fusion_completed', true);
+            }
+        }
+
+        if (!Session::get('_favorite_fusion_done', false)) {
+            try {
+                $merged = $this->favoriteService->mergeGuestFavorites(
+                    (int) ($result['user']['id'] ?? 0),
+                    (string) ($input['favorite_items'] ?? ''),
+                );
+            } catch (PDOException) {
+                $merged = false;
+            }
+
+            if ($merged) {
+                Session::set('_favorite_fusion_done', true);
+                Session::set('_favorite_fusion_completed', true);
             }
         }
 
