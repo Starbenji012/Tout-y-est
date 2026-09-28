@@ -11,8 +11,10 @@ use PDOException;
 final class AuthService
 {
     /** Reçoit le modèle utilisateur lorsqu'une base de données est disponible. */
-    public function __construct(private readonly ?User $userModel)
-    {
+    public function __construct(
+        private readonly ?User $userModel,
+        private readonly ?EmailVerificationService $emailVerificationService = null,
+    ) {
     }
 
     /** Valide les identifiants puis retourne un résultat sans gérer l'affichage. */
@@ -89,6 +91,13 @@ final class AuthService
             return $this->failure('La création de compte est temporairement indisponible.');
         }
 
+        try {
+            $emailVerification = $this->emailVerificationService?->issueForUser($userId)
+                ?? ['status' => 'unavailable'];
+        } catch (\Throwable) {
+            $emailVerification = ['status' => 'unavailable'];
+        }
+
         return [
             'success' => true,
             'user' => [
@@ -97,8 +106,10 @@ final class AuthService
                 'email' => $data['email'],
                 'phone' => null,
                 'role' => 'client',
+                'emailVerified' => false,
             ],
             'errors' => [],
+            'emailVerification' => $emailVerification,
         ];
     }
 
@@ -155,6 +166,7 @@ final class AuthService
             'email' => (string) $user['email'],
             'phone' => $user['telephone'] !== null ? (string) $user['telephone'] : null,
             'role' => (string) $user['role'],
+            'emailVerified' => $user['email_verified_at'] !== null,
         ];
     }
 

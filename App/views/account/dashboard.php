@@ -1,6 +1,19 @@
 <?php
 
 $accountUser = $accountUser ?? [];
+$emailVerification = is_array($emailVerification ?? null) ? $emailVerification : [];
+$emailVerificationNotice = is_string($emailVerificationNotice ?? null) ? $emailVerificationNotice : null;
+$verificationMessages = [
+    'sent' => ['success', 'Un nouveau lien de vérification a été envoyé.'],
+    'cooldown' => ['info', 'Un lien vient déjà d’être demandé. Patientez une minute avant de recommencer.'],
+    'already_verified' => ['success', 'Votre adresse e-mail est déjà vérifiée.'],
+    'transport_unavailable' => ['warning', 'L’envoi réel reste à configurer sur cet environnement.'],
+    'send_failed' => ['warning', 'Le message n’a pas pu être envoyé. Réessayez plus tard.'],
+    'unavailable' => ['warning', 'La vérification est temporairement indisponible.'],
+];
+$verificationMessage = $emailVerificationNotice !== null
+    ? ($verificationMessages[$emailVerificationNotice] ?? null)
+    : null;
 ?>
 
 <section class="account-dashboard" aria-labelledby="account-dashboard-title">
@@ -13,6 +26,28 @@ $accountUser = $accountUser ?? [];
                 <p>Retrouvez ici les informations utiles à votre expérience Tout y est.</p>
             </div>
         </header>
+
+        <?php if (!($emailVerification['verified'] ?? false)): ?>
+            <section class="account-verification" aria-labelledby="account-verification-title" data-motion="section">
+                <i data-lucide="mail-warning" aria-hidden="true"></i>
+                <div class="account-verification__content">
+                    <h2 id="account-verification-title">Votre adresse e-mail n’est pas encore vérifiée.</h2>
+                    <p>Vérifiez votre boîte de réception pour confirmer que cette adresse vous appartient.</p>
+                    <?php if (is_array($verificationMessage)): ?>
+                        <p class="account-verification__message is-<?= htmlspecialchars($verificationMessage[0], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" role="status">
+                            <?= htmlspecialchars($verificationMessage[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+                <form action="/verification-email/renvoyer" method="post">
+                    <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                    <?php $button = ['label' => 'Renvoyer l’e-mail', 'variant' => 'secondary', 'type' => 'submit', 'icon' => 'send']; ?>
+                    <?php require dirname(__DIR__) . '/components/button.php'; ?>
+                </form>
+            </section>
+        <?php elseif ($emailVerificationNotice === 'already_verified'): ?>
+            <p class="account-verification-confirmed" role="status"><i data-lucide="badge-check" aria-hidden="true"></i>Votre adresse e-mail est vérifiée.</p>
+        <?php endif; ?>
 
         <div class="account-dashboard__grid">
             <article class="account-dashboard__card" data-motion="card">
@@ -37,4 +72,4 @@ $accountUser = $accountUser ?? [];
     </div>
 </section>
 
-<?php unset($accountUser, $button); ?>
+<?php unset($accountUser, $emailVerification, $emailVerificationNotice, $verificationMessages, $verificationMessage, $button); ?>

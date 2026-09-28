@@ -1,0 +1,9 @@
+{
+    "name": "tout-y-est/store",
+    "description": "Boutique e-commerce Tout y est",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "phpmailer/phpmailer": "^6.9"
+    }
+}

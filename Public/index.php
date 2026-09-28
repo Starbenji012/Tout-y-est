@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+$composerAutoload = dirname(__DIR__) . '/vendor/autoload.php';
+
+if (is_file($composerAutoload)) {
+    require_once $composerAutoload;
+}
+
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Router;
@@ -16,7 +22,9 @@ use App\Services\AuthService;
 use App\Services\CartService;
 use App\Services\CategoryService;
 use App\Services\FavoriteService;
+use App\Services\EmailVerificationService;
 use App\Services\LoginThrottleService;
+use App\Services\SmtpEmailSender;
 use App\Models\CharacteristicValue;
 use App\Models\Product;
 use App\Models\Review;
@@ -43,6 +51,7 @@ require_once dirname(__DIR__) . '/App/middleware/CsrfMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/AuthMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/GuestMiddleware.php';
 require_once dirname(__DIR__) . '/App/middleware/AdminMiddleware.php';
+require_once dirname(__DIR__) . '/App/contracts/EmailSender.php';
 require_once dirname(__DIR__) . '/App/models/Cart.php';
 require_once dirname(__DIR__) . '/App/models/Favorite.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
@@ -56,10 +65,13 @@ require_once dirname(__DIR__) . '/App/services/ProductService.php';
 require_once dirname(__DIR__) . '/App/services/CategoryService.php';
 require_once dirname(__DIR__) . '/App/services/CartService.php';
 require_once dirname(__DIR__) . '/App/services/FavoriteService.php';
+require_once dirname(__DIR__) . '/App/services/SmtpEmailSender.php';
+require_once dirname(__DIR__) . '/App/services/EmailVerificationService.php';
 require_once dirname(__DIR__) . '/App/controllers/CartController.php';
 require_once dirname(__DIR__) . '/App/controllers/CategoryController.php';
 require_once dirname(__DIR__) . '/App/controllers/AccountController.php';
 require_once dirname(__DIR__) . '/App/controllers/AuthController.php';
+require_once dirname(__DIR__) . '/App/controllers/EmailVerificationController.php';
 require_once dirname(__DIR__) . '/App/controllers/ErrorController.php';
 require_once dirname(__DIR__) . '/App/controllers/HomeController.php';
 require_once dirname(__DIR__) . '/App/controllers/FavoriteController.php';
@@ -82,7 +94,11 @@ try {
     $productService = new ProductService();
 }
 $request = new Request();
-$authService = new AuthService($database instanceof PDO ? new User($database) : null);
+$userModel = $database instanceof PDO ? new User($database) : null;
+$mailConfig = require dirname(__DIR__) . '/Config/mail.php';
+$emailSender = new SmtpEmailSender($mailConfig);
+$emailVerificationService = new EmailVerificationService($userModel, $emailSender);
+$authService = new AuthService($userModel, $emailVerificationService);
 $loginThrottleService = new LoginThrottleService();
 $categoryService = new CategoryService($database instanceof PDO ? new Category($database) : null, $productService);
 $cartService = new CartService(

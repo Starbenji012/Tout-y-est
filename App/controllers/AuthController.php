@@ -83,6 +83,11 @@ final class AuthController extends Controller
         CsrfMiddleware::refresh();
         Session::set('user', $result['user']);
 
+        if ($mode === 'register') {
+            $verificationStatus = (string) ($result['emailVerification']['status'] ?? 'unavailable');
+            Session::set('_email_verification_notice', $verificationStatus);
+        }
+
         if (!Session::get('_cart_fusion_done', false)) {
             $merged = $this->cartService->mergeGuestCart(
                 (int) ($result['user']['id'] ?? 0),

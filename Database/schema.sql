@@ -17,8 +17,13 @@ CREATE TABLE utilisateur (
     role VARCHAR(20) NOT NULL DEFAULT 'client',
     statut VARCHAR(20) NOT NULL DEFAULT 'actif',
     date_creation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    email_verified_at DATETIME NULL,
+    email_verification_token_hash CHAR(64) NULL,
+    email_verification_expires_at DATETIME NULL,
+    email_verification_sent_at DATETIME NULL,
     CONSTRAINT pk_utilisateur PRIMARY KEY (id_utilisateur),
-    CONSTRAINT uq_utilisateur_email UNIQUE (email)
+    CONSTRAINT uq_utilisateur_email UNIQUE (email),
+    CONSTRAINT uq_utilisateur_email_verification_token_hash UNIQUE (email_verification_token_hash)
 ) ENGINE=InnoDB;
 
 CREATE TABLE categorie (

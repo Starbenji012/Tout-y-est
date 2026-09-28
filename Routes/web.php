@@ -6,12 +6,13 @@ use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\CartController;
 use App\Controllers\CategoryController;
+use App\Controllers\EmailVerificationController;
 use App\Controllers\HomeController;
 use App\Controllers\FavoriteController;
 use App\Controllers\ProductController;
 
 // Réunit ici les contrôleurs déjà configurés par le point d'entrée.
-$accountController = new AccountController();
+$accountController = new AccountController($emailVerificationService);
 $authController = new AuthController(
     $authService,
     $request,
@@ -23,6 +24,7 @@ $cartController = new CartController($cartService, $request);
 $categoryController = new CategoryController($categoryService, $request);
 $homeController = new HomeController($productService);
 $favoriteController = new FavoriteController($favoriteService, $productService, $request);
+$emailVerificationController = new EmailVerificationController($emailVerificationService, $request);
 $productController = new ProductController($productService, $request);
 
 // Chaque chemin public pointe vers une seule action de contrôleur.
@@ -37,6 +39,11 @@ return [
         'middleware' => ['guest'],
     ],
     '/deconnexion' => [$authController, 'logout'],
+    '/verification-email' => [$emailVerificationController, 'verify'],
+    '/verification-email/renvoyer' => [
+        'handler' => [$emailVerificationController, 'resend'],
+        'middleware' => ['auth'],
+    ],
     '/panier' => [$cartController, 'index'],
     '/boutique' => [$productController, 'index'],
     '/produit' => [$productController, 'show'],
