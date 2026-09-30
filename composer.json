@@ -3,7 +3,7 @@
     "description": "Boutique e-commerce Tout y est",
     "type": "project",
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.1",
         "phpmailer/phpmailer": "^6.9"
     }
 }
