@@ -26,6 +26,22 @@ CREATE TABLE utilisateur (
     CONSTRAINT uq_utilisateur_email_verification_token_hash UNIQUE (email_verification_token_hash)
 ) ENGINE=InnoDB;
 
+CREATE TABLE password_reset_token (
+    id_password_reset BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id_utilisateur BIGINT UNSIGNED NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    date_creation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_password_reset_token PRIMARY KEY (id_password_reset),
+    CONSTRAINT uq_password_reset_token_user UNIQUE (id_utilisateur),
+    CONSTRAINT uq_password_reset_token_hash UNIQUE (token_hash),
+    CONSTRAINT fk_password_reset_token_user FOREIGN KEY (id_utilisateur)
+        REFERENCES utilisateur (id_utilisateur)
+        ON DELETE CASCADE
+        ON UPDATE RESTRICT,
+    INDEX idx_password_reset_token_expiration (expires_at)
+) ENGINE=InnoDB;
+
 CREATE TABLE categorie (
     id_categorie BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     nom VARCHAR(100) NOT NULL,

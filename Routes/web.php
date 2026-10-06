@@ -9,6 +9,7 @@ use App\Controllers\CategoryController;
 use App\Controllers\EmailVerificationController;
 use App\Controllers\HomeController;
 use App\Controllers\FavoriteController;
+use App\Controllers\PasswordResetController;
 use App\Controllers\ProductController;
 
 // Réunit ici les contrôleurs déjà configurés par le point d'entrée.
@@ -25,6 +26,7 @@ $categoryController = new CategoryController($categoryService, $request);
 $homeController = new HomeController($productService);
 $favoriteController = new FavoriteController($favoriteService, $productService, $request);
 $emailVerificationController = new EmailVerificationController($emailVerificationService, $request);
+$passwordResetController = new PasswordResetController($passwordResetService, $request);
 $productController = new ProductController($productService, $request);
 
 // Chaque chemin public pointe vers une seule action de contrôleur.
@@ -44,6 +46,9 @@ return [
         'handler' => [$emailVerificationController, 'resend'],
         'middleware' => ['auth'],
     ],
+    '/mot-de-passe-oublie' => [$passwordResetController, 'request'],
+    '/reinitialiser-mot-de-passe' => [$passwordResetController, 'form'],
+    '/reinitialiser-mot-de-passe/appliquer' => [$passwordResetController, 'reset'],
     '/panier' => [$cartController, 'index'],
     '/boutique' => [$productController, 'index'],
     '/produit' => [$productController, 'show'],

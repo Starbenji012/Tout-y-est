@@ -196,24 +196,6 @@
       return;
     }
 
-    if (event.target.closest("[data-forgot-password]")) {
-      const recoveryMessage =
-        "Contactez le support Tout y est afin de vérifier votre identité et récupérer l’accès à votre compte.";
-
-      if (!window.Swal || !window.MotionSystem?.fire) {
-        window.alert(recoveryMessage);
-        return;
-      }
-
-      window.MotionSystem.fire({
-        icon: "info",
-        title: "Récupération sécurisée",
-        text: recoveryMessage,
-        confirmButtonText: "Compris",
-      });
-      return;
-    }
-
     if (event.target.closest("[data-google-auth]")) {
       const googleMessage =
         "La connexion Google nécessite encore les identifiants OAuth et un stockage sécurisé de l’identifiant fournisseur.";

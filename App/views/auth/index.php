@@ -11,6 +11,7 @@ $loginFailures = max(0, (int) ($loginFailures ?? 0));
 $showLoginHelp = (bool) ($showLoginHelp ?? false);
 $loginRetryAfter = max(0, (int) ($loginRetryAfter ?? 0));
 $returnTo = isset($returnTo) && is_string($returnTo) ? $returnTo : '';
+$resetSuccess = (bool) ($resetSuccess ?? false);
 ?>
 
 <section class="account-access" aria-labelledby="account-access-title" data-auth-view data-active-mode="<?= $activeMode ?>">
@@ -36,6 +37,13 @@ $returnTo = isset($returnTo) && is_string($returnTo) ? $returnTo : '';
                         <p><?= htmlspecialchars($authAdvice, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
                     <?php endif; ?>
                 </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($resetSuccess): ?>
+            <div class="account-alert account-alert--success" role="status" data-motion="section">
+                <i data-lucide="badge-check" aria-hidden="true"></i>
+                <div><strong>Mot de passe mis à jour</strong><p>Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p></div>
             </div>
         <?php endif; ?>
 
@@ -78,7 +86,7 @@ $returnTo = isset($returnTo) && is_string($returnTo) ? $returnTo : '';
                         </div>
                         <div class="account-form__options">
                             <label class="account-checkbox"><input type="checkbox" name="remember" value="1"><span>Se souvenir de moi</span></label>
-                            <button class="account-form__link" type="button" data-forgot-password>Mot de passe oublié ?</button>
+                            <a class="account-form__link" href="/mot-de-passe-oublie">Mot de passe oublié ?</a>
                         </div>
                         <?php if ($showLoginHelp): ?>
                             <div class="account-login-help" role="status">
@@ -86,7 +94,7 @@ $returnTo = isset($returnTo) && is_string($returnTo) ? $returnTo : '';
                                 <div>
                                     <strong>Besoin d’aide pour vous connecter ?</strong>
                                     <p>Après <?= $loginFailures ?> tentatives, vérifiez calmement votre adresse ou récupérez votre accès.</p>
-                                    <button type="button" data-forgot-password>Utiliser « Mot de passe oublié ? »</button>
+                                    <a href="/mot-de-passe-oublie">Utiliser « Mot de passe oublié ? »</a>
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -156,4 +164,4 @@ $returnTo = isset($returnTo) && is_string($returnTo) ? $returnTo : '';
     </div>
 </section>
 
-<?php unset($authErrors, $oldInput, $activeMode, $csrfTokenValue, $authAdvice, $loginFailures, $showLoginHelp, $loginRetryAfter, $returnTo, $error, $badge, $button); ?>
+<?php unset($authErrors, $oldInput, $activeMode, $csrfTokenValue, $authAdvice, $loginFailures, $showLoginHelp, $loginRetryAfter, $returnTo, $resetSuccess, $error, $badge, $button); ?>

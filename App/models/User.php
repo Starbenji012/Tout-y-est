@@ -30,6 +30,20 @@ final class User
         return is_array($user) ? $user : null;
     }
 
+    /** Remplace le hash du mot de passe après validation d'un jeton. */
+    public function updatePassword(int $userId, string $passwordHash): bool
+    {
+        $statement = $this->database->prepare(
+            'UPDATE utilisateur SET mot_de_passe = :password_hash WHERE id_utilisateur = :user_id',
+        );
+        $statement->execute([
+            'password_hash' => $passwordHash,
+            'user_id' => $userId,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
+
     /** Vérifie l'unicité d'une adresse avant l'inscription. */
     public function emailExists(string $email): bool
     {

@@ -153,6 +153,7 @@ final class AuthController extends Controller
             'showLoginHelp' => (bool) ($context['showLoginHelp'] ?? false),
             'loginRetryAfter' => (int) ($context['loginRetryAfter'] ?? 0),
             'returnTo' => $this->safeReturnPath((string) ($old['return_to'] ?? $this->request->queryParameters()['return'] ?? '')),
+            'resetSuccess' => ($this->request->queryParameters()['reset'] ?? '') === 'success',
         ]);
     }
 
