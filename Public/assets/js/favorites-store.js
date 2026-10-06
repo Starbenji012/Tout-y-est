@@ -185,6 +185,9 @@
       isAuthenticated
         ? applyServer(values, notify)
         : writeLocal(values, notify),
+    clear: () => isAuthenticated
+      ? mutate("clear", 0).then(() => [])
+      : writeLocal([]),
     toggle: (productId) => {
       const normalizedId = Number(productId);
 

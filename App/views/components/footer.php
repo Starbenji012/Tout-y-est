@@ -1,6 +1,6 @@
 <footer class="site-footer">
     <div class="container footer-container">
-        <div class="footer-grid" data-motion="section">
+        <div class="footer-grid<?= $siteContactLinks !== [] || $siteSocialLinks !== [] ? ' footer-grid--with-contact' : '' ?>" data-motion="section">
             <section class="footer-about-container" id="footer-about" aria-labelledby="footer-about-title">
                 <h2 class="visually-hidden" id="footer-about-title">À propos de Tout y est</h2>
                 <div class="footer-brand-container">
@@ -19,78 +19,41 @@
                     <li><a href="/boutique">Boutique</a></li>
                     <li><a href="/promotions">Promotions</a></li>
                     <li><a href="/#footer-about">À propos</a></li>
-                    <li><a href="/#footer-contact">Contact</a></li>
                 </ul>
             </nav>
 
-            <section class="footer-information-container" aria-labelledby="footer-information-title">
-                <h2 class="footer-title" id="footer-information-title">Informations utiles</h2>
-                <ul class="footer-links">
-                    <li><span class="footer-link-placeholder">Livraison</span></li>
-                    <li><span class="footer-link-placeholder">Modes de paiement</span></li>
-                    <li><span class="footer-link-placeholder">Politique de retour</span></li>
-                    <li><span class="footer-link-placeholder">Conditions générales</span></li>
-                    <li><span class="footer-link-placeholder">FAQ</span></li>
-                </ul>
-            </section>
-
-            <section class="footer-contact-container" id="footer-contact" aria-labelledby="footer-contact-title">
-                <h2 class="footer-title" id="footer-contact-title">Contact</h2>
-                <address class="footer-contact-list">
-                    <span class="footer-contact-placeholder">
-                        <i data-lucide="phone" aria-hidden="true"></i>
-                        <span>Téléphone</span>
-                    </span>
-                    <span class="footer-contact-placeholder">
-                        <i data-lucide="message-circle" aria-hidden="true"></i>
-                        <span>WhatsApp</span>
-                    </span>
-                    <span class="footer-contact-placeholder">
-                        <i data-lucide="mail" aria-hidden="true"></i>
-                        <span>E-mail</span>
-                    </span>
-                    <span class="footer-contact-address">
-                        <i data-lucide="map-pin" aria-hidden="true"></i>
-                        <span>Adresse à renseigner</span>
-                    </span>
-                </address>
-
-                <div class="footer-social-container">
-                    <p class="footer-social-title">Suivez-nous</p>
-                    <div class="footer-social-links">
-                        <span class="footer-social-placeholder" aria-label="Facebook, lien à venir">
-                            <i data-lucide="thumbs-up" aria-hidden="true"></i>
-                        </span>
-                        <span class="footer-social-placeholder" aria-label="Instagram, lien à venir">
-                            <i data-lucide="camera" aria-hidden="true"></i>
-                        </span>
-                        <span class="footer-social-placeholder" aria-label="TikTok, lien à venir">
-                            <i data-lucide="music-2" aria-hidden="true"></i>
-                        </span>
-                    </div>
-                </div>
-            </section>
+            <?php if ($siteContactLinks !== [] || $siteSocialLinks !== []): ?>
+                <section class="footer-contact-container" aria-labelledby="footer-contact-title">
+                    <h2 class="footer-title" id="footer-contact-title">Contact</h2>
+                    <?php if ($siteContactLinks !== []): ?>
+                        <address class="footer-contact-list">
+                            <?php foreach ($siteContactLinks as $siteLink): ?>
+                                <?php $siteLinkIcon = preg_match('/^[a-z0-9-]+$/', (string) ($siteLink['icon'] ?? '')) ? (string) $siteLink['icon'] : 'link'; ?>
+                                <a href="<?= htmlspecialchars((string) $siteLink['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                                    <i data-lucide="<?= $siteLinkIcon ?>" aria-hidden="true"></i>
+                                    <?= htmlspecialchars((string) $siteLink['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </address>
+                    <?php endif; ?>
+                    <?php if ($siteSocialLinks !== []): ?>
+                        <div class="footer-social-links" aria-label="Réseaux sociaux">
+                            <?php foreach ($siteSocialLinks as $siteLink): ?>
+                                <?php $siteLinkIcon = preg_match('/^[a-z0-9-]+$/', (string) ($siteLink['icon'] ?? '')) ? (string) $siteLink['icon'] : 'link'; ?>
+                                <a href="<?= htmlspecialchars((string) $siteLink['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="<?= htmlspecialchars((string) $siteLink['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                                    <i data-lucide="<?= $siteLinkIcon ?>" aria-hidden="true"></i>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
         </div>
     </div>
 
     <div class="footer-copyright-container">
         <div class="container footer-bottom-container">
             <p>© <time datetime="2026">2026</time> Tout y est</p>
-            <ul class="footer-assurances" aria-label="Nos engagements">
-                <li>
-                    <i data-lucide="shield-check" aria-hidden="true"></i>
-                    Paiement sécurisé
-                </li>
-                <li>
-                    <i data-lucide="truck" aria-hidden="true"></i>
-                    Livraison rapide
-                </li>
-                <li>
-                    <i data-lucide="headphones" aria-hidden="true"></i>
-                    Support client
-                </li>
-            </ul>
-            <span class="footer-legal-placeholder">Mentions légales</span>
         </div>
     </div>
 </footer>

@@ -41,7 +41,6 @@ final class ProductController extends Controller
             'catalogSearchNotice' => $catalog['searchNotice'],
             'catalogEmptyState' => $this->catalogEmptyState(),
             'activeFilters' => $catalog['filters'],
-            'catalogBreadcrumb' => $this->catalogBreadcrumb($catalog),
         ]);
     }
 
@@ -105,9 +104,6 @@ final class ProductController extends Controller
 
         Response::json([
             'html' => $html,
-            'breadcrumbHtml' => $this->renderPartial('components/breadcrumb', [
-                'breadcrumb' => ['items' => $this->catalogBreadcrumb($catalog)],
-            ]),
             'facetsHtml' => $this->renderPartial('components/catalog-context-filters', [
                 'catalogContextFilters' => [
                     'facets' => $catalog['facets'],
@@ -168,29 +164,6 @@ final class ProductController extends Controller
             'text' => 'Essayez de modifier votre recherche ou vos filtres.',
             'action' => ['label' => 'Réinitialiser les filtres', 'variant' => 'secondary', 'href' => '/boutique'],
         ];
-    }
-
-    /** Construit un fil d'Ariane adapté au contexte actuel du catalogue. */
-    private function catalogBreadcrumb(array $catalog): array
-    {
-        $items = [
-            ['label' => 'Accueil', 'href' => '/'],
-            ['label' => 'Boutique'],
-        ];
-        $filters = $catalog['filters'] ?? [];
-        $selectedCategories = $filters['categories'] ?? [];
-        $search = trim((string) ($filters['search'] ?? ''));
-
-        if (count($selectedCategories) === 1) {
-            $slug = (string) $selectedCategories[0];
-            $items[1]['href'] = '/boutique';
-            $items[] = ['label' => (string) (($catalog['categories'] ?? [])[$slug] ?? $slug)];
-        } elseif ($search !== '') {
-            $items[1]['href'] = '/boutique';
-            $items[] = ['label' => 'Résultats pour « ' . $search . ' »'];
-        }
-
-        return $items;
     }
 
     /** Conserve les filtres actifs lors de la génération des liens de pagination. */

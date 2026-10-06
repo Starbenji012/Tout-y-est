@@ -347,6 +347,18 @@ textarea:focus {
 .section-header__description { color: var(--color-text-muted); }
 .section-header__action { flex-shrink: 0; }
 
+/* Regroupe les actions de navigation propres à une page. */
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.page-actions .btn {
+  min-width: 0;
+}
+
 /* Cartes */
 .card,
 .product-card {
@@ -962,6 +974,15 @@ textarea:focus {
 
   .section-header__action,
   .section-header__action .btn { width: 100%; }
+
+  .page-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-actions .btn {
+    width: 100%;
+  }
 
   .empty-state { padding: var(--spacing-xl); }
 }

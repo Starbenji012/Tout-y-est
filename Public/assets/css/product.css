@@ -7,6 +7,10 @@
   padding-block: var(--spacing-xl) var(--section-spacing);
 }
 
+.product-detail .page-actions {
+  margin-bottom: var(--spacing-md);
+}
+
 .product-detail__layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(20rem, 0.95fr);
@@ -210,15 +214,6 @@
 .product-content__services details p,
 .product-content__faq details p { padding: 0 var(--spacing-md) var(--spacing-md); color: var(--color-text-muted); }
 
-.product-reviews { grid-column: 1 / -1; }
-.product-reviews__summary { display: flex; align-items: center; gap: var(--spacing-xs); }
-.product-reviews__summary svg { fill: var(--color-gold); color: var(--color-gold); }
-.product-reviews__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-md); }
-.product-reviews blockquote { border: var(--border); border-radius: var(--radius-medium); background-color: var(--brand-gray-200); padding: var(--spacing-lg); }
-.product-reviews blockquote > div { display: flex; justify-content: space-between; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
-.product-reviews blockquote span { color: var(--color-gold-dark); font-weight: var(--font-weight-semibold); }
-.product-reviews__empty { border-radius: var(--radius-medium); background-color: var(--brand-gray-200); padding: var(--spacing-lg); }
-
 .product-detail__assurances span {
   display: inline-flex;
   align-items: center;
@@ -244,8 +239,6 @@
   .product-detail__purchase-container .btn { width: 100%; }
   .quantity-control { width: fit-content; }
   .product-content__container { grid-template-columns: minmax(0, 1fr); }
-  .product-reviews { grid-column: auto; }
-  .product-reviews__list { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 30rem) {

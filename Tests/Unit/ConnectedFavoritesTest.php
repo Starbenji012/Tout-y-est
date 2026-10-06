@@ -120,6 +120,19 @@ try {
         throw new RuntimeException('La fusion API avec CSRF valide a échoué.');
     }
 
+    $_POST = ['_token' => $token, 'action' => 'clear', 'productId' => 0, 'user_id' => 2];
+    http_response_code(200);
+    ob_start();
+    $controller->mutate();
+    $clearPayload = json_decode((string) ob_get_clean(), true, 512, JSON_THROW_ON_ERROR);
+
+    if (http_response_code() !== 200 || ($clearPayload['ids'] ?? null) !== []) {
+        throw new RuntimeException('Le vidage des favoris connectés a échoué.');
+    }
+    if ($favoriteService->productIdsForUser(2) !== [2]) {
+        throw new RuntimeException('Le vidage a touché les favoris d’un autre utilisateur.');
+    }
+
     Session::remove('user');
     $_POST = ['_token' => $token, 'action' => 'remove', 'productId' => 2];
     http_response_code(200);

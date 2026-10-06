@@ -1,4 +1,18 @@
-<?php $activePage = $activePage ?? ''; ?>
+<?php
+$activePage = $activePage ?? '';
+$siteContactLinks = array_values(array_filter(
+    is_array($siteContactLinks ?? null) ? $siteContactLinks : [],
+    static fn (mixed $link): bool => is_array($link)
+        && trim((string) ($link['label'] ?? '')) !== ''
+        && trim((string) ($link['href'] ?? '')) !== '',
+));
+$siteSocialLinks = array_values(array_filter(
+    is_array($siteSocialLinks ?? null) ? $siteSocialLinks : [],
+    static fn (mixed $link): bool => is_array($link)
+        && trim((string) ($link['label'] ?? '')) !== ''
+        && trim((string) ($link['href'] ?? '')) !== '',
+));
+?>
 
 <a class="site-header__skip-link" href="#main-content">Aller au contenu</a>
 
@@ -18,25 +32,17 @@
                 </span>
             </div>
 
-            <div class="top-bar__contacts" aria-label="Contacts et réseaux sociaux">
-                <a href="/#footer-contact" aria-label="Voir les informations de contact WhatsApp">
-                    <i data-lucide="message-circle" aria-hidden="true"></i>
-                    <span>WhatsApp</span>
-                </a>
-                <a href="/#footer-contact" aria-label="Voir les informations de contact téléphonique">
-                    <i data-lucide="phone" aria-hidden="true"></i>
-                    <span>Téléphone</span>
-                </a>
-                <span class="top-bar__social-placeholder" aria-label="Facebook, lien à venir">
-                    <i data-lucide="thumbs-up" aria-hidden="true"></i>
-                </span>
-                <span class="top-bar__social-placeholder" aria-label="Instagram, lien à venir">
-                    <i data-lucide="camera" aria-hidden="true"></i>
-                </span>
-                <span class="top-bar__social-placeholder" aria-label="TikTok, lien à venir">
-                    <i data-lucide="music-2" aria-hidden="true"></i>
-                </span>
-            </div>
+            <?php if ($siteContactLinks !== [] || $siteSocialLinks !== []): ?>
+                <div class="top-bar__contacts" aria-label="Contacts et réseaux sociaux">
+                    <?php foreach ([...$siteContactLinks, ...$siteSocialLinks] as $siteLink): ?>
+                        <?php $siteLinkIcon = preg_match('/^[a-z0-9-]+$/', (string) ($siteLink['icon'] ?? '')) ? (string) $siteLink['icon'] : 'link'; ?>
+                        <a href="<?= htmlspecialchars((string) $siteLink['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="<?= htmlspecialchars((string) $siteLink['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                            <i data-lucide="<?= $siteLinkIcon ?>" aria-hidden="true"></i>
+                            <span><?= htmlspecialchars((string) $siteLink['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -129,9 +135,6 @@
             </li>
             <li>
                 <a class="site-navigation__link" href="/#footer-about">À propos</a>
-            </li>
-            <li>
-                <a class="site-navigation__link" href="/#footer-contact">Contact</a>
             </li>
             <li class="site-navigation__mobile-action site-navigation__mobile-action--first">
                 <a class="site-navigation__link<?= $activePage === 'favorites' ? ' is-active' : '' ?>" href="/favoris" aria-label="Favoris, 0 article" data-favorites-link<?= $activePage === 'favorites' ? ' aria-current="page"' : '' ?>>

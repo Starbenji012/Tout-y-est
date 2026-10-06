@@ -9,9 +9,6 @@
   const results = page.querySelector("[data-cart-results]");
   const content = page.querySelector("[data-cart-content]");
   const loader = page.querySelector("[data-cart-loader]");
-  const overview = page.querySelector("[data-cart-overview]");
-  const checkoutGate = page.querySelector("[data-cart-checkout-gate]");
-  const isAuthenticated = document.body.dataset.authenticated === "true";
   let requestController;
   let clearPending = false;
   const pendingItems = new WeakSet();
@@ -56,11 +53,6 @@
 
       if (JSON.stringify(payload.items) !== JSON.stringify(requestedItems)) {
         window.CartStore.replace(payload.items, false);
-      }
-
-      if (payload.items.length === 0 && !checkoutGate.hidden) {
-        checkoutGate.hidden = true;
-        overview.hidden = false;
       }
 
       if (payload.notice) {
@@ -137,18 +129,6 @@
     } finally {
       finishItemAction(item);
     }
-  };
-
-  // Affiche l’étape d’identification sans perdre le panier invité.
-  const openCheckoutGate = () => {
-    overview.hidden = true;
-    checkoutGate.hidden = false;
-    checkoutGate
-      .querySelector("#cart-checkout-gate-title")
-      ?.focus({ preventScroll: true });
-    checkoutGate.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.lucide?.createIcons();
-    window.MotionSystem?.refresh(checkoutGate);
   };
 
   page.addEventListener("change", (event) => {
@@ -245,27 +225,6 @@
       return;
     }
 
-    if (event.target.closest("[data-cart-checkout]")) {
-      if (!isAuthenticated) {
-        openCheckoutGate();
-        return;
-      }
-
-      window.MotionSystem?.fire({
-        icon: "info",
-        title: "Panier prêt",
-        text: "L’étape de livraison sera disponible avec le tunnel de commande.",
-        confirmButtonText: "Compris",
-      });
-      return;
-    }
-
-    if (event.target.closest("[data-cart-gate-back]")) {
-      checkoutGate.hidden = true;
-      overview.hidden = false;
-      overview.focus({ preventScroll: true });
-      overview.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   });
 
   window.addEventListener("cart:updated", loadCart);

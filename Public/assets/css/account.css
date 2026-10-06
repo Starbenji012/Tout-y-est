@@ -453,6 +453,7 @@
 
 .account-dashboard__welcome {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-lg);
   align-items: center;
   padding: var(--spacing-xl);
@@ -582,7 +583,7 @@ a.account-dashboard__card:focus-visible {
 }
 
 .account-dashboard__logout {
-  justify-self: end;
+  margin-inline-start: auto;
 }
 
 @media (max-width: 64rem) {
@@ -630,6 +631,15 @@ a.account-dashboard__card:focus-visible {
 
   .account-dashboard__welcome {
     align-items: flex-start;
+  }
+
+  .account-dashboard__logout,
+  .account-dashboard__logout .btn {
+    width: 100%;
+  }
+
+  .account-dashboard__logout {
+    margin-inline-start: 0;
   }
 
   .account-form__options {

@@ -13,18 +13,14 @@ $productName = (string) $product['name'];
 $productStock = (int) ($product['stock'] ?? 0);
 $productGallery = $product['gallery'] ?? [['src' => $product['image'], 'alt' => $product['alt']]];
 $productCharacteristics = $product['characteristics'] ?? [];
-$productReviews = $product['reviewItems'] ?? [];
-$breadcrumb = ['items' => [
-    ['label' => 'Accueil', 'href' => '/'],
-    ['label' => 'Boutique', 'href' => '/boutique'],
-    ['label' => $productName],
-]];
 ?>
 
 <section class="product-detail" aria-labelledby="product-title" data-product-detail>
     <div class="container">
-        <?php require dirname(__DIR__) . '/components/breadcrumb.php'; ?>
-
+        <div class="page-actions">
+            <?php $button = ['label' => 'Retour à la boutique', 'variant' => 'ghost', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start']; ?>
+            <?php require dirname(__DIR__) . '/components/button.php'; ?>
+        </div>
         <div class="product-detail__layout" data-product-card data-product-id="<?= (int) $product['id'] ?>" data-product-variant-id="<?= (int) ($product['variantId'] ?? $product['id']) ?>">
             <div class="product-detail__media" data-motion="side">
                 <div class="product-detail__image-container">
@@ -115,21 +111,6 @@ $breadcrumb = ['items' => [
             <details><summary>Puis-je demander plus d’informations ?</summary><p>Oui, le service client pourra vous accompagner avant votre décision d’achat.</p></details>
         </article>
 
-        <article class="product-content__panel product-reviews" id="product-reviews" data-motion="section">
-            <span class="section-badge">Expériences clients</span>
-            <h2>Avis clients</h2>
-            <p class="product-reviews__summary"><i data-lucide="star" aria-hidden="true"></i><strong><?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/5</strong><span>sur <?= (int) $product['reviews'] ?> avis</span></p>
-            <?php if ($productReviews !== []): ?>
-                <div class="product-reviews__list">
-                    <?php foreach ($productReviews as $review): ?>
-                        <?php $reviewName = (string) $review['nom']; $reviewInitial = preg_match('/^./u', $reviewName, $reviewMatch) ? $reviewMatch[0] : ''; ?>
-                        <blockquote><div><strong><?= htmlspecialchars(trim((string) $review['prenom'] . ' ' . $reviewInitial) . '.', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong><span><?= (int) $review['note'] ?>/5</span></div><p><?= htmlspecialchars((string) $review['commentaire'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p></blockquote>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <p class="product-reviews__empty">Aucun avis détaillé n’est encore publié pour ce produit.</p>
-            <?php endif; ?>
-        </article>
     </div>
 </section>
 
@@ -150,4 +131,4 @@ $breadcrumb = ['items' => [
     ?>
 <?php endif; ?>
 
-<?php unset($product, $relatedProducts, $productName, $productStock, $productGallery, $productCharacteristics, $productReviews, $breadcrumb, $imageIndex, $image, $characteristic, $review, $reviewName, $reviewInitial, $reviewMatch, $badge, $button, $productSection); ?>
+<?php unset($product, $relatedProducts, $productName, $productStock, $productGallery, $productCharacteristics, $imageIndex, $image, $characteristic, $badge, $button, $productSection); ?>

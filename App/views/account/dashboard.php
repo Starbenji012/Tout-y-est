@@ -25,6 +25,11 @@ $verificationMessage = $emailVerificationNotice !== null
                 <h1 id="account-dashboard-title">Bonjour, <?= htmlspecialchars((string) ($accountUser['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
                 <p>Retrouvez ici les informations utiles à votre expérience Tout y est.</p>
             </div>
+            <form class="account-dashboard__logout" action="/deconnexion" method="post">
+                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                <?php $button = ['label' => 'Se déconnecter', 'variant' => 'ghost', 'type' => 'submit', 'icon' => 'log-out', 'iconPosition' => 'start']; ?>
+                <?php require dirname(__DIR__) . '/components/button.php'; ?>
+            </form>
         </header>
 
         <?php if (!($emailVerification['verified'] ?? false)): ?>
@@ -63,12 +68,6 @@ $verificationMessage = $emailVerificationNotice !== null
             <a class="account-dashboard__card" href="/favoris" data-motion="card"><i data-lucide="heart" aria-hidden="true"></i><h2>Mes favoris</h2><p>Retrouvez les produits enregistrés dans votre compte.</p><span>Voir mes favoris <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>
             <a class="account-dashboard__card" href="/panier" data-motion="card"><i data-lucide="shopping-cart" aria-hidden="true"></i><h2>Mon panier</h2><p>Reprenez rapidement votre sélection en cours.</p><span>Voir mon panier <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>
         </div>
-
-        <form class="account-dashboard__logout" action="/deconnexion" method="post">
-            <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-            <?php $button = ['label' => 'Se déconnecter', 'variant' => 'ghost', 'type' => 'submit', 'icon' => 'log-out', 'iconPosition' => 'start']; ?>
-            <?php require dirname(__DIR__) . '/components/button.php'; ?>
-        </form>
     </div>
 </section>
 

@@ -55,6 +55,18 @@ final class FavoriteService
         return true;
     }
 
+    /** Vide la sélection personnelle sans toucher aux autres comptes. */
+    public function clear(int $userId): bool
+    {
+        if (!$this->validUser($userId)) {
+            return false;
+        }
+
+        $this->favoriteModel->clearForUser($userId);
+
+        return true;
+    }
+
     /** Fusionne les favoris invités utilisables avec ceux déjà en base. */
     public function mergeGuestFavorites(int $userId, string $serializedIds): bool
     {

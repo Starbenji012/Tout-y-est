@@ -128,6 +128,7 @@ final class FavoriteController extends Controller
             $success = match ($action) {
                 'add' => $this->favoriteService->add($userId, $productId),
                 'remove' => $this->favoriteService->remove($userId, $productId),
+                'clear' => $this->favoriteService->clear($userId),
                 default => false,
             };
         } catch (PDOException) {
@@ -148,7 +149,7 @@ final class FavoriteController extends Controller
         }
 
         Response::json([
-            'active' => in_array($productId, $ids, true),
+            'active' => $action !== 'clear' && in_array($productId, $ids, true),
             'count' => count($ids),
             'ids' => $ids,
         ]);

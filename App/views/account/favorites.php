@@ -6,12 +6,18 @@ $sectionHeader = [
     'badge' => ['label' => 'Votre sélection', 'variant' => 'popular'],
     'title' => 'Mes favoris',
     'description' => 'Gardez sous la main les produits qui vous plaisent et reprenez votre découverte à tout moment.',
-    'action' => ['label' => 'Retour à la boutique', 'variant' => 'secondary', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start'],
 ];
 ?>
 
 <section class="product-section product-section--favorites" aria-labelledby="favorites-title" data-product-section data-favorites-page>
     <div class="container product-section__container">
+        <div class="page-actions">
+            <?php $button = ['label' => 'Retour à la boutique', 'variant' => 'ghost', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start']; ?>
+            <?php require dirname(__DIR__) . '/components/button.php'; ?>
+            <?php $button = ['label' => 'Vider les favoris', 'variant' => 'ghost', 'icon' => 'trash-2', 'iconPosition' => 'start', 'attributes' => ['data-favorites-clear' => true, 'hidden' => true]]; ?>
+            <?php require dirname(__DIR__) . '/components/button.php'; ?>
+        </div>
+
         <?php require dirname(__DIR__) . '/components/section-header.php'; ?>
 
         <div class="favorites-results" aria-live="polite" aria-busy="true" data-favorites-results>

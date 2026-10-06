@@ -55,6 +55,15 @@ final class Favorite
         $statement->execute(['user_id' => $userId, 'product_id' => $productId]);
     }
 
+    /** Retire uniquement tous les favoris du compte demandé. */
+    public function clearForUser(int $userId): void
+    {
+        $statement = $this->database->prepare(
+            'DELETE FROM favori WHERE id_utilisateur = :user_id',
+        );
+        $statement->execute(['user_id' => $userId]);
+    }
+
     /** Fusionne une sélection validée dans une transaction courte. */
     public function merge(int $userId, array $productIds): void
     {

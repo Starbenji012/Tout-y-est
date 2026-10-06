@@ -126,16 +126,23 @@
 
 .catalog-sort select {
   min-height: var(--control-height);
-  padding: 0 var(--spacing-lg) 0 var(--spacing-md);
+  padding: 0 var(--spacing-xl) 0 var(--spacing-md);
   background-color: var(--brand-gray-100);
   border: var(--border);
   border-radius: var(--radius-field);
   color: var(--color-anthracite);
+  cursor: pointer;
   transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
-.catalog-sort select:hover {
+.catalog-sort select:hover,
+.catalog-sort select:focus-visible {
   border-color: var(--brand-gray-600);
+}
+
+.catalog-sort select:focus-visible {
+  box-shadow: 0 0 0 var(--space-1) var(--color-focus-ring);
+  outline: 0;
 }
 
 .catalog-layout {
@@ -273,6 +280,11 @@
   transform: translateX(var(--space-1));
 }
 
+.catalog-filter-option:focus-within,
+.catalog-filter-option:has(input:checked) {
+  background-color: var(--brand-gray-200);
+}
+
 .catalog-filter-option input {
   width: var(--icon-size);
   height: var(--icon-size);
@@ -316,6 +328,12 @@
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   list-style: none;
+}
+
+.catalog-filter-group--context summary:focus-visible {
+  border-radius: var(--radius-small);
+  box-shadow: 0 0 0 var(--space-1) var(--color-focus-ring);
+  outline: 0;
 }
 
 .catalog-filter-group--context summary::-webkit-details-marker {

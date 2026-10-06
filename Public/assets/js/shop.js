@@ -13,7 +13,6 @@
   const viewButtons = document.querySelectorAll("[data-catalog-view]");
   const contextFilters = document.querySelector("[data-catalog-context-filters]");
   const searchNotice = document.querySelector("[data-catalog-search-notice]");
-  const breadcrumb = document.querySelector("[data-catalog-breadcrumb]");
   const searchInput = searchForm?.querySelector("input[type='search']");
   const resetButton = filtersForm?.querySelector("[data-catalog-filter-reset]");
 
@@ -165,9 +164,6 @@
       content.innerHTML = catalog.html;
       if (contextFilters && typeof catalog.facetsHtml === "string") {
         contextFilters.innerHTML = catalog.facetsHtml;
-      }
-      if (breadcrumb && typeof catalog.breadcrumbHtml === "string") {
-        breadcrumb.innerHTML = catalog.breadcrumbHtml;
       }
       const resultLabel = catalog.count === 1 ? "produit trouvé" : "produits trouvés";
       count.innerHTML = `<strong>${catalog.count}</strong> ${resultLabel}`;

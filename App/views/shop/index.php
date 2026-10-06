@@ -30,7 +30,6 @@ $productSection = [
             'promotion' => 'Promotions',
         ],
     ],
-    'breadcrumb' => $catalogBreadcrumb ?? [],
     'emptyState' => $catalogEmptyState ?? [
         'title' => 'Aucun produit disponible',
         'text' => 'Le catalogue sera enrichi très prochainement.',

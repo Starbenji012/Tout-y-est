@@ -9,7 +9,9 @@
   const results = page.querySelector("[data-favorites-results]");
   const content = page.querySelector("[data-favorites-content]");
   const loader = page.querySelector("[data-favorites-loader]");
+  const clearButton = page.querySelector("[data-favorites-clear]");
   let requestController;
+  let clearPending = false;
   const pendingRemovals = new Set();
 
   // Affiche un retour bref sans interrompre la consultation des favoris.
@@ -69,6 +71,7 @@
 
       const payload = await response.json();
       content.innerHTML = payload.html;
+      clearButton.hidden = payload.ids.length === 0;
 
       if (JSON.stringify(payload.ids) !== JSON.stringify(requestedIds)) {
         window.FavoriteStore.replace(payload.ids, false);
@@ -89,6 +92,39 @@
 
   // Retire un favori une seule fois et attend sa persistance avant confirmation.
   page.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-favorites-clear]")) {
+      if (clearPending || window.FavoriteStore.ids().length === 0) {
+        return;
+      }
+
+      clearPending = true;
+      clearButton.disabled = true;
+
+      try {
+        const result = await window.MotionSystem?.fire({
+          icon: "question",
+          title: "Vider les favoris ?",
+          text: "Tous les produits seront retirés de votre sélection.",
+          showCancelButton: true,
+          confirmButtonText: "Vider",
+          cancelButtonText: "Annuler",
+        });
+
+        if (result?.isConfirmed) {
+          await window.FavoriteStore.clear();
+          clearButton.hidden = true;
+          notify("Favoris vidés.");
+        }
+      } catch (error) {
+        notify(error?.message || "Impossible de vider les favoris.", "error");
+      } finally {
+        clearPending = false;
+        clearButton.disabled = false;
+      }
+
+      return;
+    }
+
     const button = event.target.closest("[data-favorite-remove]");
     const productCard = button?.closest("[data-product-card]");
     const productId = Number(productCard?.dataset.productId);
