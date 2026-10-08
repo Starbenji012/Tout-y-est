@@ -1,6 +1,6 @@
 <footer class="site-footer">
     <div class="container footer-container">
-        <div class="footer-grid<?= $siteContactLinks !== [] || $siteSocialLinks !== [] ? ' footer-grid--with-contact' : '' ?>" data-motion="section">
+        <div class="footer-grid<?= $footerContactLinks !== [] || $siteSocialLinks !== [] ? ' footer-grid--with-contact' : '' ?>" data-motion="section">
             <section class="footer-about-container" id="footer-about" aria-labelledby="footer-about-title">
                 <h2 class="visually-hidden" id="footer-about-title">À propos de Tout y est</h2>
                 <div class="footer-brand-container">
@@ -22,14 +22,14 @@
                 </ul>
             </nav>
 
-            <?php if ($siteContactLinks !== [] || $siteSocialLinks !== []): ?>
+            <?php if ($footerContactLinks !== [] || $siteSocialLinks !== []): ?>
                 <section class="footer-contact-container" aria-labelledby="footer-contact-title">
                     <h2 class="footer-title" id="footer-contact-title">Contact</h2>
-                    <?php if ($siteContactLinks !== []): ?>
+                    <?php if ($footerContactLinks !== []): ?>
                         <address class="footer-contact-list">
-                            <?php foreach ($siteContactLinks as $siteLink): ?>
+                            <?php foreach ($footerContactLinks as $siteLink): ?>
                                 <?php $siteLinkIcon = preg_match('/^[a-z0-9-]+$/', (string) ($siteLink['icon'] ?? '')) ? (string) $siteLink['icon'] : 'link'; ?>
-                                <a href="<?= htmlspecialchars((string) $siteLink['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                                <a class="footer-contact-link" href="<?= htmlspecialchars((string) $siteLink['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="<?= htmlspecialchars('Contacter Tout y est : ' . (string) $siteLink['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
                                     <i data-lucide="<?= $siteLinkIcon ?>" aria-hidden="true"></i>
                                     <?= htmlspecialchars((string) $siteLink['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
                                 </a>

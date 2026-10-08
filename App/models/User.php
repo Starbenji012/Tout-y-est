@@ -55,12 +55,23 @@ final class User
         return (int) $statement->fetchColumn() > 0;
     }
 
+    /** Vérifie qu'un numéro normalisé n'est pas déjà rattaché à un compte. */
+    public function phoneExists(string $phone): bool
+    {
+        $statement = $this->database->prepare(
+            'SELECT COUNT(*) FROM utilisateur WHERE telephone = :telephone',
+        );
+        $statement->execute(['telephone' => $phone]);
+
+        return (int) $statement->fetchColumn() > 0;
+    }
+
     /** Enregistre un nouvel utilisateur et retourne son identifiant. */
     public function create(array $user): int
     {
         $statement = $this->database->prepare(
-            'INSERT INTO utilisateur (nom, prenom, email, mot_de_passe, role, statut, date_creation)
-             VALUES (:nom, :prenom, :email, :mot_de_passe, :role, :statut, NOW())',
+            'INSERT INTO utilisateur (nom, prenom, email, telephone, mot_de_passe, role, statut, date_creation)
+             VALUES (:nom, :prenom, :email, :telephone, :mot_de_passe, :role, :statut, NOW())',
         );
         $statement->execute($user);
 

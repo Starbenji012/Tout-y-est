@@ -118,16 +118,30 @@
 }
 
 .footer-contact-list a {
+  position: relative;
+  z-index: 1;
   display: flex;
+  width: fit-content;
+  min-height: var(--control-height);
+  padding: var(--spacing-xs) var(--spacing-sm);
   align-items: center;
   gap: var(--space-3);
   color: var(--color-text);
   font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .footer-contact-list a:hover,
 .footer-contact-list a:focus-visible {
   color: var(--color-gold-dark);
+}
+
+.footer-contact-list a:focus-visible {
+  border-radius: var(--radius-small);
+  outline: var(--border-width) var(--border-style) var(--color-gold);
+  outline-offset: var(--space-1);
 }
 
 .footer-contact-list svg,

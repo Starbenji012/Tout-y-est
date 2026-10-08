@@ -63,7 +63,12 @@ final class AuthService
         $errors = $this->registrationErrors($data);
 
         if ($errors !== []) {
-            return ['success' => false, 'user' => null, 'errors' => $errors];
+            return [
+                'success' => false,
+                'user' => null,
+                'errors' => array_values($errors),
+                'fieldErrors' => $errors,
+            ];
         }
 
         if ($this->userModel === null) {
@@ -72,20 +77,47 @@ final class AuthService
 
         try {
             if ($this->userModel->emailExists($data['email'])) {
-                return $this->failure('Un compte utilise déjà cette adresse e-mail.', 'email_exists');
+                return $this->failure(
+                    'Un compte utilise déjà cette adresse e-mail.',
+                    'email_exists',
+                    field: 'email',
+                );
+            }
+
+            if ($this->userModel->phoneExists($data['telephone'])) {
+                return $this->failure(
+                    'Ce numéro de téléphone est déjà associé à un compte.',
+                    'phone_exists',
+                    field: 'telephone',
+                );
             }
 
             $userId = $this->userModel->create([
                 'nom' => $data['nom'],
                 'prenom' => $data['prenom'],
                 'email' => $data['email'],
+                'telephone' => $data['telephone'],
                 'mot_de_passe' => password_hash($data['password'], PASSWORD_DEFAULT),
                 'role' => 'client',
                 'statut' => 'actif',
             ]);
         } catch (PDOException $exception) {
             if ((string) $exception->getCode() === '23000') {
-                return $this->failure('Cette adresse e-mail est déjà utilisée.', 'email_exists');
+                $databaseMessage = strtolower((string) ($exception->errorInfo[2] ?? $exception->getMessage()));
+
+                if (str_contains($databaseMessage, 'telephone')) {
+                    return $this->failure(
+                        'Ce numéro de téléphone est déjà associé à un compte.',
+                        'phone_exists',
+                        field: 'telephone',
+                    );
+                }
+
+                return $this->failure(
+                    'Cette adresse e-mail est déjà utilisée.',
+                    'email_exists',
+                    field: 'email',
+                );
             }
 
             return $this->failure('La création de compte est temporairement indisponible.');
@@ -104,11 +136,12 @@ final class AuthService
                 'id' => $userId,
                 'name' => $data['prenom'] . ' ' . $data['nom'],
                 'email' => $data['email'],
-                'phone' => null,
+                'phone' => $data['telephone'],
                 'role' => 'client',
                 'emailVerified' => false,
             ],
             'errors' => [],
+            'fieldErrors' => [],
             'emailVerification' => $emailVerification,
         ];
     }
@@ -120,6 +153,7 @@ final class AuthService
             'nom' => trim((string) ($input['nom'] ?? '')),
             'prenom' => trim((string) ($input['prenom'] ?? '')),
             'email' => strtolower(trim((string) ($input['email'] ?? ''))),
+            'telephone' => $this->normalizeRdcPhone((string) ($input['telephone'] ?? '')),
             'password' => (string) ($input['password'] ?? ''),
             'password_confirmation' => (string) ($input['password_confirmation'] ?? ''),
         ];
@@ -130,23 +164,54 @@ final class AuthService
     {
         $errors = [];
 
-        if (!$this->validName($data['prenom']) || !$this->validName($data['nom'])) {
-            $errors[] = 'Le prénom et le nom doivent contenir entre 2 et 100 caractères.';
+        if (!$this->validName($data['nom'])) {
+            $errors['nom'] = 'Le nom doit contenir entre 2 et 100 caractères.';
+        }
+
+        if (!$this->validName($data['prenom'])) {
+            $errors['prenom'] = 'Le prénom doit contenir entre 2 et 100 caractères.';
         }
 
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Saisissez une adresse e-mail valide.';
+            $errors['email'] = 'Saisissez une adresse e-mail valide.';
+        }
+
+        if ($data['telephone'] === null) {
+            $errors['telephone'] = 'Saisissez un numéro RDC valide, par exemple +243 81 234 5678 ou 081 234 5678.';
         }
 
         if (strlen($data['password']) < 8 || !preg_match('/[A-Za-z]/', $data['password']) || !preg_match('/\d/', $data['password'])) {
-            $errors[] = 'Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.';
+            $errors['password'] = 'Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.';
         }
 
         if (!hash_equals($data['password'], $data['password_confirmation'])) {
-            $errors[] = 'La confirmation du mot de passe ne correspond pas.';
+            $errors['password_confirmation'] = 'La confirmation du mot de passe ne correspond pas.';
         }
 
         return $errors;
+    }
+
+    /** Convertit les formes RDC courantes vers le format international +243XXXXXXXXX. */
+    private function normalizeRdcPhone(string $phone): ?string
+    {
+        $compact = preg_replace('/[\s().-]+/', '', trim($phone));
+
+        if (!is_string($compact) || $compact === '') {
+            return null;
+        }
+
+        if (str_starts_with($compact, '00')) {
+            $compact = '+' . substr($compact, 2);
+        }
+
+        if (preg_match('/^\+243(\d{9})$/', $compact, $matches) === 1
+            || preg_match('/^243(\d{9})$/', $compact, $matches) === 1
+            || preg_match('/^0(\d{9})$/', $compact, $matches) === 1
+        ) {
+            return '+243' . $matches[1];
+        }
+
+        return null;
     }
 
     /** Vérifie qu'un nom contient uniquement des caractères humains attendus. */
@@ -171,12 +236,18 @@ final class AuthService
     }
 
     /** Uniformise les réponses d'échec retournées au contrôleur. */
-    private function failure(string $message, string $reason = 'validation_failed', ?string $advice = null): array
+    private function failure(
+        string $message,
+        string $reason = 'validation_failed',
+        ?string $advice = null,
+        ?string $field = null,
+    ): array
     {
         return [
             'success' => false,
             'user' => null,
             'errors' => [$message],
+            'fieldErrors' => $field !== null ? [$field => $message] : [],
             'reason' => $reason,
             'advice' => $advice,
         ];

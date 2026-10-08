@@ -196,22 +196,6 @@
       return;
     }
 
-    if (event.target.closest("[data-google-auth]")) {
-      const googleMessage =
-        "La connexion Google nécessite encore les identifiants OAuth et un stockage sécurisé de l’identifiant fournisseur.";
-
-      if (!window.Swal || !window.MotionSystem?.fire) {
-        window.alert(googleMessage);
-        return;
-      }
-
-      window.MotionSystem.fire({
-        icon: "info",
-        title: "Connexion Google à configurer",
-        text: googleMessage,
-        confirmButtonText: "Compris",
-      });
-    }
   });
 
   view.addEventListener("submit", (event) => {

@@ -149,6 +149,7 @@ try {
         'nom' => 'Entreprise',
         'prenom' => 'Carole',
         'email' => 'carole@entreprise.example',
+        'telephone' => '+243812345678',
         'password' => 'Motdepasse1',
         'password_confirmation' => 'Motdepasse1',
     ]);

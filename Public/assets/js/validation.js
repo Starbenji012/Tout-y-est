@@ -4,6 +4,12 @@
     required: (input) => input.value.trim() === "" ? "Ce champ est obligatoire." : "",
     name: (input) => input.value.trim().length >= 2 ? "" : "Saisissez au moins 2 caractères.",
     email: (input) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim()) ? "" : "Saisissez une adresse e-mail valide.",
+    phone: (input) => {
+      const compact = input.value.trim().replace(/[\s().-]+/g, "");
+      return /^(?:\+243|243)\d{9}$/.test(compact) || /^0\d{9}$/.test(compact)
+        ? ""
+        : "Saisissez un numéro RDC valide.";
+    },
     password: (input) => input.value.length >= 8 && /[A-Za-z]/.test(input.value) && /\d/.test(input.value)
       ? ""
       : "Utilisez au moins 8 caractères, une lettre et un chiffre.",

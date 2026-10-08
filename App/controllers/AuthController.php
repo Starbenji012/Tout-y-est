@@ -67,8 +67,14 @@ final class AuthController extends Controller
             }
 
             http_response_code(422);
-            $this->renderPage($result['errors'], $input, [
+            $fieldErrors = is_array($result['fieldErrors'] ?? null) ? $result['fieldErrors'] : [];
+            $globalErrors = array_values(array_filter(
+                $result['errors'],
+                static fn (string $error): bool => !in_array($error, $fieldErrors, true),
+            ));
+            $this->renderPage($globalErrors, $input, [
                 'authAdvice' => $result['advice'] ?? null,
+                'fieldErrors' => $fieldErrors,
                 'loginFailures' => $throttle['count'],
                 'showLoginHelp' => $throttle['showHelp'],
             ]);
@@ -142,11 +148,12 @@ final class AuthController extends Controller
             'title' => 'Connexion et inscription | Tout y est',
             'metaDescription' => 'Connectez-vous ou créez votre compte Tout y est.',
             'activePage' => 'account',
-            'pageLibraries' => ['gsap', 'sweetalert2'],
+            'pageLibraries' => ['gsap'],
             'pageStyles' => ['/assets/css/account.css'],
             'pageScripts' => ['/assets/js/validation.js', '/assets/js/account.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'authErrors' => $errors,
+            'fieldErrors' => is_array($context['fieldErrors'] ?? null) ? $context['fieldErrors'] : [],
             'oldInput' => $old,
             'authAdvice' => $context['authAdvice'] ?? null,
             'loginFailures' => (int) ($context['loginFailures'] ?? 0),

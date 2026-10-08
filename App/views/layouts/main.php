@@ -7,6 +7,11 @@ $cartFusionCompleted = (bool) \App\Core\Session::get('_cart_fusion_completed', f
 \App\Core\Session::remove('_cart_fusion_completed');
 $favoriteFusionCompleted = (bool) \App\Core\Session::get('_favorite_fusion_completed', false);
 \App\Core\Session::remove('_favorite_fusion_completed');
+$appConfig = require dirname(__DIR__, 3) . '/Config/app.php';
+$contactEmail = filter_var((string) ($appConfig['contact_email'] ?? ''), FILTER_VALIDATE_EMAIL);
+$footerContactLinks = $contactEmail !== false
+    ? [['label' => $contactEmail, 'href' => 'mailto:' . $contactEmail, 'icon' => 'mail']]
+    : [];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
