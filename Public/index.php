@@ -19,6 +19,11 @@ use App\Models\Category;
 use App\Models\Favorite;
 use App\Models\PasswordResetToken;
 use App\Models\User;
+use App\Models\Setting;
+use App\Services\MoneyService;
+use App\Models\UserAddress;
+use App\Models\DeliveryZone;
+use App\Services\CheckoutService;
 use App\Services\AuthService;
 use App\Services\CartService;
 use App\Services\CategoryService;
@@ -62,6 +67,12 @@ require_once dirname(__DIR__) . '/App/models/Category.php';
 require_once dirname(__DIR__) . '/App/models/CharacteristicValue.php';
 require_once dirname(__DIR__) . '/App/models/Review.php';
 require_once dirname(__DIR__) . '/App/models/User.php';
+require_once dirname(__DIR__) . '/App/models/Setting.php';
+require_once dirname(__DIR__) . '/App/services/MoneyService.php';
+require_once dirname(__DIR__) . '/App/models/UserAddress.php';
+require_once dirname(__DIR__) . '/App/models/DeliveryZone.php';
+require_once dirname(__DIR__) . '/App/services/CheckoutService.php';
+require_once dirname(__DIR__) . '/App/controllers/CheckoutController.php';
 require_once dirname(__DIR__) . '/App/models/PasswordResetToken.php';
 require_once dirname(__DIR__) . '/App/services/AuthService.php';
 require_once dirname(__DIR__) . '/App/services/LoginThrottleService.php';
@@ -90,15 +101,18 @@ Session::start();
 
 try {
     $database = Database::connect($databaseConfig);
+    $moneyService = new MoneyService(new Setting($database));
     $productService = new ProductService(
         new Product($database),
         new CharacteristicValue($database),
         new Review($database),
+        $moneyService,
     );
 } catch (PDOException $exception) {
     error_log('Connexion au catalogue indisponible : ' . $exception->getMessage());
     $productService = new ProductService();
 }
+$moneyService = $moneyService ?? new MoneyService();
 $request = new Request();
 $userModel = $database instanceof PDO ? new User($database) : null;
 $mailConfig = require dirname(__DIR__) . '/Config/mail.php';
@@ -112,10 +126,20 @@ $categoryService = new CategoryService($database instanceof PDO ? new Category($
 $cartService = new CartService(
     $productService,
     $database instanceof PDO ? new Cart($database) : null,
+    $moneyService,
 );
 $favoriteService = new FavoriteService(
     $productService,
     $database instanceof PDO ? new Favorite($database) : null,
+);
+
+$checkoutService = new CheckoutService(
+    $cartService,
+    $authService,
+    $userModel,
+    $database instanceof PDO ? new UserAddress($database) : null,
+    $database instanceof PDO ? new DeliveryZone($database) : null,
+    $moneyService,
 );
 
 // Associe l'adresse demandée au contrôleur chargé de produire la réponse.

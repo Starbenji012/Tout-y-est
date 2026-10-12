@@ -39,13 +39,12 @@ $cartItems = $cartConfig['items'] ?? [];
                 <p class="cart-summary__notice"><i data-lucide="triangle-alert" aria-hidden="true"></i>Retirez les articles indisponibles pour continuer.</p>
             <?php endif; ?>
             <div class="cart-summary__actions">
-                <?php $button = ['label' => 'Commander bientôt', 'variant' => 'primary', 'icon' => 'clock-3', 'class' => 'cart-summary__checkout', 'attributes' => ['disabled' => true, 'aria-describedby' => 'cart-checkout-notice']]; ?>
+                <?php $button = ['label' => 'Commander', 'variant' => 'primary', 'icon' => 'arrow-right', 'class' => 'cart-summary__checkout', 'attributes' => ['disabled' => !$cartConfig['canCheckout'], 'aria-describedby' => 'cart-checkout-notice']] + ($cartConfig['canCheckout'] ? ['href' => '/checkout'] : []); ?>
                 <?php require __DIR__ . '/button.php'; ?>
                 <?php $button = ['label' => 'Continuer les achats', 'variant' => 'secondary', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start']; ?>
                 <?php require __DIR__ . '/button.php'; ?>
             </div>
-            <p class="cart-summary__notice" id="cart-checkout-notice">Le passage de commande sera activé dans le prochain lot.</p>
-            <p class="cart-summary__trust"><i data-lucide="shield-check" aria-hidden="true"></i>Paiement sécurisé et informations protégées</p>
+            <p class="cart-summary__notice" id="cart-checkout-notice">Renseignez votre livraison à l’étape suivante. Aucun paiement n’est demandé maintenant.</p>
         </aside>
     </div>
 <?php endif; ?>

@@ -192,7 +192,7 @@ final class AuthService
     }
 
     /** Convertit les formes RDC courantes vers le format international +243XXXXXXXXX. */
-    private function normalizeRdcPhone(string $phone): ?string
+    public function normalizeRdcPhone(string $phone): ?string
     {
         $compact = preg_replace('/[\s().-]+/', '', trim($phone));
 

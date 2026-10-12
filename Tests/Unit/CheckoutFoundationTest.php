@@ -38,7 +38,7 @@ foreach ($tables as $table) {
     $assert(str_contains($create, 'PRIMARY KEY'), "$table doit posseder une cle primaire.");
     // Comparer les colonnes reelles au schema de reference, sans le rejouer.
     preg_match('/CREATE TABLE ' . $table . ' \((.*?)\) ENGINE=InnoDB;/s', $schema, $definition);
-    preg_match_all('/^    (\w+) ((?:BIGINT|INT)(?: UNSIGNED)?|BOOLEAN|VARCHAR\(\d+\)|DECIMAL\(\d+,\s*\d+\)|DATETIME|TEXT)([^\n]*)/m', $definition[1] ?? '', $expected, PREG_SET_ORDER);
+    preg_match_all('/^    (\w+) ((?:BIGINT|INT)(?: UNSIGNED)?|BOOLEAN|(?:VAR)?CHAR\(\d+\)|DECIMAL\(\d+,\s*\d+\)|DATETIME|TEXT)([^\n]*)/m', $definition[1] ?? '', $expected, PREG_SET_ORDER);
     $columnsQuery->execute([$table]);
     $actual = $columnsQuery->fetchAll();
     $assert(count($actual) === count($expected) && count($expected) > 0, "$table : colonnes divergentes.");

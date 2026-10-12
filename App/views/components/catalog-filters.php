@@ -36,10 +36,10 @@ $hasActiveFilters = $activeCategories !== []
             <?php require __DIR__ . '/catalog-context-filters.php'; ?>
         </div>
         <fieldset class="catalog-filter-group">
-            <legend>Prix</legend>
+            <legend>Prix (USD ; valeurs DEV sans devise)</legend>
             <div class="catalog-price-range">
                 <label><span>Minimum</span><input type="number" name="price_min" min="0" inputmode="numeric" placeholder="0" value="<?= htmlspecialchars((string) ($catalogActiveFilters['priceMin'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></label>
-                <label><span>Maximum</span><input type="number" name="price_max" min="0" inputmode="numeric" placeholder="FCFA" value="<?= htmlspecialchars((string) ($catalogActiveFilters['priceMax'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></label>
+                <label><span>Maximum</span><input type="number" name="price_max" min="0" inputmode="numeric" placeholder="Maximum" value="<?= htmlspecialchars((string) ($catalogActiveFilters['priceMax'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></label>
             </div>
         </fieldset>
         <fieldset class="catalog-filter-group">

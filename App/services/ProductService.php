@@ -8,17 +8,22 @@ use App\Models\CharacteristicValue;
 use App\Models\Product;
 use App\Models\Review;
 
+require_once __DIR__ . '/MoneyService.php';
+
 /** Prépare toutes les données produit destinées aux vues et aux API. */
 final class ProductService
 {
     private ?bool $databaseAvailable = null;
+    private readonly MoneyService $money;
 
     /** Reçoit les modèles sans créer de connexion ou de requête dans le service. */
     public function __construct(
         private readonly ?Product $productModel = null,
         private readonly ?CharacteristicValue $characteristicValueModel = null,
         private readonly ?Review $reviewModel = null,
+        ?MoneyService $money = null,
     ) {
+        $this->money = $money ?? new MoneyService();
     }
 
     /** Retourne les produits présentés comme nouveautés sur l'accueil. */
@@ -529,9 +534,11 @@ final class ProductService
     /** Convertit une ligne SQL vers le format unique compris par les composants. */
     private function mapDatabaseProduct(array $product): array
     {
-        $basePrice = (float) $product['prix_reference'];
-        $discount = max(0, min(100, (float) ($product['reduction'] ?? 0)));
-        $currentPrice = $discount > 0 ? $basePrice * (1 - ($discount / 100)) : $basePrice;
+        $baseMinor = $this->money->minor((string) $product['prix_reference']);
+        $percent = (string) ($product['reduction'] ?? '0');
+        $currentMinor = $this->money->discounted($baseMinor, $percent);
+        $discount = (float) $percent;
+        $currency = $product['devise_reference'] ?? null;
         $stock = (int) ($product['stock'] ?? 0);
         $badge = $this->databaseBadge($product, $discount, $stock);
         $image = trim((string) ($product['image'] ?? ''));
@@ -553,9 +560,12 @@ final class ProductService
             'searchTerms' => (string) ($product['search_attributes'] ?? ''),
             'category' => (string) $product['categorie'],
             'categorySlug' => (string) $product['categorie_slug'],
-            'price' => $this->formatPrice($currentPrice),
-            'priceValue' => $currentPrice,
-            'oldPrice' => $discount > 0 ? $this->formatPrice($basePrice) : null,
+            'price' => $this->money->format($currentMinor, $currency),
+            'priceMinor' => $currentMinor,
+            'priceAmount' => $this->money->decimal($currentMinor),
+            'currencyReference' => $currency,
+            'priceValue' => (float) $this->money->decimal($currentMinor),
+            'oldPrice' => $discount > 0 ? $this->money->format($baseMinor, $currency) : null,
             'discount' => $discount > 0 ? (int) round($discount) : null,
             'rating' => round((float) ($product['note'] ?? 0), 1),
             'reviews' => (int) ($product['avis_count'] ?? 0),
@@ -662,12 +672,6 @@ final class ProductService
     private function priceValue(string $price): float
     {
         return (float) preg_replace('/[^0-9.]+/', '', str_replace(',', '.', $price));
-    }
-
-    /** Formate un montant selon la présentation commune de la boutique. */
-    private function formatPrice(float $price): string
-    {
-        return number_format($price, 0, ',', ' ') . ' FCFA';
     }
 
     /** Transforme un libellé en identifiant lisible dans une URL. */
@@ -791,8 +795,8 @@ final class ProductService
                 'id' => 1,
                 'name' => 'Montre Signature',
                 'category' => 'Accessoires',
-                'price' => '32 000 FCFA',
-                'oldPrice' => '38 000 FCFA',
+                'price' => '32 000 (devise DEV non définie)',
+                'oldPrice' => '38 000 (devise DEV non définie)',
                 'rating' => 4.8,
                 'reviews' => 24,
                 'image' => '/assets/images/products/watch.jpg',
@@ -805,7 +809,7 @@ final class ProductService
                 'id' => 2,
                 'name' => 'T-shirt Essential',
                 'category' => 'Vêtements',
-                'price' => '15 000 FCFA',
+                'price' => '15 000 (devise DEV non définie)',
                 'oldPrice' => null,
                 'rating' => 4.6,
                 'reviews' => 18,
@@ -819,8 +823,8 @@ final class ProductService
                 'id' => 3,
                 'name' => 'Casquette Urbaine',
                 'category' => 'Accessoires',
-                'price' => '12 500 FCFA',
-                'oldPrice' => '15 000 FCFA',
+                'price' => '12 500 (devise DEV non définie)',
+                'oldPrice' => '15 000 (devise DEV non définie)',
                 'rating' => 4.9,
                 'reviews' => 31,
                 'image' => '/assets/images/products/hat.jpg',
@@ -833,7 +837,7 @@ final class ProductService
                 'id' => 4,
                 'name' => 'Costume Élégance',
                 'category' => 'Vêtements',
-                'price' => '95 000 FCFA',
+                'price' => '95 000 (devise DEV non définie)',
                 'oldPrice' => null,
                 'rating' => 4.5,
                 'reviews' => 15,
@@ -847,8 +851,8 @@ final class ProductService
                 'id' => 5,
                 'name' => 'Ordinateur Portable Pro',
                 'category' => 'Informatique',
-                'price' => '650 000 FCFA',
-                'oldPrice' => '700 000 FCFA',
+                'price' => '650 000 (devise DEV non définie)',
+                'oldPrice' => '700 000 (devise DEV non définie)',
                 'rating' => 4.7,
                 'reviews' => 12,
                 'image' => '/assets/images/products/laptop.jpg',
@@ -861,7 +865,7 @@ final class ProductService
                 'id' => 6,
                 'name' => 'Téléviseur Smart 4K',
                 'category' => 'Électronique',
-                'price' => '420 000 FCFA',
+                'price' => '420 000 (devise DEV non définie)',
                 'oldPrice' => null,
                 'rating' => 4.4,
                 'reviews' => 9,
@@ -875,8 +879,8 @@ final class ProductService
                 'id' => 7,
                 'name' => 'Manette Gaming Sans Fil',
                 'category' => 'Gaming',
-                'price' => '55 000 FCFA',
-                'oldPrice' => '65 000 FCFA',
+                'price' => '55 000 (devise DEV non définie)',
+                'oldPrice' => '65 000 (devise DEV non définie)',
                 'rating' => 4.6,
                 'reviews' => 17,
                 'image' => '/assets/images/products/gaming-controller.jpg',
@@ -889,7 +893,7 @@ final class ProductService
                 'id' => 8,
                 'name' => 'Bague Cœur Dorée',
                 'category' => 'Bijoux',
-                'price' => '18 000 FCFA',
+                'price' => '18 000 (devise DEV non définie)',
                 'oldPrice' => null,
                 'rating' => 4.8,
                 'reviews' => 27,
@@ -903,8 +907,8 @@ final class ProductService
                 'id' => 9,
                 'name' => 'Écouteurs Sans Fil',
                 'category' => 'Audio',
-                'price' => '28 000 FCFA',
-                'oldPrice' => '32 000 FCFA',
+                'price' => '28 000 (devise DEV non définie)',
+                'oldPrice' => '32 000 (devise DEV non définie)',
                 'rating' => 4.7,
                 'reviews' => 21,
                 'image' => '/assets/images/products/wireless-earbuds.jpg',
@@ -917,8 +921,8 @@ final class ProductService
                 'id' => 10,
                 'name' => 'Casque Audio Confort',
                 'category' => 'Audio',
-                'price' => '45 000 FCFA',
-                'oldPrice' => '52 000 FCFA',
+                'price' => '45 000 (devise DEV non définie)',
+                'oldPrice' => '52 000 (devise DEV non définie)',
                 'rating' => 4.8,
                 'reviews' => 19,
                 'image' => '/assets/images/products/headphones.jpg',
@@ -932,6 +936,8 @@ final class ProductService
         return array_map(fn (array $product): array => array_replace($product, [
             'categorySlug' => $this->slugify((string) $product['category']),
             'priceValue' => $this->priceValue((string) $product['price']),
+            'currencyReference' => null,
+            'priceMinor' => $this->money->minor((string) (int) $this->priceValue((string) $product['price'])),
             'description' => sprintf(
                 '%s a été sélectionné pour sa qualité, son style et son utilité au quotidien.',
                 (string) $product['name'],

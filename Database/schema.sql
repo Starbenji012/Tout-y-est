@@ -74,12 +74,14 @@ CREATE TABLE variante_produit (
     id_produit BIGINT UNSIGNED NOT NULL,
     sku VARCHAR(100) NOT NULL,
     prix_reference DECIMAL(12, 2) NOT NULL,
+    devise_reference CHAR(3) NULL DEFAULT 'USD',
     stock INT UNSIGNED NOT NULL DEFAULT 0,
     statut VARCHAR(20) NOT NULL,
     description_variante VARCHAR(255) NULL,
     CONSTRAINT pk_variante_produit PRIMARY KEY (id_variante),
     CONSTRAINT uq_variante_produit_sku UNIQUE (sku),
     CONSTRAINT chk_variante_produit_prix CHECK (prix_reference >= 0),
+    CONSTRAINT chk_variante_devise CHECK (devise_reference IS NULL OR devise_reference = 'USD'),
     CONSTRAINT chk_variante_produit_stock CHECK (stock >= 0),
     CONSTRAINT fk_variante_produit_produit FOREIGN KEY (id_produit)
         REFERENCES produit (id_produit)
@@ -158,11 +160,19 @@ CREATE TABLE commande (
     sous_total DECIMAL(12, 2) NOT NULL,
     frais_livraison DECIMAL(12, 2) NOT NULL,
     total DECIMAL(12, 2) NOT NULL,
+    devise_reference CHAR(3) NULL,
+    devise_paiement CHAR(3) NULL,
+    taux_usd_cdf DECIMAL(12, 4) NULL,
+    total_paiement DECIMAL(18, 2) NULL,
     CONSTRAINT pk_commande PRIMARY KEY (id_commande),
     CONSTRAINT uq_commande_numero UNIQUE (numero_commande),
     CONSTRAINT chk_commande_sous_total CHECK (sous_total >= 0),
     CONSTRAINT chk_commande_frais_livraison CHECK (frais_livraison >= 0),
     CONSTRAINT chk_commande_total CHECK (total = sous_total + frais_livraison),
+    CONSTRAINT chk_commande_devise_reference CHECK (devise_reference IS NULL OR devise_reference = 'USD'),
+    CONSTRAINT chk_commande_devise_paiement CHECK (devise_paiement IS NULL OR devise_paiement IN ('USD','CDF')),
+    CONSTRAINT chk_commande_taux CHECK (taux_usd_cdf IS NULL OR taux_usd_cdf BETWEEN 0.0001 AND 100000),
+    CONSTRAINT chk_commande_total_paiement CHECK (total_paiement IS NULL OR total_paiement >= 0),
     CONSTRAINT fk_commande_utilisateur FOREIGN KEY (id_utilisateur)
         REFERENCES utilisateur (id_utilisateur)
         ON DELETE RESTRICT
@@ -225,9 +235,15 @@ CREATE TABLE paiement (
     date_creation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     date_modification DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     date_paiement DATETIME NULL,
+    devise_reglement CHAR(3) NULL,
+    taux_usd_cdf DECIMAL(12, 4) NULL,
+    montant_reglement DECIMAL(18, 2) NULL,
     CONSTRAINT pk_paiement PRIMARY KEY (id_paiement),
     CONSTRAINT uq_paiement_reference UNIQUE (id_mode_paiement, reference_externe),
     CONSTRAINT chk_paiement_montant CHECK (montant >= 0),
+    CONSTRAINT chk_paiement_devise CHECK (devise_reglement IS NULL OR devise_reglement IN ('USD','CDF')),
+    CONSTRAINT chk_paiement_taux CHECK (taux_usd_cdf IS NULL OR taux_usd_cdf BETWEEN 0.0001 AND 100000),
+    CONSTRAINT chk_paiement_reglement CHECK (montant_reglement IS NULL OR montant_reglement >= 0),
     CONSTRAINT fk_paiement_commande FOREIGN KEY (id_commande)
         REFERENCES commande (id_commande)
         ON DELETE RESTRICT
@@ -245,13 +261,26 @@ CREATE TABLE zone_livraison (
     description TEXT NULL,
     frais_reference DECIMAL(12, 2) NOT NULL,
     statut VARCHAR(20) NOT NULL DEFAULT 'inactif',
+    devise_reference CHAR(3) NULL DEFAULT 'USD',
     CONSTRAINT pk_zone_livraison PRIMARY KEY (id_zone_livraison),
     CONSTRAINT uq_zone_livraison_nom UNIQUE (nom),
     CONSTRAINT chk_zone_livraison_frais CHECK (
         frais_reference >= 0
     ),
-    CONSTRAINT chk_zone_livraison_statut CHECK (statut IN ('actif', 'inactif'))
+    CONSTRAINT chk_zone_livraison_statut CHECK (statut IN ('actif', 'inactif')),
+    CONSTRAINT chk_zone_devise CHECK (devise_reference IS NULL OR devise_reference = 'USD')
 ) ENGINE=InnoDB;
+
+-- Configuration commerciale reutilisee par le futur Admin.
+CREATE TABLE parametre (
+    id_parametre BIGINT NOT NULL,
+    cle VARCHAR(100) NOT NULL,
+    valeur TEXT NULL,
+    PRIMARY KEY (id_parametre),
+    UNIQUE KEY uq_parametre_cle (cle)
+) ENGINE=InnoDB;
+INSERT INTO parametre (id_parametre, cle, valeur)
+VALUES (1, 'monetary_config', '{"reference":"USD","alternative":"CDF","usd_cdf_rate":"2450"}');
 
 -- Adresse editable du compte, jamais utilisee comme historique de livraison.
 CREATE TABLE adresse_utilisateur (

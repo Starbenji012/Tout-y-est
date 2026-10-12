@@ -19,7 +19,7 @@ $database->beginTransaction();
 try {
     $database->exec('CREATE TEMPORARY TABLE categorie (id_categorie BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(100), slug VARCHAR(120), statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE produit (id_produit BIGINT UNSIGNED PRIMARY KEY, id_categorie BIGINT UNSIGNED, nom VARCHAR(180), slug VARCHAR(220), description TEXT, statut VARCHAR(20), date_creation DATETIME)');
-    $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20))');
+    $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20), devise_reference CHAR(3) DEFAULT \'USD\')');
     $database->exec('CREATE TEMPORARY TABLE promotion (id_promotion BIGINT UNSIGNED PRIMARY KEY, pourcentage DECIMAL(5, 2), date_debut DATETIME, date_fin DATETIME, statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE beneficier (id_produit BIGINT UNSIGNED, id_promotion BIGINT UNSIGNED)');
 

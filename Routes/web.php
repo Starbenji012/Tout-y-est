@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\CartController;
+use App\Controllers\CheckoutController;
 use App\Controllers\CategoryController;
 use App\Controllers\EmailVerificationController;
 use App\Controllers\HomeController;
@@ -22,6 +23,7 @@ $authController = new AuthController(
     $favoriteService,
 );
 $cartController = new CartController($cartService, $request);
+$checkoutController = new CheckoutController($checkoutService, $request);
 $categoryController = new CategoryController($categoryService, $request);
 $homeController = new HomeController($productService);
 $favoriteController = new FavoriteController($favoriteService, $productService, $request);
@@ -50,6 +52,9 @@ return [
     '/reinitialiser-mot-de-passe' => [$passwordResetController, 'form'],
     '/reinitialiser-mot-de-passe/appliquer' => [$passwordResetController, 'reset'],
     '/panier' => [$cartController, 'index'],
+    '/checkout' => [$checkoutController, 'index'],
+    '/api/checkout/recapitulatif' => [$checkoutController, 'summary'],
+    '/api/checkout/livraison' => [$checkoutController, 'delivery'],
     '/boutique' => [$productController, 'index'],
     '/produit' => [$productController, 'show'],
     '/promotions' => [$productController, 'promotions'],

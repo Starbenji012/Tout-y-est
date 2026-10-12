@@ -20,13 +20,13 @@ try {
     $database->exec('CREATE TEMPORARY TABLE ligne_panier (id_ligne_panier BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_panier BIGINT UNSIGNED NOT NULL, id_variante BIGINT UNSIGNED NOT NULL, quantite INT UNSIGNED NOT NULL, date_ajout DATETIME, date_modification DATETIME, UNIQUE KEY uq_ligne_panier_variante (id_panier, id_variante))');
     $database->exec('CREATE TEMPORARY TABLE categorie (id_categorie BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(100), slug VARCHAR(120), statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE produit (id_produit BIGINT UNSIGNED PRIMARY KEY, id_categorie BIGINT UNSIGNED, nom VARCHAR(180), slug VARCHAR(220), description TEXT, statut VARCHAR(20), date_creation DATETIME)');
-    $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20))');
+    $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20), devise_reference CHAR(3) DEFAULT \'USD\')');
     $database->exec('CREATE TEMPORARY TABLE promotion (id_promotion BIGINT UNSIGNED PRIMARY KEY, pourcentage DECIMAL(5, 2), date_debut DATETIME, date_fin DATETIME, statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE beneficier (id_produit BIGINT UNSIGNED, id_promotion BIGINT UNSIGNED)');
 
     $database->exec("INSERT INTO categorie VALUES (1, 'Test', 'test', 'actif')");
     $database->exec("INSERT INTO produit VALUES (1, 1, 'Produit connecté', 'produit-connecte', 'Test', 'actif', NOW())");
-    $database->exec("INSERT INTO variante_produit VALUES (15, 1, 'TEST-15', 100, 2, 'actif'), (16, 1, 'TEST-16', 200, 15, 'actif'), (17, 1, 'TEST-17', 300, 200, 'actif')");
+    $database->exec("INSERT INTO variante_produit (id_variante,id_produit,sku,prix_reference,stock,statut) VALUES (15, 1, 'TEST-15', 100, 2, 'actif'), (16, 1, 'TEST-16', 200, 15, 'actif'), (17, 1, 'TEST-17', 300, 200, 'actif')");
     $database->exec("INSERT INTO promotion VALUES (1, 10, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 1 DAY), 'actif')");
     $database->exec('INSERT INTO beneficier VALUES (1, 1)');
 

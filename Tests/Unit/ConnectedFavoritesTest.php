@@ -34,7 +34,7 @@ try {
     $database->exec('CREATE TEMPORARY TABLE utilisateur (id_utilisateur BIGINT UNSIGNED PRIMARY KEY)');
     $database->exec('CREATE TEMPORARY TABLE categorie (id_categorie BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(100), slug VARCHAR(120), statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE produit (id_produit BIGINT UNSIGNED PRIMARY KEY, id_categorie BIGINT UNSIGNED, nom VARCHAR(180), slug VARCHAR(220), description TEXT, statut VARCHAR(20), date_creation DATETIME)');
-    $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20))');
+    $database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12, 2), stock INT UNSIGNED, statut VARCHAR(20), devise_reference CHAR(3) DEFAULT \'USD\')');
     $database->exec('CREATE TEMPORARY TABLE promotion (id_promotion BIGINT UNSIGNED PRIMARY KEY, pourcentage DECIMAL(5, 2), date_debut DATETIME, date_fin DATETIME, statut VARCHAR(20))');
     $database->exec('CREATE TEMPORARY TABLE beneficier (id_produit BIGINT UNSIGNED, id_promotion BIGINT UNSIGNED)');
     $database->exec('CREATE TEMPORARY TABLE favori (id_favori BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_utilisateur BIGINT UNSIGNED NOT NULL, id_produit BIGINT UNSIGNED NOT NULL, date_ajout DATETIME NOT NULL, UNIQUE KEY uq_favori_utilisateur_produit (id_utilisateur, id_produit))');
@@ -42,7 +42,7 @@ try {
     $database->exec('INSERT INTO utilisateur VALUES (1), (2)');
     $database->exec("INSERT INTO categorie VALUES (1, 'Test', 'test', 'actif')");
     $database->exec("INSERT INTO produit VALUES (1, 1, 'Produit A', 'produit-a', 'Test A', 'actif', NOW()), (2, 1, 'Produit B', 'produit-b', 'Test B', 'actif', NOW()), (3, 1, 'Produit inactif', 'produit-inactif', 'Test', 'inactif', NOW())");
-    $database->exec("INSERT INTO variante_produit VALUES (11, 1, 'TEST-A', 100, 20, 'actif'), (12, 2, 'TEST-B', 200, 20, 'actif'), (13, 3, 'TEST-C', 300, 20, 'actif')");
+    $database->exec("INSERT INTO variante_produit (id_variante,id_produit,sku,prix_reference,stock,statut) VALUES (11, 1, 'TEST-A', 100, 20, 'actif'), (12, 2, 'TEST-B', 200, 20, 'actif'), (13, 3, 'TEST-C', 300, 20, 'actif')");
 
     $productService = new ProductService(new Product($database));
     $favoriteService = new FavoriteService($productService, new Favorite($database));

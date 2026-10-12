@@ -1,0 +1,86 @@
+<?php
+
+declare(strict_types=1);
+
+// Les fixtures restent dans des tables temporaires propres a cette connexion.
+$root = dirname(__DIR__, 2);
+foreach (['core/Database', 'core/Controller', 'core/Request', 'core/Response', 'core/Session', 'middleware/CsrfMiddleware', 'models/Setting', 'models/User', 'models/UserAddress', 'models/DeliveryZone', 'models/Cart', 'models/Product', 'services/AuthService', 'services/ProductService', 'services/CartService', 'services/CheckoutService', 'controllers/CheckoutController'] as $file) {
+    require_once $root . '/App/' . $file . '.php';
+}
+$database = App\Core\Database::connect(require $root . '/Config/database.php');
+$assert = static function (bool $valid, string $message): void {
+    if (!$valid) throw new RuntimeException($message);
+};
+$database->exec('CREATE TEMPORARY TABLE utilisateur (id_utilisateur BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(100), prenom VARCHAR(100), email VARCHAR(254), telephone VARCHAR(30), mot_de_passe VARCHAR(255), role VARCHAR(20), statut VARCHAR(20), email_verified_at DATETIME NULL)');
+$database->exec('CREATE TEMPORARY TABLE adresse_utilisateur (id_adresse BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_utilisateur BIGINT UNSIGNED, id_zone_livraison BIGINT UNSIGNED NULL, nom_destinataire VARCHAR(100), prenom_destinataire VARCHAR(100), telephone VARCHAR(30), commune VARCHAR(100), adresse VARCHAR(255), repere VARCHAR(255) NULL, instructions TEXT NULL, adresse_par_defaut BOOLEAN NOT NULL DEFAULT FALSE)');
+$database->exec('CREATE TEMPORARY TABLE zone_livraison (id_zone_livraison BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(120), frais_reference DECIMAL(12,2), statut VARCHAR(20), devise_reference CHAR(3) DEFAULT \'USD\')');
+$database->exec('CREATE TEMPORARY TABLE panier (id_panier BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_utilisateur BIGINT UNSIGNED UNIQUE, date_creation DATETIME, date_modification DATETIME)');
+$database->exec('CREATE TEMPORARY TABLE ligne_panier (id_ligne_panier BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT, id_panier BIGINT UNSIGNED, id_variante BIGINT UNSIGNED, quantite INT UNSIGNED, date_ajout DATETIME, date_modification DATETIME, UNIQUE(id_panier,id_variante))');
+$database->exec('CREATE TEMPORARY TABLE categorie (id_categorie BIGINT UNSIGNED PRIMARY KEY, nom VARCHAR(100), slug VARCHAR(120), statut VARCHAR(20))');
+$database->exec('CREATE TEMPORARY TABLE produit (id_produit BIGINT UNSIGNED PRIMARY KEY, id_categorie BIGINT UNSIGNED, nom VARCHAR(180), slug VARCHAR(220), description TEXT, statut VARCHAR(20), date_creation DATETIME)');
+$database->exec('CREATE TEMPORARY TABLE variante_produit (id_variante BIGINT UNSIGNED PRIMARY KEY, id_produit BIGINT UNSIGNED, sku VARCHAR(100), prix_reference DECIMAL(12,2), stock INT UNSIGNED, statut VARCHAR(20), devise_reference CHAR(3) DEFAULT \'USD\')');
+$database->exec('CREATE TEMPORARY TABLE promotion (id_promotion BIGINT UNSIGNED PRIMARY KEY, pourcentage DECIMAL(5,2), date_debut DATETIME, date_fin DATETIME, statut VARCHAR(20))');
+$database->exec('CREATE TEMPORARY TABLE beneficier (id_produit BIGINT UNSIGNED, id_promotion BIGINT UNSIGNED)');
+$database->exec("INSERT INTO utilisateur (id_utilisateur,nom,prenom,email,telephone,mot_de_passe,role,statut) VALUES (90001,'TEST','Alice','alice@example.invalid','+243812345678','unused','client','actif'),(90002,'TEST','Bob','bob@example.invalid','+243812345679','unused','client','actif')");
+$database->exec("INSERT INTO categorie VALUES (90001,'TEST','test-checkout','actif')");
+$database->exec("INSERT INTO produit VALUES (90001,90001,'TEST checkout','test-checkout','TEST','actif',NOW())");
+$database->exec("INSERT INTO variante_produit (id_variante,id_produit,sku,prix_reference,stock,statut) VALUES (90001,90001,'TEST-CHECKOUT-90001',10.50,20,'actif')");
+$cartService = new App\Services\CartService(new App\Services\ProductService(new App\Models\Product($database)), new App\Models\Cart($database));
+$addresses = new App\Models\UserAddress($database);
+$zones = new App\Models\DeliveryZone($database);
+$service = new App\Services\CheckoutService($cartService, new App\Services\AuthService(new App\Models\User($database)), new App\Models\User($database), $addresses, $zones, new App\Services\MoneyService(new App\Models\Setting($database)));
+$assert($service->context(0)['status'] === 401, 'Un invite ne peut pas entrer au checkout.');
+$assert($service->context(90001)['status'] === 422, 'Le panier vide doit etre refuse.');
+$assert($cartService->mutateConnectedCart(90001, 'add', 90001, 2), 'Fixture panier.');
+$assert($cartService->mutateConnectedCart(90002, 'add', 90001, 1), 'Fixture second compte.');
+$context = $service->context(90001);
+$assert($context['profile']['prenom'] === 'Alice' && $context['profile']['telephone'] === '+243812345678', 'Profil reel pre rempli.');
+$assert($context['profile']['email_verified_at'] === null && !isset($context['error']), 'Non verifie : preparation autorisee, pas de finalisation.');
+$assert($context['zones'] === [], 'Etat zones vide.');
+$input = ['address_id' => '0', 'nom_destinataire' => 'TEST', 'prenom_destinataire' => 'Alice', 'telephone' => '081 234 5678', 'commune' => 'TEST commune', 'adresse' => 'TEST adresse', 'id_zone_livraison' => '90001', 'save_address' => '1', 'make_default' => '1', 'user_id' => '90002', 'shipping' => '0', 'total' => '0'];
+$assert(isset($service->validateDelivery(90001, $input)['errors']['id_zone_livraison']), 'Aucune zone inventee.');
+$database->exec("INSERT INTO zone_livraison (id_zone_livraison,nom,frais_reference,statut) VALUES (90001,'TEST TEMPORAIRE',3.25,'inactif')");
+$assert($service->summary(90001, 90001)['status'] === 422, 'Zone inactive refusee.');
+$assert($service->summary(90001, 90009)['status'] === 422, 'Zone inexistante refusee.');
+$database->exec("UPDATE zone_livraison SET statut = 'actif' WHERE id_zone_livraison = 90001");
+$result = $service->validateDelivery(90001, $input);
+$assert($result['success'] && $result['saved'], 'Adresse creee.');
+$assert($result['summary']['subtotal'] === '$21.00' && $result['summary']['shipping'] === '$3.25' && $result['summary']['total'] === '$24.25', 'Faux tarifs client ignores.');
+$untrusted = $service->validateDelivery(90001, array_replace($input, ['save_address' => '0', 'usd_cdf_rate' => '1', 'currency' => 'CDF', 'converted_total' => '1']));
+$assert($untrusted['summary']['totalCdf'] === '59 413 FC' && $untrusted['summary']['monetarySnapshot']['usd_cdf_rate'] === '2450', 'Taux et conversion client ignores.');
+$database->exec('UPDATE variante_produit SET devise_reference = NULL');
+$assert($service->summary(90001, 90001)['status'] === 422, 'Prix DEV ambigu non converti.');
+$database->exec("UPDATE variante_produit SET devise_reference = 'USD'");
+$assert($result['address']['telephone'] === '+243812345678', 'Telephone normalise.');
+$assert(count($addresses->forUser(90001)) === 1 && $addresses->forUser(90002) === [], 'Isolation des adresses.');
+$assert($addresses->findForUser(90002, $result['addressId']) === null, 'Lecture autre compte refusee.');
+$assert($service->validateDelivery(90002, ['address_id' => $result['addressId']])['status'] === 422, 'Selection autre compte refusee.');
+$reuse = $service->validateDelivery(90001, ['address_id' => $result['addressId'], 'telephone' => 'INVALID', 'id_zone_livraison' => '0']);
+$assert($reuse['success'], 'Adresse enregistree relue cote serveur.');
+$service->validateDelivery(90001, $input + ['ignored' => true]);
+$assert((int) $database->query('SELECT COUNT(*) FROM adresse_utilisateur WHERE id_utilisateur = 90001 AND adresse_par_defaut = 1')->fetchColumn() === 1, 'Adresse par defaut unique.');
+foreach (['telephone' => 'INVALID', 'commune' => '', 'adresse' => '', 'instructions' => str_repeat('x', 1001)] as $field => $bad) {
+    $assert(isset($service->validateDelivery(90001, array_replace($input, [$field => $bad]))['errors'][$field]), 'Validation serveur : ' . $field);
+}
+App\Core\Session::start();
+App\Core\Session::set('user', ['id' => 90001]);
+$controller = new App\Controllers\CheckoutController($service, new App\Core\Request());
+$_SERVER['REQUEST_METHOD'] = 'POST'; $_POST = $input + ['_token' => 'invalid'];
+ob_start(); $controller->delivery(); $payload = json_decode((string) ob_get_clean(), true, 512, JSON_THROW_ON_ERROR);
+$assert(http_response_code() === 419 && isset($payload['error']), 'CSRF obligatoire.');
+$_POST['_token'] = App\Middleware\CsrfMiddleware::token();
+ob_start(); $controller->delivery(); $payload = json_decode((string) ob_get_clean(), true, 512, JSON_THROW_ON_ERROR);
+$assert(http_response_code() === 200 && $payload['success'], 'API validee.');
+$assert(App\Core\Session::get('_checkout_delivery')['userId'] === 90001, 'Identite session uniquement.');
+App\Core\Session::remove('user');
+ob_start(); $controller->delivery(); ob_end_clean();
+$assert(http_response_code() === 401, 'API invite refusee.');
+$_SERVER['REQUEST_METHOD'] = 'GET';
+App\Core\Session::set('user', ['id' => 90001]);
+ob_start(); $controller->index(); $html = (string) ob_get_clean();
+$assert(str_contains($html, 'Informations &amp; livraison') || str_contains($html, 'Informations & livraison'), 'Vue checkout rendue.');
+$assert(str_contains($html, 'data-checkout-form') && str_contains($html, 'Continuer au paiement'), 'Structure checkout.');
+$database->exec('DELETE FROM zone_livraison');
+ob_start(); $controller->index(); $emptyHtml = (string) ob_get_clean();
+$assert(str_contains($emptyHtml, 'Les zones et frais de livraison seront bientôt disponibles.'), 'Etat vide explicite.');
+echo "CHECKOUT_DELIVERY_OK (tables temporaires, isolation, tarifs, validations, CSRF, rendu).\n";

@@ -11,6 +11,10 @@ $sectionHeader = [
 
 <section class="cart-page" aria-labelledby="cart-title" data-cart-page>
     <div class="container cart-page__container">
+        <?php $checkoutNotice = \App\Core\Session::get('_checkout_notice'); \App\Core\Session::remove('_checkout_notice'); ?>
+        <?php if (is_string($checkoutNotice)): ?>
+            <p role="status"><?= htmlspecialchars($checkoutNotice, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+        <?php endif; ?>
         <div class="page-actions">
             <?php $button = ['label' => 'Retour à la boutique', 'variant' => 'ghost', 'href' => '/boutique', 'icon' => 'arrow-left', 'iconPosition' => 'start']; ?>
             <?php require dirname(__DIR__) . '/components/button.php'; ?>

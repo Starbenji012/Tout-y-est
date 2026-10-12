@@ -9,12 +9,15 @@ use App\Models\Cart;
 /** Transforme les articles mémorisés côté client en un panier fiable. */
 final class CartService
 {
+    private readonly MoneyService $money;
     /** Reçoit les dépendances du panier invité et du panier connecté. */
     public function __construct(
         private readonly ProductService $productService,
         private readonly ?Cart $connectedCart = null,
+        ?MoneyService $money = null,
     )
     {
+        $this->money = $money ?? new MoneyService();
     }
 
     /** Reconstruit le panier connecté depuis les lignes persistées et le catalogue courant. */
@@ -136,7 +139,8 @@ final class CartService
     {
         $products = $this->productService->findProductsByVariantIds(array_keys($requestedItems));
         $items = [];
-        $subtotal = 0.0;
+        $subtotal = 0;
+        $knownCurrency = true;
         $count = 0;
         $quantityAdjusted = false;
 
@@ -148,10 +152,11 @@ final class CartService
             $stock = max(0, (int) ($product['stock'] ?? 0));
             $quantity = min($requestedItems[$variantId], $stock > 0 ? $stock : 1);
             $available = $stock > 0;
-            $unitPrice = (float) ($product['priceValue'] ?? 0);
+            $unitPrice = (int) $product['priceMinor'];
+            $knownCurrency = $knownCurrency && ($product['currencyReference'] ?? null) === MoneyService::REFERENCE;
             $availability = $this->availability($stock);
             $quantityAdjusted = $quantityAdjusted || $quantity !== $requestedItems[$variantId];
-            $subtotal += $available ? $unitPrice * $quantity : 0.0;
+            $subtotal += $available ? $unitPrice * $quantity : 0;
             $count += $quantity;
             $items[] = [
                 'product' => $product,
@@ -164,8 +169,10 @@ final class CartService
         return [
             'items' => $items,
             'count' => $count,
-            'subtotal' => $this->formatPrice($subtotal),
-            'total' => $this->formatPrice($subtotal),
+            'subtotalMinor' => $knownCurrency ? $subtotal : null,
+            'currencyReference' => $knownCurrency ? MoneyService::REFERENCE : null,
+            'subtotal' => $knownCurrency ? $this->money->format($subtotal) : 'À déterminer (devise DEV non définie)',
+            'total' => $knownCurrency ? $this->money->format($subtotal) : 'À déterminer (devise DEV non définie)',
             'canCheckout' => $items !== [] && array_reduce(
                 $items,
                 static fn (bool $available, array $item): bool => $available && $item['available'],
@@ -191,8 +198,10 @@ final class CartService
         return [
             'items' => [],
             'count' => 0,
-            'subtotal' => $this->formatPrice(0),
-            'total' => $this->formatPrice(0),
+            'subtotalMinor' => 0,
+            'currencyReference' => MoneyService::REFERENCE,
+            'subtotal' => $this->money->format(0),
+            'total' => $this->money->format(0),
             'canCheckout' => false,
             'storedItems' => [],
             'notice' => null,
@@ -238,9 +247,4 @@ final class CartService
         return $items;
     }
 
-    /** Formate un montant de manière cohérente avec les cartes produits. */
-    private function formatPrice(float $price): string
-    {
-        return number_format($price, 0, ',', ' ') . ' FCFA';
-    }
 }

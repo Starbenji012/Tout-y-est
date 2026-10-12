@@ -191,6 +191,7 @@ final class Product
                     v.id_variante,
                     v.sku,
                     v.prix_reference,
+                    v.devise_reference,
                     p.date_creation,
                     c.nom AS categorie,
                     c.slug AS categorie_slug,

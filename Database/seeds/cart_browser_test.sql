@@ -39,6 +39,7 @@ INSERT INTO variante_produit (
     id_produit,
     sku,
     prix_reference,
+    devise_reference,
     stock,
     statut,
     description_variante
@@ -47,6 +48,7 @@ VALUES (
     @dev_product_one_id,
     'DEV-CART-BAG-001',
     45000.00,
+    NULL,
     25,
     'actif',
     'Variante de développement pour le test du panier.'
@@ -79,6 +81,7 @@ INSERT INTO variante_produit (
     id_produit,
     sku,
     prix_reference,
+    devise_reference,
     stock,
     statut,
     description_variante
@@ -87,6 +90,7 @@ VALUES (
     @dev_product_two_id,
     'DEV-CART-HEADSET-001',
     78500.00,
+    NULL,
     40,
     'actif',
     'Variante de développement pour le test du compteur et des quantités.'

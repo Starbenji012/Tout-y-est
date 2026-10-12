@@ -30,6 +30,14 @@ final class User
         return is_array($user) ? $user : null;
     }
 
+    /** Lit le profil courant sans exposer mot de passe ni tokens au checkout. */
+    public function findCheckoutProfile(int $userId): ?array
+    {
+        $statement = $this->database->prepare('SELECT id_utilisateur, nom, prenom, email, telephone, email_verified_at FROM utilisateur WHERE id_utilisateur = ? AND statut = \'actif\'');
+        $statement->execute([$userId]);
+        return $statement->fetch() ?: null;
+    }
+
     /** Remplace le hash du mot de passe après validation d'un jeton. */
     public function updatePassword(int $userId, string $passwordHash): bool
     {
