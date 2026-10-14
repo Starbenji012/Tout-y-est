@@ -33,6 +33,8 @@ $productController = new ProductController($productService, $request);
 
 // Chaque chemin public pointe vers une seule action de contrôleur.
 return [
+    '/admin/zones-livraison' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'index'],
+    '/api/admin/zones-livraison/enregistrer' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'save'],
     '/' => [$homeController, 'index'],
     '/compte' => [
         'handler' => [$accountController, 'index'],

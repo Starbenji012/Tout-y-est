@@ -30,6 +30,14 @@ final class User
         return is_array($user) ? $user : null;
     }
 
+    /** Relit les droits actuels du compte sans exposer ses secrets. */
+    public function findAccessState(int $userId): ?array
+    {
+        $statement = $this->database->prepare('SELECT role, statut FROM utilisateur WHERE id_utilisateur = ?');
+        $statement->execute([$userId]);
+        return $statement->fetch() ?: null;
+    }
+
     /** Lit le profil courant sans exposer mot de passe ni tokens au checkout. */
     public function findCheckoutProfile(int $userId): ?array
     {

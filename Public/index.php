@@ -73,6 +73,8 @@ require_once dirname(__DIR__) . '/App/models/UserAddress.php';
 require_once dirname(__DIR__) . '/App/models/DeliveryZone.php';
 require_once dirname(__DIR__) . '/App/services/CheckoutService.php';
 require_once dirname(__DIR__) . '/App/controllers/CheckoutController.php';
+require_once dirname(__DIR__) . '/App/services/DeliveryZoneService.php';
+require_once dirname(__DIR__) . '/App/controllers/Admin/DeliveryController.php';
 require_once dirname(__DIR__) . '/App/models/PasswordResetToken.php';
 require_once dirname(__DIR__) . '/App/services/AuthService.php';
 require_once dirname(__DIR__) . '/App/services/LoginThrottleService.php';
@@ -143,6 +145,11 @@ $checkoutService = new CheckoutService(
 );
 
 // Associe l'adresse demandée au contrôleur chargé de produire la réponse.
+$deliveryZoneService = new \App\Services\DeliveryZoneService(
+    $userModel,
+    $database instanceof PDO ? new DeliveryZone($database) : null,
+    $moneyService,
+);
 $routes = require dirname(__DIR__) . '/Routes/web.php';
 $requestPath = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 $route = $routes[$requestPath] ?? null;
