@@ -1,5 +1,6 @@
 <?php
 $activePage = $activePage ?? '';
+$headerUser = \App\Core\Session::get('user');
 $siteContactLinks = array_values(array_filter(
     is_array($siteContactLinks ?? null) ? $siteContactLinks : [],
     static fn (mixed $link): bool => is_array($link)
@@ -82,7 +83,9 @@ $siteSocialLinks = array_values(array_filter(
                 </a>
                 <a class="header-action header-action--desktop<?= $activePage === 'account' ? ' is-active' : '' ?>" href="/compte" aria-label="Mon compte"<?= $activePage === 'account' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">
-                        <i data-lucide="user" aria-hidden="true"></i>
+                        <?php if (is_array($headerUser)): ?>
+                            <?php $avatarName = $headerUser['name'] ?? ''; $avatarSize = 'compact'; require __DIR__ . '/user-avatar.php'; ?>
+                        <?php else: ?><i data-lucide="user" aria-hidden="true"></i><?php endif; ?>
                     </span>
                     <span class="header-action__label">Mon compte</span>
                 </a>
@@ -136,6 +139,10 @@ $siteSocialLinks = array_values(array_filter(
             <li>
                 <a class="site-navigation__link" href="/#footer-about">À propos</a>
             </li>
+        </ul>
+        <?php require __DIR__ . '/category-navigation.php'; ?>
+
+        <ul class="container site-navigation__list site-navigation__personal" aria-label="Actions personnelles">
             <li class="site-navigation__mobile-action site-navigation__mobile-action--first">
                 <a class="site-navigation__link<?= $activePage === 'favorites' ? ' is-active' : '' ?>" href="/favoris" aria-label="Favoris, 0 article" data-favorites-link<?= $activePage === 'favorites' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">
@@ -147,12 +154,22 @@ $siteSocialLinks = array_values(array_filter(
             </li>
             <li class="site-navigation__mobile-action">
                 <a class="site-navigation__link<?= $activePage === 'account' ? ' is-active' : '' ?>" href="/compte"<?= $activePage === 'account' ? ' aria-current="page"' : '' ?>>
-                    <i data-lucide="user" aria-hidden="true"></i>
+                    <?php if (is_array($headerUser)): ?>
+                        <?php $avatarName = $headerUser['name'] ?? ''; $avatarSize = 'compact'; require __DIR__ . '/user-avatar.php'; ?>
+                    <?php else: ?><i data-lucide="user" aria-hidden="true"></i><?php endif; ?>
                     Mon compte
                 </a>
             </li>
+            <li class="site-navigation__mobile-action">
+                <a class="site-navigation__link<?= $activePage === 'cart' ? ' is-active' : '' ?>" href="/panier" aria-label="Panier, 0 produit" data-cart-link<?= $activePage === 'cart' ? ' aria-current="page"' : '' ?>>
+                    <span class="header-action__icon">
+                        <i data-lucide="shopping-cart" aria-hidden="true"></i>
+                        <span class="action-badge" aria-hidden="true" data-cart-count>0</span>
+                    </span>
+                    <span>Panier</span>
+                </a>
+            </li>
         </ul>
-        <?php require __DIR__ . '/category-navigation.php'; ?>
     </nav>
 
     <button class="menu-overlay" type="button" aria-label="Fermer le menu" aria-hidden="true" tabindex="-1" data-menu-overlay></button>

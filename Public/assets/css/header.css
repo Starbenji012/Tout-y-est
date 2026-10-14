@@ -579,6 +579,7 @@
 }
 
 .site-navigation__mobile-header,
+.site-navigation__personal,
 .site-navigation__mobile-action,
 .menu-overlay {
   display: none;
@@ -903,6 +904,9 @@
     gap: var(--space-2);
     padding: var(--space-5);
   }
+
+  .site-navigation__personal { display: flex; padding-top: 0; }
+  .site-navigation__personal .site-navigation__mobile-action--first { margin-top: 0; }
 
   .site-navigation__link,
   .site-navigation__categories {

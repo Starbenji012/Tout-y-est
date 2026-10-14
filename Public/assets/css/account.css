@@ -397,10 +397,17 @@
   gap: var(--spacing-xs);
 }
 
-.account-dashboard__welcome span {
+.account-dashboard__welcome .account-dashboard__eyebrow {
   color: var(--color-gold-dark);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+}
+
+.account-dashboard__name { text-transform: capitalize; }
+.account-dashboard__welcome > div { min-width: 0; }
+.account-dashboard__welcome h1 { overflow-wrap: anywhere; }
+@media (max-width: 48rem) {
+  .account-dashboard__avatar .user-avatar--large { width: calc(var(--control-height) + var(--spacing-md)); height: calc(var(--control-height) + var(--spacing-md)); font-size: var(--font-size-xl); }
 }
 
 .account-verification {

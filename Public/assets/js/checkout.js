@@ -44,6 +44,7 @@
       const response = await fetch(`/api/checkout/recapitulatif?zone=${encodeURIComponent(zoneId)}`, { headers: { Accept: 'application/json' }, signal: controller.signal });
       const payload = await readResponse(response);
       summary.innerHTML = payload.html;
+      window.lucide?.createIcons();
     } catch (error) {
       if (error.name !== 'AbortError') showMessage(error.message || 'Impossible de calculer la livraison.');
     } finally {
@@ -86,6 +87,7 @@
       const response = await fetch(form.action, { method: 'POST', body: data, headers: { Accept: 'application/json' } });
       const payload = await readResponse(response);
       summary.innerHTML = payload.summary.html;
+      window.lucide?.createIcons();
       showMessage(payload.saved ? 'Adresse enregistrée. Les informations de livraison sont validées ; le paiement sera disponible dans une prochaine étape.' : 'Informations de livraison validées. Le paiement sera disponible dans une prochaine étape.');
       if (payload.saved) {
         // Reutiliser l'adresse creee empeche un second clic de la dupliquer.

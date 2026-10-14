@@ -19,10 +19,12 @@ $verificationMessage = $emailVerificationNotice !== null
 <section class="account-dashboard" aria-labelledby="account-dashboard-title">
     <div class="container account-dashboard__container">
         <header class="account-dashboard__welcome" data-motion="section">
-            <span class="account-dashboard__icon" aria-hidden="true"><i data-lucide="user-round"></i></span>
+            <div class="account-dashboard__avatar">
+                <?php $avatarName = $accountUser['name'] ?? ''; $avatarSize = 'large'; require dirname(__DIR__) . '/components/user-avatar.php'; ?>
+            </div>
             <div>
-                <span>Votre espace personnel</span>
-                <h1 id="account-dashboard-title">Bonjour, <?= htmlspecialchars((string) ($accountUser['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
+                <span class="account-dashboard__eyebrow">Votre espace personnel</span>
+                <h1 id="account-dashboard-title">Bonjour, <span class="account-dashboard__name"><?= htmlspecialchars((string) ($accountUser['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span></h1>
                 <p>Retrouvez ici les informations utiles à votre expérience Tout y est.</p>
             </div>
             <form class="account-dashboard__logout" action="/deconnexion" method="post">

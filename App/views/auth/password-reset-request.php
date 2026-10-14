@@ -10,7 +10,6 @@ $csrfTokenValue = htmlspecialchars((string) ($csrfToken ?? ''), ENT_QUOTES | ENT
         <div class="account-auth-shell" data-motion="section">
             <article class="account-panel">
                 <div class="account-panel__heading">
-                    <i data-lucide="key-round" aria-hidden="true"></i>
                     <div><h1 id="password-reset-request-title">Mot de passe oublié ?</h1><p>Indiquez votre adresse e-mail pour recevoir un lien sécurisé.</p></div>
                 </div>
                 <?php if ($authErrors !== []): ?>

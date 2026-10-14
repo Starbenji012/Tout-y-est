@@ -18,7 +18,8 @@ $sectionHeader = ['id' => 'checkout-title', 'headingLevel' => 1, 'badge' => ['la
         </ol>
         <div class="checkout-layout">
             <div class="checkout-information">
-                <section class="checkout-panel" aria-labelledby="checkout-account-title">
+                <section class="checkout-panel checkout-account" aria-labelledby="checkout-account-title">
+                    <div class="checkout-account__information">
                     <h2 id="checkout-account-title">Votre compte</h2>
                     <p><?= $escape($profile['prenom']) ?> <?= $escape($profile['nom']) ?></p>
                     <p><?= $escape($profile['email']) ?></p>
@@ -26,6 +27,10 @@ $sectionHeader = ['id' => 'checkout-title', 'headingLevel' => 1, 'badge' => ['la
                     <?php if ($profile['email_verified_at'] === null): ?>
                         <p class="checkout-help">Votre e-mail devra être vérifié avant la finalisation de la commande. <a href="/compte">Vérifier mon adresse e-mail</a></p>
                     <?php else: ?><p class="checkout-help">Adresse e-mail vérifiée.</p><?php endif; ?>
+                    </div>
+                    <div class="checkout-account__avatar">
+                        <?php $avatarName = trim($profile['prenom']) ?: $profile['nom']; $avatarSize = 'large'; require dirname(__DIR__) . '/components/user-avatar.php'; ?>
+                    </div>
                 </section>
                 <form class="checkout-panel" action="/api/checkout/livraison" method="post" data-checkout-form>
                     <input type="hidden" name="_token" value="<?= $escape($csrfToken) ?>">
@@ -49,10 +54,10 @@ $sectionHeader = ['id' => 'checkout-title', 'headingLevel' => 1, 'badge' => ['la
                         <?php endforeach; ?>
                         <div class="checkout-field checkout-field--wide">
                             <label for="checkout-zone">Endroit / zone de livraison</label>
-                            <select id="checkout-zone" name="id_zone_livraison" required <?= $zones === [] ? 'disabled' : '' ?> aria-describedby="error-id_zone_livraison checkout-zones-notice">
+                            <div class="form-select"><select id="checkout-zone" name="id_zone_livraison" required <?= $zones === [] ? 'disabled' : '' ?> aria-describedby="error-id_zone_livraison checkout-zones-notice">
                                 <option value="">Choisissez une zone</option>
                                 <?php foreach ($zones as $zone): ?><option value="<?= (int) $zone['id_zone_livraison'] ?>"><?= $escape($zone['nom']) ?></option><?php endforeach; ?>
-                            </select>
+                            </select></div>
                             <small class="checkout-error" id="error-id_zone_livraison" data-error-for="id_zone_livraison"></small>
                             <p class="checkout-help" id="checkout-zones-notice"><?= $zones === [] ? 'Les zones et frais de livraison seront bientôt disponibles. Vous pourrez poursuivre lorsqu’une zone réelle sera configurée.' : 'Le tarif est calculé par le serveur selon la zone choisie.' ?></p>
                         </div>
@@ -64,8 +69,8 @@ $sectionHeader = ['id' => 'checkout-title', 'headingLevel' => 1, 'badge' => ['la
                         <?php endforeach; ?>
                     </div>
                     <div class="checkout-save-options" data-save-options>
-                        <label><input type="checkbox" name="save_address" value="1"> Enregistrer cette adresse pour mes prochaines commandes</label>
-                        <label><input type="checkbox" name="make_default" value="1"> Utiliser comme adresse par défaut</label>
+                        <label class="form-check"><input type="checkbox" name="save_address" value="1"> Enregistrer cette adresse pour mes prochaines commandes</label>
+                        <label class="form-check"><input type="checkbox" name="make_default" value="1"> Utiliser comme adresse par défaut</label>
                     </div>
                     <p role="status" aria-live="polite" tabindex="-1" data-checkout-message></p>
                     <?php $button = ['label' => 'Valider les informations de livraison', 'type' => 'submit', 'variant' => 'secondary', 'attributes' => ['disabled' => $zones === [], 'aria-describedby' => 'checkout-zones-notice']]; require dirname(__DIR__) . '/components/button.php'; ?>

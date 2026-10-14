@@ -18,6 +18,7 @@
 
   /* Typographie */
   --font-family-primary: "Poppins", sans-serif;
+  --font-family-avatar: Georgia, "Times New Roman", serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
