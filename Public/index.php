@@ -73,6 +73,7 @@ require_once dirname(__DIR__) . '/App/models/UserAddress.php';
 require_once dirname(__DIR__) . '/App/models/DeliveryZone.php';
 require_once dirname(__DIR__) . '/App/services/CheckoutService.php';
 require_once dirname(__DIR__) . '/App/controllers/CheckoutController.php';
+foreach (['models/ProductVariant','models/Order','models/OrderItem','models/Delivery','services/OrderService','controllers/OrderController'] as $orderFile) require_once dirname(__DIR__) . '/App/' . $orderFile . '.php';
 require_once dirname(__DIR__) . '/App/services/DeliveryZoneService.php';
 require_once dirname(__DIR__) . '/App/controllers/Admin/DeliveryController.php';
 require_once dirname(__DIR__) . '/App/models/PasswordResetToken.php';
@@ -145,6 +146,11 @@ $checkoutService = new CheckoutService(
 );
 
 // Associe l'adresse demandée au contrôleur chargé de produire la réponse.
+$orderService = $database instanceof PDO ? new \App\Services\OrderService(
+    $database, $userModel, new Cart($database), new \App\Models\ProductVariant($database),
+    new DeliveryZone($database), new UserAddress($database), new \App\Models\Order($database),
+    new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $checkoutService, $moneyService,
+) : null;
 $deliveryZoneService = new \App\Services\DeliveryZoneService(
     $userModel,
     $database instanceof PDO ? new DeliveryZone($database) : null,

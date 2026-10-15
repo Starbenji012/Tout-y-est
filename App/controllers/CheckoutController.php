@@ -27,6 +27,11 @@ final class CheckoutController extends Controller
             Response::redirect('/panier');
         }
         header('Cache-Control: no-store');
+        $creationKey = bin2hex(random_bytes(32));
+        $keys = Session::get('_checkout_creation_keys', []);
+        $keys = is_array($keys) ? $keys : [];
+        $keys[$creationKey] = $this->userId();
+        Session::set('_checkout_creation_keys', array_slice($keys, -10, null, true));
         $this->render('checkout/index', [
             'title' => 'Informations & livraison | Tout y est',
             'activePage' => 'cart',
@@ -34,6 +39,7 @@ final class CheckoutController extends Controller
             'pageScripts' => ['/assets/js/checkout.js'],
             'checkout' => $context,
             'csrfToken' => CsrfMiddleware::token(),
+            'creationKey' => $creationKey,
         ]);
     }
 
@@ -70,7 +76,7 @@ final class CheckoutController extends Controller
             $result = $this->checkoutService->validateDelivery($this->userId(), $input);
             if (!empty($result['success'])) {
                 // Brouillon de session uniquement : aucun INSERT commande ou paiement.
-                Session::set('_checkout_delivery', ['userId' => $this->userId(), 'address' => $result['address']]);
+                Session::set('_checkout_delivery', ['userId' => $this->userId(), 'address' => $result['address'], 'addressId' => $result['addressId']]);
                 $result['summary']['html'] = $this->renderPartial('checkout/summary', ['cart' => $result['summary']['cart'], 'summary' => $result['summary']]);
                 unset($result['summary']['cart']);
             }

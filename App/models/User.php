@@ -46,6 +46,13 @@ final class User
         return $statement->fetch() ?: null;
     }
 
+    public function lockForOrder(int $userId): ?array
+    {
+        $query = $this->database->prepare('SELECT id_utilisateur, statut, email_verified_at FROM utilisateur WHERE id_utilisateur = ? FOR UPDATE');
+        $query->execute([$userId]);
+        return $query->fetch() ?: null;
+    }
+
     /** Remplace le hash du mot de passe après validation d'un jeton. */
     public function updatePassword(int $userId, string $passwordHash): bool
     {

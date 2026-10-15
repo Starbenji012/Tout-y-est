@@ -59,6 +59,18 @@ final class Cart
 		return $statement->fetchAll();
 	}
 
+    /** Lecture brute verrouillée, sans création de panier ni ajustement silencieux. */
+    public function lockForUser(int $userId): array
+    {
+        $query = $this->database->prepare('SELECT id_panier FROM panier WHERE id_utilisateur = ? FOR UPDATE');
+        $query->execute([$userId]);
+        $cartId = $query->fetchColumn();
+        if (!$cartId) return [];
+        $query = $this->database->prepare('SELECT id_variante, quantite FROM ligne_panier WHERE id_panier = ? ORDER BY id_variante FOR UPDATE');
+        $query->execute([$cartId]);
+        return $query->fetchAll();
+    }
+
 	/** Fusionne les quantités validées par le service sans remplacer les autres lignes. */
 	public function mergeLines(int $cartId, array $quantities): void
 	{

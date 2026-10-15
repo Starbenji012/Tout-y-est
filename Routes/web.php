@@ -32,7 +32,10 @@ $passwordResetController = new PasswordResetController($passwordResetService, $r
 $productController = new ProductController($productService, $request);
 
 // Chaque chemin public pointe vers une seule action de contrôleur.
+/** @var \App\Services\OrderService|null $orderService */
 return [
+    '/api/checkout/commande' => [new \App\Controllers\OrderController($orderService, $request), 'create'],
+    '/checkout/paiement' => [new \App\Controllers\OrderController($orderService, $request), 'payment'],
     '/admin/zones-livraison' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'index'],
     '/api/admin/zones-livraison/enregistrer' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'save'],
     '/' => [$homeController, 'index'],

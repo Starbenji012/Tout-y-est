@@ -79,8 +79,13 @@ $sectionHeader = ['id' => 'checkout-title', 'headingLevel' => 1, 'badge' => ['la
             </div>
             <aside class="checkout-panel checkout-summary" aria-labelledby="checkout-summary-title">
                 <div data-checkout-summary><?php require __DIR__ . '/summary.php'; ?></div>
-                <?php $button = ['label' => 'Continuer au paiement', 'variant' => 'primary', 'attributes' => ['disabled' => true, 'aria-describedby' => 'checkout-payment-notice']]; require dirname(__DIR__) . '/components/button.php'; ?>
-                <p class="checkout-help" id="checkout-payment-notice"><?= $zones === [] ? 'La livraison ne peut pas encore être calculée : aucune zone active n’est disponible. Le paiement sera activé dans une prochaine étape.' : 'Vous pouvez valider votre livraison. L’étape Paiement n’est pas encore disponible.' ?></p>
+                <form action="/api/checkout/commande" method="post" data-order-form>
+                    <input type="hidden" name="_token" value="<?= $escape($csrfToken) ?>">
+                    <input type="hidden" name="_creation_key" value="<?= $escape($creationKey ?? '') ?>">
+                    <?php $button = ['label' => 'Continuer au paiement', 'type' => 'submit', 'variant' => 'primary', 'attributes' => ['disabled' => true, 'data-order-submit' => true, 'aria-describedby' => 'checkout-payment-notice']]; require dirname(__DIR__) . '/components/button.php'; ?>
+                    <p role="status" aria-live="polite" tabindex="-1" data-order-message></p>
+                </form>
+                <p class="checkout-help" id="checkout-payment-notice"><?= $zones === [] ? 'La livraison ne peut pas encore être calculée : aucune zone active n’est disponible.' : 'Validez votre livraison pour créer une commande et réserver les articles pendant 30 minutes. Aucun paiement n’est encaissé ici.' ?></p>
             </aside>
         </div>
     </div>

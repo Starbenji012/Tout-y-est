@@ -13,6 +13,8 @@
   const submit = form.querySelector('[type="submit"]');
   let requestController;
   let pending = false;
+  const orderForm = page.querySelector('[data-order-form]');
+  const orderSubmit = page.querySelector('[data-order-submit]');
 
   const showMessage = (text) => { message.textContent = text; };
   const clearErrors = () => {
@@ -54,6 +56,7 @@
 
   form.addEventListener('change', (event) => {
     if (pending) return;
+    if (orderSubmit) orderSubmit.disabled = true;
     clearErrors();
     showMessage('');
     if (event.target.name === 'address_id') {
@@ -87,8 +90,9 @@
       const response = await fetch(form.action, { method: 'POST', body: data, headers: { Accept: 'application/json' } });
       const payload = await readResponse(response);
       summary.innerHTML = payload.summary.html;
+      if (orderSubmit) orderSubmit.disabled = false;
       window.lucide?.createIcons();
-      showMessage(payload.saved ? 'Adresse enregistrée. Les informations de livraison sont validées ; le paiement sera disponible dans une prochaine étape.' : 'Informations de livraison validées. Le paiement sera disponible dans une prochaine étape.');
+      showMessage(payload.saved ? 'Adresse enregistrée et livraison validée. Vous pouvez continuer au paiement.' : 'Livraison validée. Vous pouvez continuer au paiement.');
       if (payload.saved) {
         // Reutiliser l'adresse creee empeche un second clic de la dupliquer.
         const label = document.createElement('label');
@@ -120,6 +124,29 @@
         saveOptions.querySelectorAll('input').forEach((input) => { input.disabled = true; });
       }
       message.focus();
+    }
+  });
+  orderForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (pending || orderSubmit.disabled) return;
+    pending = true;
+    const notice = orderForm.querySelector('[data-order-message]');
+    const data = new FormData(orderForm);
+    orderSubmit.disabled = true;
+    const controls = [...form.elements];
+    const previous = new Map(controls.map((control) => [control, control.disabled]));
+    controls.forEach((control) => { control.disabled = true; });
+    notice.textContent = 'Création de votre commande…';
+    try {
+      const result = await readResponse(await fetch(orderForm.action, {method: 'POST', body: data, headers: {Accept: 'application/json'}}));
+      window.location.assign(result.url);
+    } catch (error) {
+      notice.textContent = error.message || 'Connexion indisponible. Réessayez avec la même demande.';
+      notice.focus();
+      orderSubmit.disabled = false;
+    } finally {
+      pending = false;
+      controls.forEach((control) => { control.disabled = previous.get(control); });
     }
   });
 })();

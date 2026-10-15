@@ -26,6 +26,13 @@ final class UserAddress
         return $statement->fetch() ?: null;
     }
 
+    public function lockForUser(int $userId, int $addressId): ?array
+    {
+        $query = $this->database->prepare('SELECT * FROM adresse_utilisateur WHERE id_utilisateur = ? AND id_adresse = ? LOCK IN SHARE MODE');
+        $query->execute([$userId, $addressId]);
+        return $query->fetch() ?: null;
+    }
+
     /** Le verrou du compte serialise les changements d'adresse par defaut. */
     public function createForUser(int $userId, array $address, bool $makeDefault): int
     {

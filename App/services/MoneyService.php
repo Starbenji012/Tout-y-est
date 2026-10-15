@@ -64,8 +64,14 @@ final class MoneyService
 
     public function usdToCdf(int $usdCents): int
     {
+        return $this->usdToCdfAtRate($usdCents, (string) $this->configuration()['usd_cdf_rate']);
+    }
+
+    /** Le taux historique provient exclusivement du snapshot serveur. */
+    public function usdToCdfAtRate(int $usdCents, string $snapshotRate): int
+    {
         if ($usdCents < 0 || $usdCents > 999999999999) throw new InvalidArgumentException('Montant hors limites.');
-        $rate = $this->rateUnits((string) $this->configuration()['usd_cdf_rate']);
+        $rate = $this->rateUnits($snapshotRate);
         // Decomposer avant multiplication evite de depasser les entiers 64 bits.
         return intdiv($usdCents, 1000000) * $rate + $this->roundDivide(($usdCents % 1000000) * $rate, 1000000);
     }

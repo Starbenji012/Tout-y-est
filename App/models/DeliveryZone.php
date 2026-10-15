@@ -45,4 +45,11 @@ final class DeliveryZone
         $statement->execute([$id]);
         return $statement->fetch() ?: null;
     }
+
+    public function lockActive(int $id): ?array
+    {
+        $query = $this->database->prepare("SELECT id_zone_livraison, nom, frais_reference, devise_reference FROM zone_livraison WHERE id_zone_livraison = ? AND statut = 'actif' LOCK IN SHARE MODE");
+        $query->execute([$id]);
+        return $query->fetch() ?: null;
+    }
 }

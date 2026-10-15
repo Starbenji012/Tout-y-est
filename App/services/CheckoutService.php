@@ -75,20 +75,7 @@ final class CheckoutService
             return ['error' => 'Cette adresse ne vous appartient pas ou n’existe plus.', 'status' => 422];
         }
         $source = $saved ?? $input;
-        $errors = [];
-        $address = [];
-        foreach (['nom_destinataire' => 100, 'prenom_destinataire' => 100, 'commune' => 100, 'adresse' => 255, 'repere' => 255, 'instructions' => 1000] as $field => $max) {
-            $value = is_string($source[$field] ?? null) ? trim($source[$field]) : '';
-            $length = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
-            if ($length > $max || ($value === '' && !in_array($field, ['repere', 'instructions'], true))) {
-                $errors[$field] = 'Renseignez ce champ (maximum ' . $max . ' caractères).';
-            }
-            $address[$field] = $value !== '' ? $value : null;
-        }
-        $address['telephone'] = $this->authService->normalizeRdcPhone(is_string($source['telephone'] ?? null) ? $source['telephone'] : '');
-        if ($address['telephone'] === null) {
-            $errors['telephone'] = 'Saisissez un numéro RDC valide (+243…, 243… ou 0…).';
-        }
+        ['address' => $address, 'errors' => $errors] = $this->normalizeAddress($source);
         $zoneId = filter_var($source['id_zone_livraison'] ?? null, FILTER_VALIDATE_INT);
         $summary = $this->summary($userId, $zoneId !== false ? (int) $zoneId : 0);
         if (isset($summary['error'])) {
@@ -105,6 +92,22 @@ final class CheckoutService
             $addressId = $this->addresses->createForUser($userId, $address, $default);
         }
         return ['success' => true, 'address' => $address, 'addressId' => (int) $addressId, 'summary' => $summary, 'saved' => $save];
+    }
+
+    /** Validation commune à la livraison et à sa relecture avant commande. */
+    public function normalizeAddress(array $source): array
+    {
+        $errors = [];
+        $address = [];
+        foreach (['nom_destinataire' => 100, 'prenom_destinataire' => 100, 'commune' => 100, 'adresse' => 255, 'repere' => 255, 'instructions' => 1000] as $field => $max) {
+            $value = is_string($source[$field] ?? null) ? trim($source[$field]) : '';
+            $length = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
+            if ($length > $max || ($value === '' && !in_array($field, ['repere', 'instructions'], true))) $errors[$field] = 'Renseignez ce champ (maximum ' . $max . ' caractères).';
+            $address[$field] = $value !== '' ? $value : null;
+        }
+        $address['telephone'] = $this->authService->normalizeRdcPhone(is_string($source['telephone'] ?? null) ? $source['telephone'] : '');
+        if ($address['telephone'] === null) $errors['telephone'] = 'Saisissez un numéro RDC valide (+243…, 243… ou 0…).';
+        return ['address' => $address, 'errors' => $errors];
     }
 
 }
