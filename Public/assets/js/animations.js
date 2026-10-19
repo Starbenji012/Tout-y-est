@@ -2,20 +2,18 @@
 (() => {
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   let observer;
+  let initialized = false;
+  const registered = new WeakSet();
 
   // Rend un élément visible en déclenchant sa transition CSS.
   const reveal = (element) => element.classList.add("is-motion-visible");
 
-  // Observe les entrées et sorties du viewport pour rejouer les animations naturellement.
+  // Une apparition par élément : sortir du viewport ne le masque plus.
   const createObserver = () => new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
+        observer.unobserve(entry.target);
         window.requestAnimationFrame(() => reveal(entry.target));
-        return;
-      }
-
-      if (!entry.target.hasAttribute("data-motion-once")) {
-        entry.target.classList.remove("is-motion-visible");
       }
     });
   }, {
@@ -30,20 +28,39 @@
       ...root.querySelectorAll("[data-motion]"),
     ];
 
+    const pending = [];
     elements.forEach((element) => {
+      if (registered.has(element)) return;
+      registered.add(element);
       const delay = Math.max(0, Math.min(280, Number(element.dataset.motionDelay) || 0));
       element.style.setProperty("--motion-delay", `${delay}ms`);
 
       if (reducedMotionQuery.matches || !observer) {
         reveal(element);
       } else {
-        observer.observe(element);
+        // Poser l'état caché sans animer une disparition depuis opacity: 1.
+        element.classList.add("is-motion-preparing");
+        pending.push(element);
       }
+    });
+    if (pending.length === 0) return;
+
+    // Laisser un rendu intermédiaire avant de permettre la transition d'entrée.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        pending.forEach((element) => {
+          element.classList.remove("is-motion-preparing");
+          if (reducedMotionQuery.matches) reveal(element);
+          else observer.observe(element);
+        });
+      });
     });
   };
 
   // Active le système en tenant compte des préférences de mouvement réduit.
   const init = () => {
+    if (initialized) { refresh(); return; }
+    initialized = true;
     document.documentElement.classList.add("motion-enabled");
 
     if (!reducedMotionQuery.matches && "IntersectionObserver" in window) {

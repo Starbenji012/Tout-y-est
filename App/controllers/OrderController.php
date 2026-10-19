@@ -5,12 +5,13 @@ namespace App\Controllers;
 use App\Core\{Controller, Request, Response, Session};
 use App\Middleware\CsrfMiddleware;
 use App\Services\OrderService;
+use App\Services\ProductService;
 use DomainException;
 use Throwable;
 
 final class OrderController extends Controller
 {
-    public function __construct(private readonly ?OrderService $orders, private readonly Request $request) {}
+    public function __construct(private readonly ?OrderService $orders, private readonly Request $request, private readonly ?ProductService $products = null) {}
 
     public function create(): void
     {
@@ -41,8 +42,12 @@ final class OrderController extends Controller
         if ($this->orders === null) { http_response_code(503); echo 'Service indisponible.'; return; }
         try {
             $data = $this->orders->forUser($this->userId(), $this->request->queryInteger('commande'));
+            // Images actuelles uniquement ; noms, prix et taux restent les snapshots historiques.
+            $images = $this->products?->productImages(array_column($data['lines'], 'id_produit')) ?? [];
+            foreach ($data['lines'] as &$line) $line['image'] = $images[(int) $line['id_produit']][0] ?? null;
+            unset($line);
             header('Cache-Control: no-store');
-            $this->render('checkout/payment', $data + ['title' => 'Commande en attente | Tout y est', 'pageStyles' => ['/assets/css/checkout.css']]);
+            $this->render('checkout/payment', $data + ['title' => 'Paiement | Tout y est', 'pageStyles' => ['/assets/css/checkout.css'], 'pageScripts' => ['/assets/js/checkout-payment.js']]);
         } catch (DomainException) { http_response_code(404); echo 'Commande introuvable pour ce compte.'; }
         catch (Throwable) { http_response_code(503); echo 'Commande momentanément indisponible. Réessayez.'; }
     }

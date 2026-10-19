@@ -35,7 +35,7 @@ $productController = new ProductController($productService, $request);
 /** @var \App\Services\OrderService|null $orderService */
 return [
     '/api/checkout/commande' => [new \App\Controllers\OrderController($orderService, $request), 'create'],
-    '/checkout/paiement' => [new \App\Controllers\OrderController($orderService, $request), 'payment'],
+    '/checkout/paiement' => [new \App\Controllers\OrderController($orderService, $request, $productService), 'payment'],
     '/admin/zones-livraison' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'index'],
     '/api/admin/zones-livraison/enregistrer' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'save'],
     '/' => [$homeController, 'index'],

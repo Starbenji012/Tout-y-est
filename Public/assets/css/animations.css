@@ -113,6 +113,11 @@
   will-change: opacity, transform;
 }
 
+/* Préparation immédiate, puis transition commune lors de la révélation. */
+.motion-enabled [data-motion].is-motion-preparing {
+  transition: none !important;
+}
+
 .motion-enabled [data-motion="section"],
 .motion-enabled [data-motion="card"] {
   transform: translate3d(0, var(--spacing-sm), 0);
@@ -148,7 +153,70 @@
 .motion-modal-enter { animation: motion-modal-in var(--duration-slow) var(--ease-motion) both; }
 .motion-modal-leave { animation: motion-modal-out var(--duration-normal) var(--ease-motion-exit) both; }
 
+/* Micro-mouvement commun : très faible amplitude, sans changement de dimensions. */
+@keyframes checkout-soft-enter {
+  from { opacity: .82; transform: translateY(var(--space-1)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Seule l'ouverture est animée : hidden ferme toujours immédiatement. */
+.checkout-page #checkout-addresses:not([hidden]),
+.checkout-page .checkout-zone-picker [role="listbox"]:not([hidden]) {
+  animation: checkout-soft-enter var(--duration-fast) var(--ease-motion) backwards;
+}
+
+/* Une future méthode doit être explicitement disponible pour recevoir du feedback. */
+.payment-method[aria-disabled="false"]:not([disabled]) {
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.payment-method[aria-disabled="false"]:not([disabled]):active { transform: scale(.99); }
+.payment-method[aria-disabled="false"]:not([disabled]):focus-visible {
+  outline: var(--border-width) solid var(--color-gold);
+  outline-offset: var(--space-1);
+}
+.checkout-page [data-order-submit]:not(:disabled):not([aria-disabled="true"]) {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+.checkout-page [data-order-submit]:not(:disabled):not([aria-disabled="true"]):hover {
+  transform: none; box-shadow: none;
+}
+.checkout-page [data-order-submit]:not(:disabled):not([aria-disabled="true"]):active {
+  transform: scale(.98); box-shadow: none;
+}
+.checkout-page [data-order-submit]:disabled,
+.checkout-page [data-order-submit][aria-disabled="true"] {
+  transform: none; box-shadow: none; transition: none;
+}
+.checkout-page [data-order-submit]:disabled::after,
+.checkout-page [data-order-submit][aria-disabled="true"]::after { display: none; }
+.checkout-payment .checkout-payment__return:hover svg { transform: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .payment-method[aria-disabled="false"]:not([disabled]):hover {
+    transform: translateY(-1px); border-color: var(--color-gold); box-shadow: var(--shadow-small);
+  }
+  .payment-method[aria-disabled="false"]:not([disabled]):active { transform: scale(.99); }
+  .checkout-page [data-order-submit]:not(:disabled):not([aria-disabled="true"]):hover {
+    transform: translateY(-1px); box-shadow: var(--shadow-small);
+  }
+  .checkout-page [data-order-submit]:not(:disabled):not([aria-disabled="true"]):active { transform: scale(.98); }
+  .checkout-payment .checkout-payment__return:hover svg { transform: translateX(calc(var(--space-1) / 2)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .header-action__icon:has(.user-avatar),
+  .site-navigation__link .user-avatar,
+  .checkout-payment .checkout-panel,
+  .checkout-page #checkout-addresses,
+  .checkout-page .checkout-zone-picker [role="listbox"],
+  .checkout-page .payment-method,
+  .checkout-page [data-order-submit],
+  .checkout-payment .checkout-payment__return,
+  .checkout-payment .checkout-payment__return svg {
+    animation: none !important; transition: none !important; transform: none !important;
+  }
+  /* La rotation indique l'état ouvert : elle reste présente, mais instantanée. */
+  .checkout-page .checkout-zone-trigger svg { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
 
   *,

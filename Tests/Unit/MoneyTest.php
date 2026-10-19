@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/App/models/Setting.php';
 require_once dirname(__DIR__, 2) . '/App/services/MoneyService.php';
 $db = App\Core\Database::connect(require dirname(__DIR__, 2) . '/Config/database.php');
 $dev = $db->query("SELECT sku, prix_reference, devise_reference FROM variante_produit WHERE sku IN ('DEV-CART-BAG-001','DEV-CART-HEADSET-001') ORDER BY sku")->fetchAll();
-if (count($dev) === 2 && ($dev[0]['prix_reference'] !== '45000.00' || $dev[1]['prix_reference'] !== '78500.00' || $dev[0]['devise_reference'] !== null || $dev[1]['devise_reference'] !== null)) throw new RuntimeException('Données DEV réinterprétées');
+if (count($dev) === 2 && ($dev[0]['prix_reference'] !== '25.00' || $dev[1]['prix_reference'] !== '15.00' || $dev[0]['devise_reference'] !== 'USD' || $dev[1]['devise_reference'] !== 'USD')) throw new RuntimeException('Données DEV différentes des valeurs autorisées');
 // Cette configuration temporaire ne modifie jamais le taux du commerçant.
 $db->exec('CREATE TEMPORARY TABLE parametre (id_parametre BIGINT PRIMARY KEY, cle VARCHAR(100) UNIQUE, valeur TEXT)');
 $db->exec('INSERT INTO parametre VALUES (1, \'monetary_config\', \'{"reference":"USD","alternative":"CDF","usd_cdf_rate":"2450"}\')');

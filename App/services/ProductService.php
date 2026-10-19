@@ -26,6 +26,32 @@ final class ProductService
         $this->money = $money ?? new MoneyService();
     }
 
+    /** Refuse les URLs et les chemins sortant des deux dossiers produit autorisés. */
+    public static function localProductImage(string $path): ?string
+    {
+        $path = '/' . ltrim(trim($path), '/');
+        if (str_contains($path, '..') || preg_match('/[%\\\\?#\x00-\x1f]/', $path)
+            || !preg_match('~^/(assets/images/products|uploads/products)/[^:]+\.(?:jpe?g|png|webp|avif|gif)$~iu', $path)) return null;
+        $public = dirname(__DIR__, 2) . '/Public';
+        $file = realpath($public . $path);
+        $folder = str_starts_with($path, '/uploads/') ? '/uploads/products' : '/assets/images/products';
+        $root = realpath($public . $folder);
+        if ($file === false || $root === false || !is_file($file) || !str_starts_with($file, $root . DIRECTORY_SEPARATOR)) return null;
+        return $path;
+    }
+
+    /** Galerie normalisée, groupée par produit ; aucune donnée de commande n'est modifiée. */
+    public function productImages(array $ids): array
+    {
+        if ($this->productModel === null) return [];
+        $images = [];
+        foreach ($this->productModel->imagesForProducts($ids) as $row) {
+            $path = self::localProductImage($row['chemin']);
+            if ($path !== null) $images[(int) $row['id_produit']][] = $path;
+        }
+        return $images;
+    }
+
     /** Retourne les produits présentés comme nouveautés sur l'accueil. */
     public function getNewArrivals(): array
     {
@@ -285,7 +311,11 @@ final class ProductService
         if ($this->usesDatabase()) {
             $product = $this->productModel->findById($productId);
 
-            return is_array($product) ? $this->mapDatabaseProduct($product) : null;
+            if (!is_array($product)) return null;
+            $result = $this->mapDatabaseProduct($product);
+            $gallery = $this->productImages([$productId])[$productId] ?? [];
+            if ($gallery !== []) $result['gallery'] = array_map(static fn (string $src): array => ['src' => $src, 'alt' => $result['name']], $gallery);
+            return $result;
         }
 
         foreach ($this->withCatalogBadges($this->demoProducts()) as $product) {
@@ -541,13 +571,7 @@ final class ProductService
         $currency = $product['devise_reference'] ?? null;
         $stock = (int) ($product['stock'] ?? 0);
         $badge = $this->databaseBadge($product, $discount, $stock);
-        $image = trim((string) ($product['image'] ?? ''));
-
-        if ($image === '') {
-            $image = '/assets/images/branding/logo-square.png';
-        } elseif (!str_starts_with($image, '/')) {
-            $image = '/' . ltrim($image, '/');
-        }
+        $image = self::localProductImage((string) ($product['image'] ?? '')) ?? '/assets/images/branding/logo-square.png';
 
         return [
             'id' => (int) $product['id_produit'],

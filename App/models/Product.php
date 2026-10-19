@@ -165,6 +165,16 @@ final class Product
         return $statement->fetchAll();
     }
 
+    /** Une lecture groupée évite une requête par article, même pour une commande. */
+    public function imagesForProducts(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        if ($ids === []) return [];
+        $query = $this->database->prepare('SELECT id_produit, chemin FROM image_produit WHERE id_produit IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY image_principale DESC, ordre_affichage, id_image');
+        $query->execute($ids);
+        return $query->fetchAll();
+    }
+
     /** Construit la sélection SQL commune aux différentes lectures de produits. */
     private function selectSql(bool $includeSearchAttributes = false, bool $exactVariant = false): string
     {
@@ -195,7 +205,8 @@ final class Product
                     p.date_creation,
                     c.nom AS categorie,
                     c.slug AS categorie_slug,
-                    '' AS image,
+                    (SELECT ip.chemin FROM image_produit ip WHERE ip.id_produit = p.id_produit
+                     ORDER BY ip.image_principale DESC, ip.ordre_affichage, ip.id_image LIMIT 1) AS image,
                     {$searchAttributes} AS search_attributes,
                     0 AS note,
                     0 AS avis_count,

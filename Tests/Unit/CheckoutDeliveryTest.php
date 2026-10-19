@@ -37,6 +37,7 @@ $context = $service->context(90001);
 $assert($context['profile']['prenom'] === 'Alice' && $context['profile']['telephone'] === '+243812345678', 'Profil reel pre rempli.');
 $assert($context['profile']['email_verified_at'] === null && !isset($context['error']), 'Non verifie : preparation autorisee, pas de finalisation.');
 $assert($context['zones'] === [], 'Etat zones vide.');
+$assert($context['addresses'] === [], 'Compte sans adresse : formulaire nouveau.');
 $input = ['address_id' => '0', 'nom_destinataire' => 'TEST', 'prenom_destinataire' => 'Alice', 'telephone' => '081 234 5678', 'commune' => 'TEST commune', 'adresse' => 'TEST adresse', 'id_zone_livraison' => '90001', 'save_address' => '1', 'make_default' => '1', 'user_id' => '90002', 'shipping' => '0', 'total' => '0'];
 $assert(isset($service->validateDelivery(90001, $input)['errors']['id_zone_livraison']), 'Aucune zone inventee.');
 $database->exec("INSERT INTO zone_livraison (id_zone_livraison,nom,frais_reference,statut) VALUES (90001,'TEST TEMPORAIRE',3.25,'inactif')");
@@ -57,6 +58,18 @@ $assert($addresses->findForUser(90002, $result['addressId']) === null, 'Lecture 
 $assert($service->validateDelivery(90002, ['address_id' => $result['addressId']])['status'] === 422, 'Selection autre compte refusee.');
 $reuse = $service->validateDelivery(90001, ['address_id' => $result['addressId'], 'telephone' => 'INVALID', 'id_zone_livraison' => '0']);
 $assert($reuse['success'], 'Adresse enregistree relue cote serveur.');
+$temporary = $service->validateDelivery(90001, array_replace($input, ['save_address' => '0', 'repere' => '', 'instructions' => '']));
+$assert($temporary['success'] && !$temporary['saved'] && $temporary['address']['repere'] === null && $temporary['address']['instructions'] === null, 'Adresse temporaire : champs facultatifs vides acceptés.');
+$assert(count($addresses->forUser(90001)) === 1, 'Adresse temporaire non enregistrée.');
+$second = $service->validateDelivery(90001, array_replace($input, ['adresse' => 'Deuxième adresse', 'make_default' => '0']));
+$assert(count($addresses->forUser(90001)) === 2 && $addresses->forUser(90001)[0]['id_adresse'] == $result['addressId'], 'Plusieurs adresses : défaut conservé et trié en premier.');
+$third = $service->validateDelivery(90001, array_replace($input, ['adresse' => 'Nouvelle adresse par défaut']));
+$assert($addresses->forUser(90001)[0]['id_adresse'] == $third['addressId'], 'Changement explicite du défaut.');
+$assert($service->validateDelivery(90001, ['address_id' => $second['addressId']])['success'], 'Changement d’adresse autorisé.');
+foreach (['prenom_destinataire', 'nom_destinataire', 'telephone', 'commune', 'adresse', 'id_zone_livraison'] as $required) {
+    $invalid = $service->validateDelivery(90001, array_replace($input, [$required => '']));
+    $assert(isset($invalid['errors'][$required]), 'Champ obligatoire : ' . $required);
+}
 $service->validateDelivery(90001, $input + ['ignored' => true]);
 $assert((int) $database->query('SELECT COUNT(*) FROM adresse_utilisateur WHERE id_utilisateur = 90001 AND adresse_par_defaut = 1')->fetchColumn() === 1, 'Adresse par defaut unique.');
 foreach (['telephone' => 'INVALID', 'commune' => '', 'adresse' => '', 'instructions' => str_repeat('x', 1001)] as $field => $bad) {
@@ -80,7 +93,24 @@ App\Core\Session::set('user', ['id' => 90001]);
 ob_start(); $controller->index(); $html = (string) ob_get_clean();
 $assert(str_contains($html, 'Informations &amp; livraison') || str_contains($html, 'Informations & livraison'), 'Vue checkout rendue.');
 $assert(str_contains($html, 'data-checkout-form') && str_contains($html, 'Continuer au paiement'), 'Structure checkout.');
-$assert(str_contains($html, 'user-avatar--large') && str_contains($html, 'checkout-product__placeholder') && str_contains($html, 'form-select') && str_contains($html, 'form-check'), 'Avatar, miniature de remplacement et contrôles natifs.');
+$assert(str_contains($html, 'href="/assets/css/animations.css"') && str_contains($html, 'src="/assets/js/animations.js"'), 'Assets Motion System présents dans le HTML rendu Checkout.');
+$motionDom = new DOMDocument();
+$previousErrors = libxml_use_internal_errors(true); $motionDom->loadHTML($html, LIBXML_NONET); libxml_clear_errors(); libxml_use_internal_errors($previousErrors);
+$assert((new DOMXPath($motionDom))->query('//*[@data-motion="section"]')->length >= 2, 'DOM réel étape 1 : même mécanisme section que l’accueil.');
+$assert((new DOMXPath($motionDom))->query('//*[@data-checkout-page]//*[contains(concat(" ", normalize-space(@class), " "), " checkout-layout ")]//*[@data-motion="section"]')->length === 2, 'Deux grands blocs Checkout enregistrables par le gestionnaire commun, hors en-tête partagé.');
+$assert(str_contains($html, 'user-avatar--compact') && str_contains($html, 'checkout-product__placeholder') && str_contains($html, 'form-select') && str_contains($html, 'form-check'), 'Avatar compact, placeholder et contrôles accessibles.');
+$assert(!str_contains($html, 'Valider les informations de livraison') && substr_count($html, 'Continuer au paiement') === 1, 'Un seul CTA principal.');
+$assert(str_contains($html, 'data-selected-address') && str_contains($html, 'id="checkout-addresses" hidden') && str_contains($html, 'data-address-fields hidden'), 'Adresses et formulaire repliés avec une adresse existante.');
+$assert(str_contains($html, 'value="' . $addresses->forUser(90001)[0]['id_adresse'] . '" checked'), 'Adresse par défaut sélectionnée au rendu.');
+$assert(!str_contains($html, 'value="90002" data-address='), 'Aucune adresse du second compte dans le sélecteur.');
+// Les variantes de rendu ne touchent qu’aux fixtures de cette connexion.
+$database->exec('DELETE FROM adresse_utilisateur WHERE id_utilisateur = 90001 AND adresse_par_defaut = 0');
+ob_start(); $controller->index(); $oneAddressHtml = (string) ob_get_clean();
+$assert(substr_count($oneAddressHtml, 'data-address=') === 1 && str_contains($oneAddressHtml, 'data-address-fields hidden'), 'Une adresse : résumé compact et formulaire fermé.');
+$database->exec('DELETE FROM adresse_utilisateur WHERE id_utilisateur = 90001');
+ob_start(); $controller->index(); $noAddressHtml = (string) ob_get_clean();
+$assert(str_contains($noAddressHtml, 'data-address-fields >') && str_contains($noAddressHtml, 'value="0" checked'), 'Sans adresse : formulaire ouvert automatiquement.');
+$assert(str_contains($noAddressHtml, 'name="make_default" value="1" disabled') && !preg_match('/name="(?:repere|instructions)"[^>]*\srequired/', $noAddressHtml), 'Options facultatives et défaut conditionnel.');
 $cart = $context['cart'];
 $cart['items'][0]['product']['image'] = '/assets/images/products/watch.jpg';
 $summary = null;

@@ -69,6 +69,22 @@ CREATE TABLE produit (
         ON UPDATE RESTRICT
 ) ENGINE=InnoDB;
 
+CREATE TABLE image_produit (
+    id_image BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id_produit BIGINT UNSIGNED NOT NULL,
+    chemin VARCHAR(500) NOT NULL,
+    ordre_affichage SMALLINT NOT NULL DEFAULT 0,
+    image_principale TINYINT(1) NOT NULL DEFAULT 0,
+    produit_principal BIGINT UNSIGNED GENERATED ALWAYS AS
+        (CASE WHEN image_principale = 1 THEN id_produit ELSE NULL END) STORED,
+    CONSTRAINT chk_image_principale CHECK (image_principale IN (0, 1)),
+    CONSTRAINT chk_image_ordre CHECK (ordre_affichage >= 0),
+    CONSTRAINT fk_image_produit FOREIGN KEY (id_produit)
+        REFERENCES produit (id_produit) ON DELETE CASCADE ON UPDATE RESTRICT,
+    UNIQUE KEY uq_image_principale (produit_principal),
+    INDEX idx_image_ordre (id_produit, ordre_affichage, id_image)
+) ENGINE=InnoDB;
+
 CREATE TABLE variante_produit (
     id_variante BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     id_produit BIGINT UNSIGNED NOT NULL,

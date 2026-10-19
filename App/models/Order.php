@@ -18,7 +18,7 @@ final class Order
 
     public function find(int $id, bool $lock = false): ?array
     {
-        $query = $this->database->prepare('SELECT *, reservation_expire_at <= NOW() AS reservation_expired FROM commande WHERE id_commande = ?' . ($lock ? ' FOR UPDATE' : ''));
+        $query = $this->database->prepare('SELECT *, reservation_expire_at <= NOW() AS reservation_expired, TIMESTAMPDIFF(SECOND, NOW(), reservation_expire_at) AS reservation_remaining_seconds FROM commande WHERE id_commande = ?' . ($lock ? ' FOR UPDATE' : ''));
         $query->execute([$id]);
         return $query->fetch() ?: null;
     }

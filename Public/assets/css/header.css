@@ -371,6 +371,15 @@
   transition: color var(--transition-normal), transform var(--transition-normal);
 }
 
+/* Même cible stable et même rythme que les icônes des actions voisines. */
+.header-action__icon:has(.user-avatar),
+.site-navigation__link .user-avatar {
+  transition: color var(--transition-normal), transform var(--transition-normal);
+}
+.header-action:hover .header-action__icon:has(.user-avatar) { transform: translateY(-1px); }
+.header-action:active .header-action__icon:has(.user-avatar),
+.site-navigation__link:active .user-avatar { transform: translateY(1px); }
+
 .header-action:hover .header-action__icon > svg {
   color: var(--header-gold-dark);
   transform: translateY(-1px);
