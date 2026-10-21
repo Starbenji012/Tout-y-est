@@ -164,6 +164,25 @@ final class Cart
 		$statement->execute(['cart_id' => $cartId]);
 	}
 
+    /** Retire seulement les quantités commandées, dans la transaction du service. */
+    public function subtractOrder(int $userId, array $orderedLines): void
+    {
+        $current = array_column($this->lockForUser($userId), 'quantite', 'id_variante');
+        $query = $this->database->prepare('SELECT id_panier FROM panier WHERE id_utilisateur = ?');
+        $query->execute([$userId]);
+        $cartId = (int) $query->fetchColumn();
+        foreach ($orderedLines as $line) {
+            $variant = (int) $line['id_variante'];
+            if (!isset($current[$variant])) continue;
+            $remaining = max(0, (int) $current[$variant] - (int) $line['quantite']);
+            $statement = $remaining > 0
+                ? $this->database->prepare('UPDATE ligne_panier SET quantite = ? WHERE id_panier = ? AND id_variante = ?')
+                : $this->database->prepare('DELETE FROM ligne_panier WHERE id_panier = ? AND id_variante = ?');
+            $statement->execute($remaining > 0 ? [$remaining, $cartId, $variant] : [$cartId, $variant]);
+            $current[$variant] = $remaining;
+        }
+    }
+
 	/** Attend la migration officielle avant d'activer la persistance du panier. */
 	private function hasOfficialSchema(): bool
 	{

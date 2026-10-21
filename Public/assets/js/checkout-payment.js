@@ -1,3 +1,30 @@
+// La confirmation attend le serveur ; le compteur ne décide jamais de l'état métier.
+(() => {
+  const form = document.querySelector('[data-cash-form]');
+  if (!form || !form.addEventListener) return;
+  const radio = form.querySelector('input[value="cash"]');
+  const button = form.querySelector('[data-cash-submit]');
+  const error = form.querySelector('[data-cash-error]');
+  let pending = false;
+  form.addEventListener('change', () => { button.disabled = pending || !radio?.checked; });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (pending || !radio?.checked) return;
+    pending = true; button.disabled = true; button.setAttribute('aria-busy', 'true'); error.textContent = '';
+    try {
+      const response = await fetch(form.action, {method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+      let data;
+      try { data = await response.json(); } catch { throw new Error('Réponse serveur illisible. Réessayez sans recréer de commande.'); }
+      if (!response.ok || data.success !== true) throw new Error(data.error || 'La confirmation a échoué. Réessayez.');
+      try { await window.CartStore?.refresh(); } catch { /* La page suivante relira le compteur serveur. */ }
+      window.location.assign(data.url);
+    } catch (failure) {
+      error.textContent = failure.message || 'Connexion interrompue. Réessayez la confirmation.';
+      pending = false; button.disabled = !radio?.checked; button.removeAttribute('aria-busy');
+    }
+  });
+})();
+
 // Affichage uniquement : ce compteur ne prolonge ni ne modifie la réservation serveur.
 (() => {
   const page = document.querySelector('[data-payment-page]');

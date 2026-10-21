@@ -11,7 +11,7 @@ use Throwable;
 
 final class OrderController extends Controller
 {
-    public function __construct(private readonly ?OrderService $orders, private readonly Request $request, private readonly ?ProductService $products = null) {}
+    public function __construct(private readonly ?OrderService $orders, private readonly Request $request, private readonly ?ProductService $products = null, private readonly ?\App\Services\PaymentService $payments = null) {}
 
     public function create(): void
     {
@@ -42,6 +42,9 @@ final class OrderController extends Controller
         if ($this->orders === null) { http_response_code(503); echo 'Service indisponible.'; return; }
         try {
             $data = $this->orders->forUser($this->userId(), $this->request->queryInteger('commande'));
+            if ($data['order']['statut'] === 'confirmee') { Response::redirect('/checkout/confirmation?commande=' . (int) $data['order']['id_commande']); return; }
+            $data['cashAvailable'] = $this->payments?->cashAvailable() ?? false;
+            $data['csrfToken'] = CsrfMiddleware::token();
             // Images actuelles uniquement ; noms, prix et taux restent les snapshots historiques.
             $images = $this->products?->productImages(array_column($data['lines'], 'id_produit')) ?? [];
             foreach ($data['lines'] as &$line) $line['image'] = $images[(int) $line['id_produit']][0] ?? null;

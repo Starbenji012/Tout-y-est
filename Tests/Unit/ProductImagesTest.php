@@ -42,6 +42,22 @@ try {
     $summary = null;
     ob_start(); require $root . '/App/views/checkout/summary.php'; $checkoutHtml = (string) ob_get_clean();
     $assert(str_contains($checkoutHtml, 'watch.jpg') && !str_contains($checkoutHtml, 'checkout-product__placeholder'), 'Étape 1 : image réelle, sans cube.');
+    // Plusieurs produits : une variante ne doit jamais emprunter l'identité d'un autre.
+    $db->exec("INSERT INTO produit (id_produit,id_categorie,nom,slug,description,statut) VALUES (2,1,'TEST Sac','test-sac','TEST','actif'),(3,1,'TEST Casque','test-casque','TEST','actif')");
+    $db->exec("INSERT INTO variante_produit (id_variante,id_produit,sku,prix_reference,devise_reference,stock,statut) VALUES (2,2,'TEST-SAC',25,'USD',20,'actif'),(3,3,'TEST-CASQUE',15,'USD',20,'actif')");
+    $products = $service->findProductsByVariantIds([1,2,3]);
+    $assert(array_column($products,'id') === [1,2,3] && array_column($products,'variantId') === [1,2,3], 'Identité produit/variante exacte');
+    $assert(array_column($products,'image') === ['/assets/images/products/watch.jpg',$fallback,$fallback], 'Une montre, deux produits sans image');
+    $db->exec('INSERT INTO ligne_panier (id_panier,id_variante,quantite) VALUES (1,2,1),(1,3,1)');
+    $cart = (new App\Services\CartService($service,new App\Models\Cart($db)))->buildConnectedCart(1);
+    ob_start();require $root.'/App/views/checkout/summary.php';$mixedHtml=(string)ob_get_clean();
+    $assert(substr_count($mixedHtml,'watch.jpg')===1 && substr_count($mixedHtml,'checkout-product__placeholder')===2 && str_contains($mixedHtml,'TEST Sac') && str_contains($mixedHtml,'TEST Casque'), 'Étape 1 : images et placeholders isolés par produit');
+    $assert(substr_count($mixedHtml,'Sans image')===2 && substr_count($mixedHtml,'data-lucide="image-off"')===2 && !str_contains($mixedHtml,'data-lucide="package"'), 'Absence d’image explicite, sans cube');
+    $db->exec("INSERT INTO image_produit(id_produit,chemin) VALUES (3,'/assets/images/products/laptop.jpg')");
+    $assert($service->findProductsByVariantIds([2,3])[1]['image']==='/assets/images/products/laptop.jpg', 'Image propre du produit si elle existe');
+    $db->exec('DELETE FROM ligne_panier WHERE id_variante IN (2,3)');
+    $db->exec('DELETE FROM variante_produit WHERE id_variante IN (2,3)');
+    $db->exec('DELETE FROM produit WHERE id_produit IN (2,3)');
     $reject(fn () => $db->exec('UPDATE image_produit SET image_principale=1 WHERE id_image=2'));
     $reject(fn () => $db->exec("INSERT INTO image_produit (id_produit,chemin) VALUES (999,'/assets/images/products/watch.jpg')"));
     $reject(fn () => $db->exec('UPDATE image_produit SET ordre_affichage=-1'));

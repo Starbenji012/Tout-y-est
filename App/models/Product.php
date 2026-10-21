@@ -217,7 +217,7 @@ final class Product
                      WHERE b.id_produit = p.id_produit AND {$promotionCondition}) AS reduction
                 FROM produit p
                 INNER JOIN categorie c ON c.id_categorie = p.id_categorie
-                INNER JOIN variante_produit v ON v.id_variante = {$variantJoin}";
+                INNER JOIN variante_produit v ON v.id_variante = {$variantJoin} AND v.id_produit = p.id_produit";
     }
 
     /** Transforme les filtres validés en clauses SQL et paramètres préparés. */

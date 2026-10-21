@@ -24,4 +24,17 @@ final class Delivery
         $query->execute([$id]);
         return $query->fetch() ?: null;
     }
+
+    public function lockForOrder(int $id): ?array
+    {
+        $query = $this->database->prepare('SELECT * FROM livraison WHERE id_commande = ? FOR UPDATE');
+        $query->execute([$id]);
+        return $query->fetch() ?: null;
+    }
+
+    public function cancel(int $id): void
+    {
+        $query = $this->database->prepare("UPDATE livraison SET statut = 'annulee' WHERE id_commande = ?");
+        $query->execute([$id]);
+    }
 }

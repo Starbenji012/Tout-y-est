@@ -4,6 +4,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../Public/assets/js/checkout.js'), 'utf8');
+const checkoutCss = fs.readFileSync(path.join(__dirname, '../../Public/assets/css/checkout.css'), 'utf8');
+// Même règle hors breakpoint pour desktop/mobile, sans hauteur imposée aux autres cartes.
+assert.match(checkoutCss, /\[data-checkout-form\]:has\(> \[data-selected-address\]:not\(\[hidden\]\)\)\s*\{[^}]*padding-block: var\(--spacing-md\);[^}]*align-self: start;/);
+assert.match(checkoutCss, /\[data-checkout-form\]:has\(> \[data-selected-address\]:not\(\[hidden\]\)\) > \.checkout-address-actions\s*\{[^}]*margin-top: var\(--spacing-md\);[^}]*margin-bottom: 0;/);
 class Element {
   constructor() { this.listeners = {}; this.attrs = {}; this.children = []; this.dataset = {}; this.value = ''; this.disabled = false; this.hidden = false; }
   addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); }

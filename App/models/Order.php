@@ -43,4 +43,10 @@ final class Order
         $query->execute();
         return $query->fetchAll(PDO::FETCH_COLUMN);
     }
+
+    public function confirmCash(int $id): void
+    {
+        $query = $this->database->prepare("UPDATE commande SET statut = 'confirmee', reservation_expire_at = NULL WHERE id_commande = ?");
+        $query->execute([$id]);
+    }
 }

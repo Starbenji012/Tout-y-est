@@ -246,6 +246,9 @@ CREATE TABLE mode_paiement (
     CONSTRAINT chk_mode_paiement_statut CHECK (statut IN ('actif', 'inactif'))
 ) ENGINE=InnoDB;
 
+-- Seul le cash est activé pour la V1 ; aucune intégration externe.
+INSERT INTO mode_paiement (nom, statut) VALUES ('Espèces à la livraison', 'actif');
+
 CREATE TABLE paiement (
     id_paiement BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     id_commande BIGINT UNSIGNED NOT NULL,

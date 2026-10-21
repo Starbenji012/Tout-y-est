@@ -37,12 +37,17 @@ $status = match ($order['statut']) {
                 </div>
             </section>
             <?php if ($active): ?><section class="checkout-panel checkout-payment-methods" aria-labelledby="payment-method-title" data-payment-methods data-motion="section" data-motion-delay="80">
-                <div class="checkout-payment-methods__heading"><div><h2 id="payment-method-title">Mode de paiement</h2><p class="checkout-help">Les moyens de paiement seront proposés ici.</p></div></div>
-                <div class="payment-method-list" role="group" aria-label="Moyens de paiement à venir, tous indisponibles">
+                <div class="checkout-payment-methods__heading"><div><h2 id="payment-method-title">Mode de paiement</h2><p class="checkout-help">Choisissez comment régler votre commande.</p></div></div>
+                <form action="/api/checkout/confirmer-cash" method="post" data-cash-form>
+                <input type="hidden" name="_token" value="<?= $escape($csrfToken ?? '') ?>">
+                <input type="hidden" name="commande" value="<?= (int) ($order['id_commande'] ?? 0) ?>">
+                <div class="payment-method-list" role="group" aria-label="Moyens de paiement">
                     <?php foreach ([['label' => 'Espèces à la livraison', 'icon' => 'banknote'], ['label' => 'Orange Money', 'icon' => 'smartphone'], ['label' => 'Illicocash', 'icon' => 'wallet']] as $paymentMethod) require dirname(__DIR__) . '/components/payment-method.php'; ?>
                 </div>
-                <div class="checkout-payment-methods__footer"><i data-lucide="info" aria-hidden="true"></i><p id="payment-unavailable">Aucun moyen n’est encore activé. Aucun paiement ne peut être effectué depuis cet écran.</p></div>
-                <button class="btn checkout-payment__submit" type="button" disabled aria-describedby="payment-unavailable">Paiement indisponible</button>
+                <div class="checkout-payment-methods__footer"><i data-lucide="info" aria-hidden="true"></i><p id="payment-unavailable"><?= !empty($cashAvailable) ? 'Vous réglerez votre commande en espèces à la livraison. Aucun montant n’est encaissé maintenant.' : 'Le paiement en espèces est momentanément indisponible.' ?></p></div>
+                <p role="alert" data-cash-error></p>
+                <button class="btn btn-primary checkout-payment__submit" type="submit" disabled aria-describedby="payment-unavailable" data-cash-submit>Confirmer la commande</button>
+                </form>
             </section><?php endif; ?>
         </div>
         <aside class="checkout-panel checkout-summary checkout-payment-summary" aria-labelledby="order-summary-title" data-motion="section" data-motion-delay="120">
@@ -51,7 +56,7 @@ $status = match ($order['statut']) {
                 <?php foreach ($lines as $line): ?><li>
                     <div class="checkout-product__media">
                         <?php if (!empty($line['image'])): ?><img src="<?= $escape($line['image']) ?>" alt="<?= $escape($line['nom_produit_snapshot']) ?>" width="96" height="96" loading="lazy" decoding="async">
-                        <?php else: ?><span class="checkout-product__placeholder" role="img" aria-label="Image du produit non disponible"><i data-lucide="package" aria-hidden="true"></i></span><?php endif; ?>
+                        <?php else: ?><span class="checkout-product__placeholder" role="img" aria-label="Image du produit non disponible"><i data-lucide="image-off" aria-hidden="true"></i><small aria-hidden="true">Sans image</small></span><?php endif; ?>
                     </div>
                     <div class="checkout-product__information"><strong><?= $escape($line['nom_produit_snapshot']) ?></strong>
                         <small>Quantité : <?= (int) $line['quantite'] ?></small>

@@ -33,9 +33,12 @@ $productController = new ProductController($productService, $request);
 
 // Chaque chemin public pointe vers une seule action de contrôleur.
 /** @var \App\Services\OrderService|null $orderService */
+/** @var \App\Services\PaymentService|null $paymentService */
 return [
+    '/api/checkout/confirmer-cash' => [new \App\Controllers\PaymentController($paymentService, $request, $moneyService), 'confirmCash'],
+    '/checkout/confirmation' => [new \App\Controllers\PaymentController($paymentService, $request, $moneyService), 'confirmation'],
     '/api/checkout/commande' => [new \App\Controllers\OrderController($orderService, $request), 'create'],
-    '/checkout/paiement' => [new \App\Controllers\OrderController($orderService, $request, $productService), 'payment'],
+    '/checkout/paiement' => [new \App\Controllers\OrderController($orderService, $request, $productService, $paymentService), 'payment'],
     '/admin/zones-livraison' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'index'],
     '/api/admin/zones-livraison/enregistrer' => [new \App\Controllers\Admin\DeliveryController($deliveryZoneService, $request), 'save'],
     '/' => [$homeController, 'index'],
