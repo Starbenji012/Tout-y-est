@@ -57,6 +57,7 @@ $verificationMessage = $emailVerificationNotice !== null
         <?php endif; ?>
 
         <div class="account-dashboard__grid">
+            <a class="account-dashboard__card" href="/compte/commandes" data-motion="card"><i data-lucide="package" aria-hidden="true"></i><h2>Mes commandes</h2><p>Retrouvez vos commandes et leurs informations de livraison.</p><span>Voir mes commandes <i data-lucide="arrow-right" aria-hidden="true"></i></span></a>
             <article class="account-dashboard__card" data-motion="card">
                 <i data-lucide="contact" aria-hidden="true"></i>
                 <h2>Mes informations</h2>

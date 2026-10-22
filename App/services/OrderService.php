@@ -59,8 +59,8 @@ final class OrderService
             if ($total > 999999999999) throw new DomainException('Le montant de cette commande dépasse la limite autorisée.');
             $rate = (string) $this->money->configuration()['usd_cdf_rate'];
             $this->money->usdToCdfAtRate($total, $rate);
-            $orderId = $this->orders->create([
-                'user_id' => $userId, 'number' => 'TYE-' . gmdate('Ymd') . '-' . strtoupper(bin2hex(random_bytes(8))),
+            $orderId = $this->orders->createWithNumber([
+                'user_id' => $userId,
                 'subtotal' => $this->money->decimal($subtotal), 'shipping' => $this->money->decimal($shipping),
                 'total' => $this->money->decimal($total), 'rate' => $rate, 'key_hash' => hash('sha256', $creationKey),
             ]);

@@ -75,9 +75,13 @@ try {
     $call(1,array_replace($input,['_creation_key'=>str_repeat('a',64)])); $assert(http_response_code()===422,'Clé non émise refusée');
     $result=$call(1,$input); $assert($result['success'],'API création');
     $order=$db->query('SELECT * FROM commande')->fetch(); $id=(int)$order['id_commande'];
+    $assert((bool)preg_match('/^TYE-[0-9]{3,}$/D',$order['numero_commande']),'Référence commerciale progressive générée côté serveur');
     $assert((int)$order['id_utilisateur']===1 && $order['statut']==='en_attente_paiement' && $order['total']==='25.00' && $order['taux_usd_cdf']==='2450.0000','Données navigateur ignorées');
     $assert((int)$db->query('SELECT TIMESTAMPDIFF(SECOND,date_commande,reservation_expire_at) FROM commande')->fetchColumn()===1800,'Réservation 30 minutes');
+    $allocationsBefore=(int)$db->query('SELECT COUNT(*) FROM numero_commande_sequence')->fetchColumn();
     $retry=$call(1,$input); $assert($retry['reused'] && (int)$db->query('SELECT COUNT(*) FROM commande')->fetchColumn()===1 && (int)$db->query('SELECT stock FROM variante_produit')->fetchColumn()===9,'Retry sans double stock');
+    $assert((int)$db->query('SELECT COUNT(*) FROM numero_commande_sequence')->fetchColumn()===$allocationsBefore,'Retry ne consomme pas de numéro commercial');
+    $assert($db->query('SELECT numero_commande FROM commande')->fetchColumn()===$order['numero_commande'],'Retry conserve la référence');
     $assert((int)$db->query('SELECT COUNT(*) FROM ligne_panier')->fetchColumn()===2,'Panier conservé');
     $rejected(fn () => $service->forUser(2,$id));
     $db->exec("UPDATE produit SET nom='TEST changé'"); $db->exec("UPDATE variante_produit SET prix_reference=99,sku='TEST-CHANGE',description_variante='TEST changée'");
@@ -108,11 +112,13 @@ try {
     $assert($wins===1 && (int)$db->query('SELECT stock FROM variante_produit')->fetchColumn()===0,'Concurrence dernier article : un seul gagnant');
     $assert($service->releaseReservation($winnerId,'annulee') && !$service->releaseReservation($winnerId,'annulee') && (int)$db->query('SELECT stock FROM variante_produit')->fetchColumn()===1,'Annulation idempotente');
     $sameKey=bin2hex(random_bytes(32)); $workers=[];
+    $allocationsBefore=(int)$db->query('SELECT COUNT(*) FROM numero_commande_sequence')->fetchColumn();
     $db->beginTransaction(); $db->query('SELECT * FROM variante_produit WHERE id_variante=1 FOR UPDATE')->fetch();
     for($i=0;$i<2;$i++){$process=proc_open([PHP_BINARY,__FILE__,'worker',$name,'1',$sameKey],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);fclose($pipes[0]);$workers[]=[$process,$pipes];}
     usleep(300000);$db->commit();$responses=[];
     foreach($workers as [$process,$pipes]){$stdout=stream_get_contents($pipes[1]);$stderr=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$assert(proc_close($process)===0,'Worker même clé: '.$stderr);$responses[]=json_decode($stdout,true,512,JSON_THROW_ON_ERROR);}
     $assert($responses[0]['ok'] && $responses[1]['ok'] && $responses[0]['id']===$responses[1]['id'] && $responses[0]['reused']!==$responses[1]['reused'] && (int)$db->query('SELECT stock FROM variante_produit')->fetchColumn()===0,'Concurrence même clé : une seule commande');
+    $assert((int)$db->query('SELECT COUNT(*) FROM numero_commande_sequence')->fetchColumn()===$allocationsBefore+1,'Retry concurrent : une seule allocation commerciale');
     $assert((int)$db->query('SELECT COUNT(*) FROM paiement')->fetchColumn()===0,'Aucun paiement créé');
     echo "ORDER_CREATION_OK (API, snapshots, rollback, idempotence, concurrence, expiration, panier conservé).\n";
 } finally {

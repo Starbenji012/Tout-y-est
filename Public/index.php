@@ -65,6 +65,8 @@ require_once dirname(__DIR__) . '/App/models/Payment.php';
 require_once dirname(__DIR__) . '/App/models/PaymentMethod.php';
 require_once dirname(__DIR__) . '/App/services/PaymentService.php';
 require_once dirname(__DIR__) . '/App/controllers/PaymentController.php';
+require_once dirname(__DIR__) . '/App/services/CustomerOrderService.php';
+require_once dirname(__DIR__) . '/App/controllers/CustomerOrderController.php';
 require_once dirname(__DIR__) . '/App/models/Favorite.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
 require_once dirname(__DIR__) . '/App/models/Category.php';
@@ -156,6 +158,7 @@ $orderService = $database instanceof PDO ? new \App\Services\OrderService(
     new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $checkoutService, $moneyService,
 ) : null;
 $paymentService = $database instanceof PDO ? new \App\Services\PaymentService($database) : null;
+$customerOrderService = $database instanceof PDO ? new \App\Services\CustomerOrderService(new \App\Models\Order($database), new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $moneyService, $productService) : null;
 $deliveryZoneService = new \App\Services\DeliveryZoneService(
     $userModel,
     $database instanceof PDO ? new DeliveryZone($database) : null,

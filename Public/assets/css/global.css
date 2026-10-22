@@ -171,6 +171,18 @@ textarea:focus {
   color: var(--color-anthracite);
 }
 
+/* Livraison historique partagée par la confirmation et le détail client. */
+.order-delivery { display: grid; gap: var(--spacing-sm); margin-top: var(--spacing-md); overflow-wrap: anywhere; }
+.order-delivery__recipient { display: grid; gap: var(--spacing-xs); }
+.order-delivery__address p { margin: 0; }
+.order-delivery__secondary, .order-delivery__notes { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.order-delivery__notes { display: grid; gap: var(--spacing-xs); }
+.order-delivery__notes:empty { display: none; }
+.order-delivery__notes > div { display: flex; flex-wrap: wrap; gap: var(--spacing-xs); }
+.order-delivery dt { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.order-delivery dd { overflow-wrap: anywhere; line-height: var(--line-height-base); }
+.order-delivery-title { margin-top: var(--spacing-lg); }
+
 /* Marque */
 .brand-component {
   display: inline-flex;

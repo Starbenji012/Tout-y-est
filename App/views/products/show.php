@@ -44,9 +44,6 @@ $productCharacteristics = $product['characteristics'] ?? [];
                     <?php endif; ?>
                 </div>
                 <h1 class="product-detail__title" id="product-title"><?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
-                <div class="product-detail__rating" aria-label="<?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> sur 5, <?= (int) $product['reviews'] ?> avis">
-                    <i data-lucide="star" aria-hidden="true"></i><strong><?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong><span><?= (int) $product['reviews'] ?> avis</span>
-                </div>
                 <p class="product-detail__description"><?= htmlspecialchars((string) $product['description'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
                 <div class="product-detail__price-container">
                     <strong><?= htmlspecialchars((string) $product['price'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong>

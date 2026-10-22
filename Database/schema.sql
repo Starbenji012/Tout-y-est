@@ -166,6 +166,11 @@ CREATE TABLE ligne_panier (
     INDEX idx_ligne_panier_variante (id_variante)
 ) ENGINE=InnoDB;
 
+-- Journal indépendant des numéros commerciaux : ne jamais vider ni réinitialiser.
+CREATE TABLE numero_commande_sequence (
+    numero BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
+) ENGINE=InnoDB;
+
 CREATE TABLE commande (
     id_commande BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     id_utilisateur BIGINT UNSIGNED NOT NULL,

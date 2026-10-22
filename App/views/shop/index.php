@@ -23,7 +23,6 @@ $productSection = [
         ],
         'sortOptions' => [
             'newest' => 'Nouveautés',
-            'rating' => 'Mieux notés',
             'price-asc' => 'Prix croissant',
             'price-desc' => 'Prix décroissant',
             'popular' => 'Popularité',

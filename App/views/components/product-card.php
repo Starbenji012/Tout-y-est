@@ -48,15 +48,6 @@ $productUrl = (string) ($product['url'] ?? '/boutique');
             <a href="<?= htmlspecialchars($productUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($productName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
         </h3>
 
-        <div class="product-card__rating" role="img" aria-label="<?= htmlspecialchars((string) $product['rating'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> sur 5, <?= (int) $product['reviews'] ?> avis">
-            <span class="product-card__stars" aria-hidden="true">
-                <?php for ($star = 1; $star <= 5; $star++): ?>
-                    <i class="<?= $star <= round((float) $product['rating']) ? 'is-active' : '' ?>" data-lucide="star"></i>
-                <?php endfor; ?>
-            </span>
-            <span class="product-card__reviews">(<?= (int) $product['reviews'] ?>)</span>
-        </div>
-
         <div class="product-card__price-container">
             <span class="product-card__price<?= !empty($product['oldPrice']) ? ' product-card__price--sale' : '' ?>"><?= htmlspecialchars((string) $product['price'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
             <?php if (!empty($product['oldPrice'])): ?>

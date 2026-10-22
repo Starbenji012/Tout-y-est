@@ -8,7 +8,6 @@ $catalogActiveFilters = $catalogFiltersConfig['filters'] ?? [];
 $activeCategories = $catalogActiveFilters['categories'] ?? [];
 $activeStatuses = $catalogActiveFilters['statuses'] ?? [];
 $activeAvailability = (string) ($catalogActiveFilters['availability'] ?? '');
-$activeRating = (int) ($catalogActiveFilters['rating'] ?? 0);
 $activeAttributes = array_filter($catalogActiveFilters['attributes'] ?? []);
 $hasActiveFilters = $activeCategories !== []
     || $activeStatuses !== []
@@ -54,12 +53,6 @@ $hasActiveFilters = $activeCategories !== []
                 <label class="catalog-filter-option"><input type="radio" name="availability" value="<?= $value ?>"<?= $value === $activeAvailability ? ' checked' : '' ?>><span><?= $label ?></span></label>
             <?php endforeach; ?>
         </fieldset>
-        <fieldset class="catalog-filter-group">
-            <legend>Note minimale</legend>
-            <?php foreach ([0 => 'Toutes les notes', 4 => '4 étoiles et plus', 3 => '3 étoiles et plus'] as $value => $label): ?>
-                <label class="catalog-filter-option"><input type="radio" name="rating" value="<?= $value ?>"<?= $value === $activeRating ? ' checked' : '' ?>><span><?= $label ?></span></label>
-            <?php endforeach; ?>
-        </fieldset>
         <?php
         $button = [
             'label' => 'Effacer tous les filtres',
@@ -77,4 +70,4 @@ $hasActiveFilters = $activeCategories !== []
 </aside>
 <button class="catalog-filters-overlay" type="button" aria-label="Fermer les filtres" data-catalog-filter-close tabindex="-1"></button>
 
-<?php unset($catalogFilters, $catalogFiltersConfig, $catalogCategories, $catalogStatuses, $catalogFacets, $catalogActiveFilters, $activeCategories, $activeStatuses, $activeAvailability, $activeRating, $activeAttributes, $hasActiveFilters, $catalogContextFilters, $value, $label, $button); ?>
+<?php unset($catalogFilters, $catalogFiltersConfig, $catalogCategories, $catalogStatuses, $catalogFacets, $catalogActiveFilters, $activeCategories, $activeStatuses, $activeAvailability, $activeAttributes, $hasActiveFilters, $catalogContextFilters, $value, $label, $button); ?>

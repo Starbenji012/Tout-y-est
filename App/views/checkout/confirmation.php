@@ -12,11 +12,8 @@
         </section>
         <aside class="checkout-panel checkout-summary" data-motion="section" data-motion-delay="80">
             <h2>Total de votre commande</h2><p class="checkout-grand-total"><?= $escape($totalFormatted) ?></p><p class="checkout-cdf"><?= $escape($cdfFormatted) ?></p>
-            <h2>Votre livraison</h2>
-            <p><?= $escape($delivery['prenom_destinataire_snapshot']) ?> <?= $escape($delivery['nom_destinataire_snapshot']) ?></p>
-            <p><?= $escape($delivery['telephone_snapshot']) ?></p>
-            <p><?= $escape($delivery['adresse_snapshot']) ?>, <?= $escape($delivery['commune_snapshot']) ?></p>
-            <?php if (!empty($delivery['repere_snapshot'])): ?><p>Repère : <?= $escape($delivery['repere_snapshot']) ?></p><?php endif; ?>
+            <h2 class="order-delivery-title">Votre livraison</h2>
+            <?php require dirname(__DIR__).'/components/order-delivery.php'; ?>
         </aside>
     </div>
 </div></section>
