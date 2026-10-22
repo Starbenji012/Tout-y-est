@@ -15,6 +15,7 @@
   const searchNotice = document.querySelector("[data-catalog-search-notice]");
   const searchInput = searchForm?.querySelector("input[type='search']");
   const resetButton = filtersForm?.querySelector("[data-catalog-filter-reset]");
+  const layout = document.querySelector("[data-product-catalog]");
 
   if (!panel || !openButton || !filtersForm || !searchForm || !sortSelect || !results || !content || !loader || !count) {
     return;
@@ -24,6 +25,10 @@
   let previousFocus = null;
   let requestController = null;
   let priceTimer = null;
+  const desktop = window.matchMedia("(min-width: 64.0625rem)");
+  let desktopFiltersOpen = true;
+  // Le composant change le vrai select ; l'écouteur de tri existant reste inchangé.
+  window.SelectControl?.enhance(sortSelect);
 
   // Récupère la préférence d'affichage sans dépendre du stockage local.
   const readStoredView = () => {
@@ -45,25 +50,31 @@
 
   // Referme le panneau mobile et rend le focus à son déclencheur.
   const closeFilters = (restoreFocus = true) => {
+    if (desktop.matches) desktopFiltersOpen = false;
+    panel.hidden = desktop.matches;
+    layout?.classList.toggle("is-filters-collapsed", desktop.matches);
     panel.classList.remove("is-open");
     document.body.classList.remove("catalog-filters-open");
     openButton.setAttribute("aria-expanded", "false");
     panel.removeAttribute("aria-modal");
     panel.removeAttribute("role");
 
-    if (restoreFocus && previousFocus?.isConnected) {
-      previousFocus.focus();
-    }
+    if (restoreFocus) (previousFocus?.isConnected ? previousFocus : openButton).focus();
   };
 
   // Présente les filtres comme une boîte de dialogue sur petit écran.
   const openFilters = () => {
     previousFocus = document.activeElement;
-    panel.classList.add("is-open");
-    document.body.classList.add("catalog-filters-open");
+    if (desktop.matches) desktopFiltersOpen = true;
+    panel.hidden = false;
+    layout?.classList.remove("is-filters-collapsed");
+    panel.classList.toggle("is-open", !desktop.matches);
+    document.body.classList.toggle("catalog-filters-open", !desktop.matches);
     openButton.setAttribute("aria-expanded", "true");
-    panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-modal", "true");
+    if (!desktop.matches) {
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-modal", "true");
+    }
     panel.querySelector("[data-catalog-filter-close]")?.focus();
   };
 
@@ -107,7 +118,6 @@
     const values = new FormData(filtersForm);
     const hasActiveFilter = [...values.entries()].some(([name, value]) => {
       if (name === "availability") return value !== "";
-      if (name === "rating") return value !== "0";
       return String(value).trim() !== "";
     });
 
@@ -130,9 +140,7 @@
       input.value = "";
     });
     const defaultAvailability = filtersForm.querySelector('[name="availability"][value=""]');
-    const defaultRating = filtersForm.querySelector('[name="rating"][value="0"]');
     if (defaultAvailability) defaultAvailability.checked = true;
-    if (defaultRating) defaultRating.checked = true;
   };
 
   // Réactive les icônes et animations après un remplacement dynamique du HTML.
@@ -188,7 +196,10 @@
     return updated;
   };
 
-  openButton.addEventListener("click", openFilters);
+  openButton.addEventListener("click", () => {
+    if (desktop.matches ? !panel.hidden : panel.classList.contains("is-open")) closeFilters();
+    else openFilters();
+  });
   closeButtons.forEach((button) => button.addEventListener("click", () => closeFilters()));
   viewButtons.forEach((button) => button.addEventListener("click", () => applyView(button.dataset.catalogView)));
   searchForm.addEventListener("submit", (event) => {
@@ -239,7 +250,9 @@
   });
   // Garde la navigation clavier à l'intérieur du panneau mobile ouvert.
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && panel.classList.contains("is-open")) {
+    // Escape dans select-control ferme seulement ce menu, pas les filtres à côté.
+    if (event.defaultPrevented) return;
+    if (event.key === "Escape" && (panel.classList.contains("is-open") || (desktop.matches && !panel.hidden && panel.contains(document.activeElement)))) {
       closeFilters();
     }
 
@@ -257,11 +270,17 @@
       }
     }
   });
-  window.matchMedia("(min-width: 64.0625rem)").addEventListener("change", (event) => {
-    if (event.matches && panel.classList.contains("is-open")) {
-      closeFilters(false);
-    }
-  });
+  // Le drawer reste mobile ; sur desktop, conserver un seul layout fluide ouvert/fermé.
+  const syncFilterViewport = () => {
+    panel.classList.remove("is-open");
+    document.body.classList.remove("catalog-filters-open");
+    panel.hidden = desktop.matches && !desktopFiltersOpen;
+    layout?.classList.toggle("is-filters-collapsed", panel.hidden);
+    openButton.setAttribute("aria-expanded", String(desktop.matches && desktopFiltersOpen));
+    panel.removeAttribute("role"); panel.removeAttribute("aria-modal");
+  };
+  desktop.addEventListener("change", syncFilterViewport);
+  syncFilterViewport();
 
   applyView(readStoredView() || "grid");
   syncResetButton();

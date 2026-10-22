@@ -25,8 +25,8 @@ $catalogResultLabel = $catalogResultCount === 1 ? 'produit trouvé' : 'produits 
     </p>
 
     <div class="catalog-toolbar__controls">
-        <button class="btn btn-outline catalog-toolbar__filter-button" type="button" aria-controls="catalog-filters" aria-expanded="false" data-catalog-filter-open>
-            <i data-lucide="sliders-horizontal" aria-hidden="true"></i>Filtres
+        <button class="btn btn-outline catalog-toolbar__filter-button" type="button" aria-controls="catalog-filters" aria-expanded="true" data-catalog-filter-open>
+            <i data-lucide="sliders-horizontal" aria-hidden="true"></i>Filtrer les produits<i class="catalog-filter-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
         </button>
         <p class="catalog-toolbar__count" aria-live="polite" data-catalog-count><strong><?= $catalogResultCount ?></strong> <?= $catalogResultLabel ?></p>
         <div class="catalog-view-switch" role="group" aria-label="Mode d’affichage">
@@ -34,7 +34,7 @@ $catalogResultLabel = $catalogResultCount === 1 ? 'produit trouvé' : 'produits 
             <button class="catalog-view-switch__button" type="button" aria-label="Affichage en liste" aria-pressed="false" data-catalog-view="list"><i data-lucide="list" aria-hidden="true"></i></button>
         </div>
         <label class="catalog-sort" for="catalog-sort-select">
-            <span>Trier par</span>
+            <span id="catalog-sort-label" data-select-label>Trier par</span>
             <select id="catalog-sort-select" name="sort" data-catalog-sort>
                 <?php foreach ($catalogSortOptions as $value => $label): ?>
                     <option value="<?= htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"<?= (string) $value === $catalogSort ? ' selected' : '' ?>><?= htmlspecialchars((string) $label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></option>

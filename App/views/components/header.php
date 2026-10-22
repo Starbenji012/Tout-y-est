@@ -136,7 +136,7 @@ $siteSocialLinks = array_values(array_filter(
             <li>
                 <a class="site-navigation__link<?= $activePage === 'promotions' ? ' is-active' : '' ?>" href="/promotions"<?= $activePage === 'promotions' ? ' aria-current="page"' : '' ?>>Promotions</a>
             </li>
-            <li>
+            <li class="site-navigation__mobile-action">
                 <a class="site-navigation__link" href="/#footer-about">À propos</a>
             </li>
         </ul>
