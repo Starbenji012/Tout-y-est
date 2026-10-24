@@ -176,8 +176,6 @@ final class ProductController extends Controller
             'price_min' => $filters['priceMin'] ?? null,
             'price_max' => $filters['priceMax'] ?? null,
             'availability' => $filters['availability'] ?? '',
-            'rating' => $filters['rating'] ?? 0,
-            'attributes' => $filters['attributes'] ?? [],
             'sort' => ($filters['sort'] ?? 'newest') !== 'newest' ? $filters['sort'] : null,
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== [] && $value !== 0);
         $query = http_build_query($parameters);

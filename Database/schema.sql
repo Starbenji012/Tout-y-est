@@ -23,6 +23,7 @@ CREATE TABLE utilisateur (
     email_verification_sent_at DATETIME NULL,
     CONSTRAINT pk_utilisateur PRIMARY KEY (id_utilisateur),
     CONSTRAINT uq_utilisateur_email UNIQUE (email),
+    CONSTRAINT uq_utilisateur_telephone UNIQUE (telephone),
     CONSTRAINT uq_utilisateur_email_verification_token_hash UNIQUE (email_verification_token_hash)
 ) ENGINE=InnoDB;
 
@@ -130,6 +131,20 @@ CREATE TABLE beneficier (
         ON DELETE CASCADE
         ON UPDATE RESTRICT,
     INDEX idx_beneficier_promotion (id_promotion)
+) ENGINE=InnoDB;
+
+CREATE TABLE favori (
+    id_favori BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id_utilisateur BIGINT UNSIGNED NOT NULL,
+    id_produit BIGINT UNSIGNED NOT NULL,
+    date_ajout DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_favori PRIMARY KEY (id_favori),
+    CONSTRAINT uq_favori_utilisateur_produit UNIQUE (id_utilisateur, id_produit),
+    CONSTRAINT fk_favori_utilisateur FOREIGN KEY (id_utilisateur)
+        REFERENCES utilisateur (id_utilisateur) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT fk_favori_produit FOREIGN KEY (id_produit)
+        REFERENCES produit (id_produit) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    INDEX idx_favori_produit (id_produit)
 ) ENGINE=InnoDB;
 
 CREATE TABLE panier (

@@ -35,7 +35,7 @@ try {
     $db->exec("INSERT INTO variante_produit(id_variante,id_produit,sku,prix_reference,stock,statut) VALUES(1,1,'CURRENT-SKU',20,20,'actif')");
     $model=new App\Models\Order($db);$items=new App\Models\OrderItem($db);$deliveries=new App\Models\Delivery($db);
     $money=new App\Services\MoneyService(new App\Models\Setting($db));
-    $service=new App\Services\CustomerOrderService($model,$items,$deliveries,$money,new App\Services\ProductService(new App\Models\Product($db),null,null,$money));
+    $service=new App\Services\CustomerOrderService($model,$items,$deliveries,$money,new App\Services\ProductService(new App\Models\Product($db),$money));
     $make=static function(int $user,string $number,string $date,string $status)use($db,$model,$items,$deliveries):int {
         $id=$model->create(['user_id'=>$user,'number'=>$number,'subtotal'=>'40.00','shipping'=>'5.00','total'=>'45.00','rate'=>'2450','key_hash'=>hash('sha256',random_bytes(32))]);
         $q=$db->prepare('UPDATE commande SET date_commande=?,statut=? WHERE id_commande=?');$q->execute([$date,$status,$id]);

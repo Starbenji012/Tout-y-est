@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\CharacteristicValue;
 use App\Models\Product;
-use App\Models\Review;
 
 require_once __DIR__ . '/MoneyService.php';
 
@@ -19,9 +17,8 @@ final class ProductService
     /** Reçoit les modèles sans créer de connexion ou de requête dans le service. */
     public function __construct(
         private readonly ?Product $productModel = null,
-        private readonly ?CharacteristicValue $characteristicValueModel = null,
-        private readonly ?Review $reviewModel = null,
         ?MoneyService $money = null,
+        private readonly bool $demoEnabled = false,
     ) {
         $this->money = $money ?? new MoneyService();
     }
@@ -62,10 +59,10 @@ final class ProductService
     public function getRecommendations(): array
     {
         $products = $this->usesDatabase()
-            ? array_slice($this->allProducts('popular'), 0, 4)
+            ? array_slice($this->allProducts(), 0, 4)
             : $this->select([9, 2, 10, 6]);
 
-        return $this->withBadge($products, 'Populaire', 'popular');
+        return $this->withBadge($products, 'À découvrir', 'popular');
     }
 
     /** Retourne les produits bénéficiant actuellement d'une réduction. */
@@ -107,7 +104,7 @@ final class ProductService
             ['label' => 'Nouveauté', 'parameters' => ['sort' => 'newest', 'statuses' => ['new']]],
             ['label' => 'Promotion', 'parameters' => ['sort' => 'promotion', 'statuses' => ['promotion']]],
             ['label' => 'Offre limitée', 'parameters' => ['statuses' => ['limited']]],
-            ['label' => 'Populaire', 'parameters' => ['sort' => 'popular']],
+            ['label' => 'À découvrir', 'parameters' => ['sort' => 'newest']],
         ];
         $highlights = [];
         $selectedProductIds = [];
@@ -208,54 +205,10 @@ final class ProductService
         ];
     }
 
-    /** Prépare les filtres réellement disponibles pour les catégories sélectionnées. */
+    /** Les attributs restent masqués jusqu'à leur prise en charge SQL complète. */
     public function catalogFacets(array $categorySlugs = []): array
     {
-        if (count($categorySlugs) !== 1 || !$this->usesDatabase() || $this->characteristicValueModel === null) {
-            return [];
-        }
-
-        $allowedFacets = [
-            'marque' => 'Marque',
-            'marques' => 'Marque',
-            'couleur' => 'Couleur',
-            'taille' => 'Taille',
-            'pointure' => 'Pointure',
-            'capacite' => 'Capacité',
-            'stockage' => 'Capacité',
-            'memoire' => 'Mémoire',
-            'matiere' => 'Matière',
-            'etat' => 'État',
-            'condition' => 'État',
-        ];
-        $facets = [];
-
-        try {
-            $rows = $this->characteristicValueModel->findCatalogFacets($categorySlugs);
-        } catch (\PDOException) {
-            return [];
-        }
-
-        foreach ($rows as $row) {
-            $key = $this->slugify((string) $row['nom']);
-
-            if (!isset($allowedFacets[$key])) {
-                continue;
-            }
-
-            if (count($facets[$key]['options'] ?? []) >= 20) {
-                continue;
-            }
-
-            $facets[$key]['label'] = $allowedFacets[$key];
-            $facets[$key]['options'][] = [
-                'value' => (string) $row['valeur'],
-                'label' => (string) $row['valeur'],
-                'count' => (int) $row['product_count'],
-            ];
-        }
-
-        return $facets;
+        return [];
     }
 
     /** Classe les meilleures suggestions en tolérant les petites fautes de saisie. */
@@ -274,7 +227,7 @@ final class ProductService
             $filters = $this->normalizeFilters(['q' => $query]);
             $directProducts = array_map(
                 fn (array $product): array => $this->mapDatabaseProduct($product),
-                $this->productModel->findCatalog($filters, 'popular', $limit, 0),
+                $this->productModel->findCatalog($filters, 'newest', $limit, 0),
             );
 
             if (count($directProducts) >= $limit) {
@@ -395,7 +348,7 @@ final class ProductService
         $productId = (int) ($product['id'] ?? 0);
         $category = (string) ($product['category'] ?? '');
         $products = array_values(array_filter(
-            $this->allProducts('popular'),
+            $this->allProducts(),
             static fn (array $candidate): bool => (int) $candidate['id'] !== $productId,
         ));
 
@@ -409,7 +362,7 @@ final class ProductService
         return array_slice($products, 0, max(1, $limit));
     }
 
-    /** Enrichit un produit avec sa galerie, ses caractéristiques et ses avis. */
+    /** Prépare la fiche ; les caractéristiques BDD et avis ne sont pas exposés en V1. */
     public function getProductDetails(int $productId): ?array
     {
         $product = $this->findProduct($productId);
@@ -419,7 +372,6 @@ final class ProductService
         }
 
         $product['characteristics'] = $this->usesDatabase() ? [] : $this->productCharacteristics($product);
-        $product['reviewItems'] = [];
 
         return $product;
     }
@@ -526,7 +478,7 @@ final class ProductService
         $categories = is_array($parameters['categories'] ?? null) ? $parameters['categories'] : [];
         $statuses = is_array($parameters['statuses'] ?? null) ? $parameters['statuses'] : [];
         $allowedStatuses = ['promotion', 'new', 'limited'];
-        $allowedSorts = ['newest', 'price-asc', 'price-desc', 'popular', 'rating', 'promotion'];
+        $allowedSorts = ['newest', 'price-asc', 'price-desc', 'promotion'];
         $allowedAvailability = ['in-stock', 'out-of-stock'];
         $sort = (string) ($parameters['sort'] ?? 'newest');
         $availability = (string) ($parameters['availability'] ?? '');
@@ -535,19 +487,6 @@ final class ProductService
         ), 0, 10)));
         $priceMin = filter_var($parameters['price_min'] ?? null, FILTER_VALIDATE_FLOAT);
         $priceMax = filter_var($parameters['price_max'] ?? null, FILTER_VALIDATE_FLOAT);
-        $rating = filter_var($parameters['rating'] ?? 0, FILTER_VALIDATE_INT);
-        $attributes = [];
-
-        foreach (['marque', 'marques', 'couleur', 'taille', 'pointure', 'capacite', 'stockage', 'memoire', 'matiere', 'etat', 'condition'] as $attribute) {
-            $values = is_array($parameters['attributes'][$attribute] ?? null)
-                ? $parameters['attributes'][$attribute]
-                : [];
-            $attributes[$attribute] = array_values(array_unique(array_slice(array_filter(array_map(
-                static fn (mixed $value): string => substr(trim((string) $value), 0, 100),
-                $values,
-            )), 0, 20)));
-        }
-
         return [
             'search' => substr(trim((string) ($parameters['q'] ?? '')), 0, 100),
             'categories' => $normalizedCategories,
@@ -555,8 +494,6 @@ final class ProductService
             'priceMin' => $priceMin !== false && $priceMin !== null && $priceMin >= 0 ? (float) $priceMin : null,
             'priceMax' => $priceMax !== false && $priceMax !== null && $priceMax >= 0 ? (float) $priceMax : null,
             'availability' => in_array($availability, $allowedAvailability, true) ? $availability : '',
-            'rating' => $rating !== false ? min(5, max(0, (int) $rating)) : 0,
-            'attributes' => count($normalizedCategories) === 1 ? array_filter($attributes) : [],
             'sort' => in_array($sort, $allowedSorts, true) ? $sort : 'newest',
         ];
     }
@@ -591,8 +528,6 @@ final class ProductService
             'priceValue' => (float) $this->money->decimal($currentMinor),
             'oldPrice' => $discount > 0 ? $this->money->format($baseMinor, $currency) : null,
             'discount' => $discount > 0 ? (int) round($discount) : null,
-            'rating' => round((float) ($product['note'] ?? 0), 1),
-            'reviews' => (int) ($product['avis_count'] ?? 0),
             'stock' => $stock,
             'image' => $image,
             'alt' => (string) $product['nom'],
@@ -654,10 +589,9 @@ final class ProductService
             $matchesAvailability = $filters['availability'] === ''
                 || ($filters['availability'] === 'in-stock' && $stock > 0)
                 || ($filters['availability'] === 'out-of-stock' && $stock === 0);
-            $matchesRating = $filters['rating'] === 0 || (float) $product['rating'] >= $filters['rating'];
 
             return $matchesSearch && $matchesCategory && $matchesMinimum && $matchesMaximum
-                && $matchesStatus && $matchesAvailability && $matchesRating;
+                && $matchesStatus && $matchesAvailability;
         }));
 
         // Garde le même ordre que MySQL lorsque le catalogue de démonstration est utilisé.
@@ -667,10 +601,6 @@ final class ProductService
                     <=> [$this->priceValue($second['price']), $second['name'], -$second['id']],
                 'price-desc' => [$this->priceValue($second['price']), $first['name'], -$first['id']]
                     <=> [$this->priceValue($first['price']), $second['name'], -$second['id']],
-                'popular' => [$second['reviews'], $second['rating'], $second['id']]
-                    <=> [$first['reviews'], $first['rating'], $first['id']],
-                'rating' => [$second['rating'], $second['reviews'], $second['id']]
-                    <=> [$first['rating'], $first['reviews'], $first['id']],
                 'promotion' => [$second['discount'] ?? 0, $second['id']]
                     <=> [$first['discount'] ?? 0, $first['id']],
                 default => (int) $second['id'] <=> (int) $first['id'],
@@ -756,8 +686,8 @@ final class ProductService
         }
 
         usort($ranked, static fn (array $first, array $second): int =>
-            [$second['score'], $second['product']['rating'], $second['product']['reviews']]
-            <=> [$first['score'], $first['product']['rating'], $first['product']['reviews']]
+            [$second['score'], $second['product']['id']]
+            <=> [$first['score'], $first['product']['id']]
         );
 
         return array_column($ranked, 'product');
@@ -811,9 +741,10 @@ final class ProductService
         );
     }
 
-    /** Fournit les produits temporaires utilisés tant que la base est vide. */
+    /** Données fictives disponibles uniquement sur autorisation DEV explicite. */
     private function demoProducts(): array
     {
+        if (!$this->demoEnabled) return [];
         $products = $this->withDiscounts([
             [
                 'id' => 1,
@@ -821,8 +752,6 @@ final class ProductService
                 'category' => 'Accessoires',
                 'price' => '32 000 (devise DEV non définie)',
                 'oldPrice' => '38 000 (devise DEV non définie)',
-                'rating' => 4.8,
-                'reviews' => 24,
                 'image' => '/assets/images/products/watch.jpg',
                 'alt' => 'Montre rectangulaire argentée posée sur une surface réfléchissante',
                 'width' => 933,
@@ -835,8 +764,6 @@ final class ProductService
                 'category' => 'Vêtements',
                 'price' => '15 000 (devise DEV non définie)',
                 'oldPrice' => null,
-                'rating' => 4.6,
-                'reviews' => 18,
                 'image' => '/assets/images/products/tshirt-card.jpg',
                 'alt' => 'T-shirts noir et blanc soigneusement pliés',
                 'width' => 1400,
@@ -849,8 +776,6 @@ final class ProductService
                 'category' => 'Accessoires',
                 'price' => '12 500 (devise DEV non définie)',
                 'oldPrice' => '15 000 (devise DEV non définie)',
-                'rating' => 4.9,
-                'reviews' => 31,
                 'image' => '/assets/images/products/hat.jpg',
                 'alt' => 'Sélection de casquettes présentées en boutique',
                 'width' => 1400,
@@ -863,8 +788,6 @@ final class ProductService
                 'category' => 'Vêtements',
                 'price' => '95 000 (devise DEV non définie)',
                 'oldPrice' => null,
-                'rating' => 4.5,
-                'reviews' => 15,
                 'image' => '/assets/images/products/suit.jpg',
                 'alt' => 'Costume anthracite avec détail doré sur le revers',
                 'width' => 933,
@@ -877,8 +800,6 @@ final class ProductService
                 'category' => 'Informatique',
                 'price' => '650 000 (devise DEV non définie)',
                 'oldPrice' => '700 000 (devise DEV non définie)',
-                'rating' => 4.7,
-                'reviews' => 12,
                 'image' => '/assets/images/products/laptop.jpg',
                 'alt' => 'Ordinateur portable utilisé sur un espace de travail',
                 'width' => 933,
@@ -891,8 +812,6 @@ final class ProductService
                 'category' => 'Électronique',
                 'price' => '420 000 (devise DEV non définie)',
                 'oldPrice' => null,
-                'rating' => 4.4,
-                'reviews' => 9,
                 'image' => '/assets/images/products/television.jpg',
                 'alt' => 'Téléviseur grand écran installé dans un salon moderne',
                 'width' => 933,
@@ -905,8 +824,6 @@ final class ProductService
                 'category' => 'Gaming',
                 'price' => '55 000 (devise DEV non définie)',
                 'oldPrice' => '65 000 (devise DEV non définie)',
-                'rating' => 4.6,
-                'reviews' => 17,
                 'image' => '/assets/images/products/gaming-controller.jpg',
                 'alt' => 'Manette de jeu sans fil dans une ambiance gaming',
                 'width' => 933,
@@ -919,8 +836,6 @@ final class ProductService
                 'category' => 'Bijoux',
                 'price' => '18 000 (devise DEV non définie)',
                 'oldPrice' => null,
-                'rating' => 4.8,
-                'reviews' => 27,
                 'image' => '/assets/images/products/jewelry.jpg',
                 'alt' => 'Bagues dorées serties présentées dans un écrin',
                 'width' => 1120,
@@ -933,8 +848,6 @@ final class ProductService
                 'category' => 'Audio',
                 'price' => '28 000 (devise DEV non définie)',
                 'oldPrice' => '32 000 (devise DEV non définie)',
-                'rating' => 4.7,
-                'reviews' => 21,
                 'image' => '/assets/images/products/wireless-earbuds.jpg',
                 'alt' => 'Sélection d’écouteurs sans fil dans leurs boîtiers',
                 'width' => 1400,
@@ -947,8 +860,6 @@ final class ProductService
                 'category' => 'Audio',
                 'price' => '45 000 (devise DEV non définie)',
                 'oldPrice' => '52 000 (devise DEV non définie)',
-                'rating' => 4.8,
-                'reviews' => 19,
                 'image' => '/assets/images/products/headphones.jpg',
                 'alt' => 'Casque audio beige avec finitions dorées',
                 'width' => 1050,

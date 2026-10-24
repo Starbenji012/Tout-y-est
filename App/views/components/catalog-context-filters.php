@@ -3,21 +3,10 @@
 $catalogContextFiltersConfig = $catalogContextFilters ?? [];
 $contextFacets = $catalogContextFiltersConfig['facets'] ?? [];
 $contextActiveAttributes = $catalogContextFiltersConfig['filters']['attributes'] ?? [];
-$contextCategories = $catalogContextFiltersConfig['filters']['categories'] ?? [];
 $facetPosition = 0;
 ?>
 
-<?php if ($contextFacets === []): ?>
-    <p class="catalog-filters__context-hint">
-        <?php if ($contextCategories === []): ?>
-            Choisissez une catégorie pour afficher ses filtres spécifiques.
-        <?php elseif (count($contextCategories) > 1): ?>
-            Choisissez une seule catégorie pour affiner les caractéristiques.
-        <?php else: ?>
-            Aucun filtre spécifique n'est disponible pour cette catégorie.
-        <?php endif; ?>
-    </p>
-<?php else: ?>
+<?php if ($contextFacets !== []): ?>
     <?php foreach ($contextFacets as $facetKey => $facet): ?>
         <?php
         $facetLabel = (string) ($facet['label'] ?? 'Caractéristique');

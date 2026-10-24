@@ -32,9 +32,7 @@ use App\Services\EmailVerificationService;
 use App\Services\LoginThrottleService;
 use App\Services\PasswordResetService;
 use App\Services\SmtpEmailSender;
-use App\Models\CharacteristicValue;
 use App\Models\Product;
-use App\Models\Review;
 use App\Services\ProductService;
 
 // Laisse le serveur PHP livrer directement les images, feuilles de style et scripts.
@@ -70,8 +68,6 @@ require_once dirname(__DIR__) . '/App/controllers/CustomerOrderController.php';
 require_once dirname(__DIR__) . '/App/models/Favorite.php';
 require_once dirname(__DIR__) . '/App/models/Product.php';
 require_once dirname(__DIR__) . '/App/models/Category.php';
-require_once dirname(__DIR__) . '/App/models/CharacteristicValue.php';
-require_once dirname(__DIR__) . '/App/models/Review.php';
 require_once dirname(__DIR__) . '/App/models/User.php';
 require_once dirname(__DIR__) . '/App/models/Setting.php';
 require_once dirname(__DIR__) . '/App/services/MoneyService.php';
@@ -103,7 +99,8 @@ require_once dirname(__DIR__) . '/App/controllers/HomeController.php';
 require_once dirname(__DIR__) . '/App/controllers/FavoriteController.php';
 require_once dirname(__DIR__) . '/App/controllers/ProductController.php';
 
-// Construit les services avec PDO, puis conserve un catalogue de démonstration si MySQL est indisponible.
+// Une panne ne devient jamais silencieusement un faux catalogue commercial.
+$appConfig = require dirname(__DIR__) . '/Config/app.php';
 $databaseConfig = require dirname(__DIR__) . '/Config/database.php';
 $database = null;
 Session::start();
@@ -113,13 +110,18 @@ try {
     $moneyService = new MoneyService(new Setting($database));
     $productService = new ProductService(
         new Product($database),
-        new CharacteristicValue($database),
-        new Review($database),
         $moneyService,
     );
 } catch (PDOException $exception) {
     error_log('Connexion au catalogue indisponible : ' . $exception->getMessage());
-    $productService = new ProductService();
+    if (!$appConfig['catalog_demo_enabled']) {
+        http_response_code(503);
+        header('Content-Type: text/html; charset=UTF-8');
+        header('Cache-Control: no-store');
+        echo '<!doctype html><html lang="fr"><meta charset="UTF-8"><title>Service indisponible | Tout y est</title><main><h1>Nous revenons bientôt</h1><p>La boutique est momentanément indisponible. Merci de réessayer dans quelques instants.</p></main></html>';
+        return;
+    }
+    $productService = new ProductService(demoEnabled: true);
 }
 $moneyService = $moneyService ?? new MoneyService();
 $request = new Request();

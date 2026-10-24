@@ -77,7 +77,7 @@ final class Product
             'SELECT COUNT(DISTINCT p.id_produit)
              FROM produit p
              INNER JOIN categorie c ON c.id_categorie = p.id_categorie
-             INNER JOIN variante_produit v ON v.id_produit = p.id_produit' . $where,
+             INNER JOIN variante_produit v ON v.id_variante = ' . $this->representativeVariantSql() . $where,
         );
 
         $this->bindParameters($statement, $parameters);
@@ -175,6 +175,14 @@ final class Product
         return $query->fetchAll();
     }
 
+    /** Ordre stable, sans changer les prix : disponible d'abord, puis plus petit ID actif. */
+    private function representativeVariantSql(): string
+    {
+        return "(SELECT vr.id_variante FROM variante_produit vr
+            WHERE vr.id_produit = p.id_produit AND LOWER(vr.statut) IN ('actif', 'active')
+            ORDER BY (vr.stock > 0) DESC, vr.id_variante LIMIT 1)";
+    }
+
     /** Construit la sélection SQL commune aux différentes lectures de produits. */
     private function selectSql(bool $includeSearchAttributes = false, bool $exactVariant = false): string
     {
@@ -182,16 +190,11 @@ final class Product
         $searchAttributes = $includeSearchAttributes
             ? "''"
             : "''";
-        $stockSelection = $exactVariant
-            ? 'v.stock'
-            : "COALESCE((SELECT SUM(vs.stock) FROM variante_produit vs WHERE vs.id_produit = p.id_produit AND LOWER(vs.statut) NOT IN ('inactif', 'inactive')), 0)";
+        // Le prix, le stock et l'ajout panier concernent la même variante.
+        $stockSelection = 'v.stock';
         $variantJoin = $exactVariant
             ? 'v.id_variante'
-            : '(SELECT vr.id_variante
-                    FROM variante_produit vr
-                WHERE vr.id_produit = p.id_produit
-                ORDER BY vr.id_variante
-                LIMIT 1)';
+            : $this->representativeVariantSql();
 
         return "SELECT
                     p.id_produit,
@@ -208,8 +211,6 @@ final class Product
                     (SELECT ip.chemin FROM image_produit ip WHERE ip.id_produit = p.id_produit
                      ORDER BY ip.image_principale DESC, ip.ordre_affichage, ip.id_image LIMIT 1) AS image,
                     {$searchAttributes} AS search_attributes,
-                    0 AS note,
-                    0 AS avis_count,
                     {$stockSelection} AS stock,
                     (SELECT MAX(pr.pourcentage)
                      FROM beneficier b
@@ -265,9 +266,9 @@ final class Product
         }
 
         if (($filters['availability'] ?? '') === 'in-stock') {
-            $conditions[] = 'EXISTS (SELECT 1 FROM variante_produit v WHERE v.id_produit = p.id_produit AND v.stock > 0)';
+            $conditions[] = "EXISTS (SELECT 1 FROM variante_produit va WHERE va.id_produit = p.id_produit AND LOWER(va.statut) IN ('actif','active') AND va.stock > 0)";
         } elseif (($filters['availability'] ?? '') === 'out-of-stock') {
-            $conditions[] = 'NOT EXISTS (SELECT 1 FROM variante_produit v WHERE v.id_produit = p.id_produit AND v.stock > 0)';
+            $conditions[] = "NOT EXISTS (SELECT 1 FROM variante_produit va WHERE va.id_produit = p.id_produit AND LOWER(va.statut) IN ('actif','active') AND va.stock > 0)";
         }
 
         return [' WHERE ' . implode(' AND ', $conditions), $parameters];
@@ -288,7 +289,7 @@ final class Product
         }
 
         if (in_array('limited', $statuses, true)) {
-            $conditions[] = '(SELECT COALESCE(SUM(vs.stock), 0) FROM variante_produit vs WHERE vs.id_produit = p.id_produit) BETWEEN 1 AND 5';
+            $conditions[] = 'v.stock BETWEEN 1 AND 5';
         }
 
         return $conditions;
@@ -303,8 +304,6 @@ final class Product
         return match ($sort) {
             'price-asc' => $effectivePrice . ' ASC, p.nom ASC, p.id_produit DESC',
             'price-desc' => $effectivePrice . ' DESC, p.nom ASC, p.id_produit DESC',
-            'popular' => 'avis_count DESC, note DESC, p.date_creation DESC, p.id_produit DESC',
-            'rating' => 'note DESC, avis_count DESC, p.date_creation DESC, p.id_produit DESC',
             'promotion' => 'reduction DESC, p.date_creation DESC, p.id_produit DESC',
             default => 'p.date_creation DESC, p.id_produit DESC',
         };

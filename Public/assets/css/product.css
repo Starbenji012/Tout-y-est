@@ -103,7 +103,6 @@
 }
 
 .product-detail__eyebrow,
-.product-detail__rating,
 .product-detail__price-container,
 .product-detail__availability,
 .product-detail__purchase-container,
@@ -125,14 +124,8 @@
   letter-spacing: -0.04em;
 }
 
-.product-detail__rating { gap: var(--spacing-xs); }
 
-.product-detail__rating svg {
-  fill: var(--color-gold);
-  color: var(--color-gold);
-}
 
-.product-detail__rating span,
 .product-detail__description,
 .product-detail__price-container del { color: var(--color-text-muted); }
 

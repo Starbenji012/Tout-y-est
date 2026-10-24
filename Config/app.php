@@ -23,5 +23,8 @@ $environment = static function (string $name, string $default = '') use ($localE
 };
 
 return [
+    'environment' => $environment('APP_ENV', 'production'),
+    'catalog_demo_enabled' => $environment('APP_ENV', 'production') === 'development'
+        && filter_var($environment('CATALOG_DEMO_ENABLED', 'false'), FILTER_VALIDATE_BOOLEAN),
     'contact_email' => $environment('CONTACT_EMAIL', $environment('MAIL_FROM_ADDRESS')),
 ];

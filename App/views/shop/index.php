@@ -25,7 +25,6 @@ $productSection = [
             'newest' => 'Nouveautés',
             'price-asc' => 'Prix croissant',
             'price-desc' => 'Prix décroissant',
-            'popular' => 'Popularité',
             'promotion' => 'Promotions',
         ],
     ],
