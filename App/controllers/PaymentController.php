@@ -37,6 +37,10 @@ final class PaymentController extends Controller
         if (!$this->payments) { http_response_code(503); echo 'Service indisponible.'; return; }
         try {
             $data = $this->payments->confirmedForUser($this->userId(), $this->request->queryInteger('commande'));
+            // Une ancienne URL Checkout reste utile après progression, sans écran de confirmation périmé.
+            if ($data['order']['statut'] !== 'confirmee') {
+                Response::redirect('/compte/commande?commande=' . (int)$data['order']['id_commande']);
+            }
             $data['totalFormatted'] = $this->money->format($this->money->minor($data['order']['total']));
             $data['cdfFormatted'] = $this->money->format($this->money->usdToCdfAtRate($this->money->minor($data['order']['total']), $data['order']['taux_usd_cdf']), 'CDF');
             header('Cache-Control: no-store');

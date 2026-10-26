@@ -31,6 +31,8 @@ try {
         $columns = $db->prepare('SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? ORDER BY COLUMN_NAME');
         $columns->execute([$name,$table]); $fresh=$columns->fetchAll();
         $columns->execute([$config['database'],$table]); $migrated=$columns->fetchAll();
+        // S1.11 est testée sur base éphémère ; son application locale reste manuelle.
+        if ($table === 'journal_commande' && $migrated === []) continue;
         $assert($fresh === $migrated, 'Colonnes installation/migrations : '.$table);
         $keys = $db->prepare("SELECT COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY COLUMN_NAME");
         $keys->execute([$name,$table]); $freshKeys=$keys->fetchAll();

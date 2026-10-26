@@ -1,0 +1,23 @@
+<?php $escape=static fn($v):string=>htmlspecialchars((string)$v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$row=$order['row'];$delivery=$order['delivery']; ?>
+<section class="container admin-orders">
+    <a class="btn btn-ghost" href="/admin/commandes">← Retour aux commandes</a>
+    <header><h1>N° de commande <?= $escape($order['number']) ?></h1><p><?= $escape($order['date']) ?></p></header>
+    <dl class="admin-orders__facts admin-order-card"><div><dt>Commande</dt><dd><?= $escape($order['status']) ?></dd></div><div><dt>Paiement</dt><dd><?= $escape($order['paymentStatus']) ?></dd></div><div><dt>Livraison</dt><dd><?= $escape($order['deliveryStatus']) ?></dd></div></dl>
+    <div class="admin-orders__detail">
+      <div class="admin-orders__stack">
+        <section class="admin-order-card"><h2>Compte client actuel</h2><p><?= $escape(trim(($row['client_prenom']??'').' '.($row['client_nom']??''))) ?></p><p><?= $escape($row['client_email']??'Non renseigné') ?></p><p><?= $escape($row['client_telephone']??'Téléphone non renseigné') ?></p></section>
+        <section class="admin-order-card"><h2>Produits commandés</h2><ul class="admin-orders__items"><?php foreach($items as $item): ?><li>
+          <div class="admin-orders__image"><?php if($item['image']): ?><img src="<?= $escape($item['image']) ?>" alt="" width="80" height="80" loading="lazy"><?php else: ?><span>Sans image</span><?php endif; ?></div>
+          <div><strong><?= $escape($item['nom_produit_snapshot']) ?></strong><p><?= $escape($item['description_variante_snapshot']) ?></p><p>Quantité : <?= (int)$item['quantite'] ?> · <?= $escape($item['unit']) ?></p><strong><?= $escape($item['lineTotal']) ?></strong></div>
+        </li><?php endforeach; ?></ul></section>
+        <section class="admin-order-card"><h2>Destinataire et livraison historiques</h2>
+          <?php if($delivery): ?><dl class="admin-orders__fields"><?php foreach(['prenom_destinataire_snapshot'=>'Prénom','nom_destinataire_snapshot'=>'Nom','telephone_snapshot'=>'Téléphone','commune_snapshot'=>'Commune','adresse_snapshot'=>'Adresse','nom_zone_snapshot'=>'Zone','repere_snapshot'=>'Repère','instructions_snapshot'=>'Instructions','date_preparation'=>'Préparation','date_expedition'=>'Expédition','date_livraison'=>'Livraison'] as $key=>$label): ?><?php if(!empty($delivery[$key])): ?><div><dt><?= $label ?></dt><dd><?= $escape($delivery[$key]) ?></dd></div><?php endif; ?><?php endforeach; ?></dl><?php else: ?><p>Aucune livraison enregistrée.</p><?php endif; ?>
+        </section>
+        <section class="admin-order-card"><h2>Journal de la commande</h2><?php if(!$events): ?><p>Aucune action administrative enregistrée.</p><?php endif; ?><ol class="admin-orders__journal"><?php foreach($events as $event): ?><li><strong><?= $escape($event['label']) ?></strong><p><?= $escape($event['date_action']) ?> · <?= $escape(trim(($event['admin_prenom']??'').' '.($event['admin_nom']??''))?:'Administrateur') ?></p><?php foreach($event['details'] as $key=>$value): ?><p><?= $escape(['motif'=>'Motif','devise'=>'Devise','montant'=>'Montant encaissé','taux_usd_cdf'=>'Taux historique'][$key]) ?> : <?= $escape(is_scalar($value)?$value:'Non renseigné') ?></p><?php endforeach; ?></li><?php endforeach; ?></ol></section>
+      </div>
+      <aside class="admin-orders__stack">
+        <section class="admin-order-card"><h2>Totaux historiques</h2><dl class="admin-orders__fields"><div><dt>Sous-total</dt><dd><?= $escape($order['subtotal']) ?></dd></div><div><dt>Livraison</dt><dd><?= $escape($order['shipping']) ?></dd></div><div><dt>Total</dt><dd><strong><?= $escape($order['total']) ?></strong></dd></div></dl><?php if($order['cdf']): ?><p><?= $escape($order['cdf']) ?></p><small>1 USD = <?= $escape($row['taux_usd_cdf']) ?> CDF lors de la commande</small><?php endif; ?></section>
+        <section class="admin-order-card"><h2>Paiement</h2><?php if(!$order['payments']): ?><p>Aucun paiement enregistré.</p><?php endif; ?><?php foreach($order['payments'] as $payment): ?><dl class="admin-orders__fields"><div><dt>Méthode</dt><dd><?= $escape($payment['mode']) ?></dd></div><div><dt>État</dt><dd><?= $escape($payment['label']) ?></dd></div><div><dt>Montant attendu</dt><dd><?= $escape($payment['amount']) ?></dd></div><?php foreach(['devise_reglement'=>'Devise de règlement','montant_reglement'=>'Montant encaissé','taux_usd_cdf'=>'Taux historique','date_paiement'=>'Date du paiement'] as $key=>$label): ?><?php if($payment[$key]!==null): ?><div><dt><?= $label ?></dt><dd><?= $escape($payment[$key]) ?></dd></div><?php endif; ?><?php endforeach; ?></dl><?php endforeach; ?></section>
+      </aside>
+    </div>
+</section>

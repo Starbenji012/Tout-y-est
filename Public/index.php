@@ -62,6 +62,13 @@ require_once dirname(__DIR__) . '/App/models/Cart.php';
 require_once dirname(__DIR__) . '/App/models/Payment.php';
 require_once dirname(__DIR__) . '/App/models/PaymentMethod.php';
 require_once dirname(__DIR__) . '/App/services/PaymentService.php';
+require_once dirname(__DIR__) . '/App/models/AdminOrderJournal.php';
+require_once dirname(__DIR__) . '/App/services/AdminAccessService.php';
+require_once dirname(__DIR__) . '/App/services/AdminOrderService.php';
+require_once dirname(__DIR__) . '/App/models/AdminOrderRead.php';
+require_once dirname(__DIR__) . '/App/services/AdminOrderReadService.php';
+require_once dirname(__DIR__) . '/App/controllers/Admin/OrderReadController.php';
+require_once dirname(__DIR__) . '/App/controllers/Admin/OrderController.php';
 require_once dirname(__DIR__) . '/App/controllers/PaymentController.php';
 require_once dirname(__DIR__) . '/App/services/CustomerOrderService.php';
 require_once dirname(__DIR__) . '/App/controllers/CustomerOrderController.php';
@@ -160,6 +167,8 @@ $orderService = $database instanceof PDO ? new \App\Services\OrderService(
     new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $checkoutService, $moneyService,
 ) : null;
 $paymentService = $database instanceof PDO ? new \App\Services\PaymentService($database) : null;
+$adminOrderService = $database instanceof PDO ? new \App\Services\AdminOrderService($database, new \App\Services\AdminAccessService($userModel), $moneyService) : null;
+$adminOrderReadService = $database instanceof PDO ? new \App\Services\AdminOrderReadService(new \App\Services\AdminAccessService($userModel),new \App\Models\AdminOrderRead($database),new \App\Models\OrderItem($database),new \App\Models\Delivery($database),new \App\Models\Payment($database),new \App\Models\AdminOrderJournal($database),$moneyService,$productService) : null;
 $customerOrderService = $database instanceof PDO ? new \App\Services\CustomerOrderService(new \App\Models\Order($database), new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $moneyService, $productService) : null;
 $deliveryZoneService = new \App\Services\DeliveryZoneService(
     $userModel,

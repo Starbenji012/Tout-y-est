@@ -31,6 +31,10 @@
             </nav>
         </div>
     </header>
+    <nav class="container admin-section-nav" aria-label="Modules administration">
+        <a href="/admin/commandes"<?= ($adminPage ?? '') === 'orders' ? ' aria-current="page"' : '' ?>>Commandes</a>
+        <a href="/admin/zones-livraison"<?= ($adminPage ?? '') !== 'orders' ? ' aria-current="page"' : '' ?>>Zones de livraison</a>
+    </nav>
     <main id="main-content" class="admin-main"><?= $content ?? '' ?></main>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>window.lucide?.createIcons();</script>

@@ -24,4 +24,11 @@ final class Payment
         $query = $this->database->prepare("UPDATE paiement SET statut = 'annule' WHERE id_paiement = ?");
         $query->execute([$id]);
     }
+
+    public function collectCash(int $id, string $currency, string $amount): void
+    {
+        $query = $this->database->prepare("UPDATE paiement SET statut='paye',date_paiement=NOW(),devise_reglement=?,montant_reglement=? WHERE id_paiement=? AND statut='a_encaisser' AND date_paiement IS NULL");
+        $query->execute([$currency,$amount,$id]);
+        if ($query->rowCount() !== 1) throw new \DomainException('Ce paiement ne peut plus être encaissé.',409);
+    }
 }

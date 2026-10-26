@@ -35,7 +35,18 @@ $productController = new ProductController($productService, $request);
 /** @var \App\Services\OrderService|null $orderService */
 /** @var \App\Services\PaymentService|null $paymentService */
 /** @var \App\Services\CustomerOrderService|null $customerOrderService */
+/** @var \App\Services\AdminOrderService|null $adminOrderService */
+$adminOrderController = new \App\Controllers\Admin\OrderController($adminOrderService, $request);
+/** @var \App\Services\AdminOrderReadService|null $adminOrderReadService */
+$adminOrderReadController = new \App\Controllers\Admin\OrderReadController($adminOrderReadService, $request);
 return [
+    '/admin/commandes' => [$adminOrderReadController, 'index'],
+    '/admin/commande' => [$adminOrderReadController, 'detail'],
+    '/api/admin/commandes/preparer' => [$adminOrderController, 'prepare'],
+    '/api/admin/commandes/mettre-en-livraison' => [$adminOrderController, 'ship'],
+    '/api/admin/commandes/livrer' => [$adminOrderController, 'deliver'],
+    '/api/admin/commandes/encaisser-cash' => [$adminOrderController, 'collectCash'],
+    '/api/admin/commandes/annuler' => [$adminOrderController, 'cancel'],
     '/compte/commandes' => ['handler' => [new \App\Controllers\CustomerOrderController($customerOrderService, $request), 'index'], 'middleware' => ['auth']],
     '/compte/commande' => ['handler' => [new \App\Controllers\CustomerOrderController($customerOrderService, $request), 'detail'], 'middleware' => ['auth']],
     '/api/checkout/confirmer-cash' => [new \App\Controllers\PaymentController($paymentService, $request, $moneyService), 'confirmCash'],

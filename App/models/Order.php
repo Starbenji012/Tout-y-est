@@ -68,6 +68,13 @@ final class Order
         $query->execute([$id]);
     }
 
+    public function advance(int $id, string $status): void
+    {
+        if (!in_array($status, ['en_preparation','en_livraison','livree'], true)) throw new \InvalidArgumentException('Progression invalide.');
+        $query = $this->database->prepare('UPDATE commande SET statut=? WHERE id_commande=?');
+        $query->execute([$status,$id]);
+    }
+
     /** Lecture client bornée, sans clés techniques de création ni effet sur le stock. */
     public function listForUser(int $userId, int $limit, int $offset, ?string $from = null, ?string $until = null): array
     {

@@ -8,6 +8,8 @@ use App\Models\User;
 use InvalidArgumentException;
 use PDOException;
 
+require_once __DIR__ . '/AdminAccessService.php';
+
 /** Valide les droits et les données sans inventer de zones ni de tarifs. */
 final class DeliveryZoneService
 {
@@ -17,11 +19,7 @@ final class DeliveryZoneService
     {
         if ($userId < 1) return ['error' => 'Connectez-vous avec un compte administrateur.', 'status' => 401];
         if ($this->users === null || $this->zones === null) return ['error' => 'Administration indisponible.', 'status' => 503];
-        $user = $this->users->findAccessState($userId);
-        if ($user === null || ($user['role'] ?? '') !== 'admin' || !in_array($user['statut'], ['actif', 'active'], true)) {
-            return ['error' => 'Accès réservé aux administrateurs autorisés.', 'status' => 403];
-        }
-        return ['success' => true];
+        return (new AdminAccessService($this->users))->accessForUser($userId);
     }
 
     public function listing(int $userId): array

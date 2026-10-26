@@ -31,9 +31,9 @@ final class User
     }
 
     /** Relit les droits actuels du compte sans exposer ses secrets. */
-    public function findAccessState(int $userId): ?array
+    public function findAccessState(int $userId, bool $lock = false): ?array
     {
-        $statement = $this->database->prepare('SELECT role, statut FROM utilisateur WHERE id_utilisateur = ?');
+        $statement = $this->database->prepare('SELECT role, statut FROM utilisateur WHERE id_utilisateur = ?' . ($lock ? ' LOCK IN SHARE MODE' : ''));
         $statement->execute([$userId]);
         return $statement->fetch() ?: null;
     }

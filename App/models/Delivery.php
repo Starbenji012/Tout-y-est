@@ -37,4 +37,14 @@ final class Delivery
         $query = $this->database->prepare("UPDATE livraison SET statut = 'annulee' WHERE id_commande = ?");
         $query->execute([$id]);
     }
+
+    public function advance(int $id, string $status): void
+    {
+        $date = match ($status) {
+            'en_preparation'=>'date_preparation', 'en_livraison'=>'date_expedition', 'livree'=>'date_livraison',
+            default=>throw new \InvalidArgumentException('Progression invalide.'),
+        };
+        $query = $this->database->prepare("UPDATE livraison SET statut=?, $date=COALESCE($date,NOW()) WHERE id_commande=?");
+        $query->execute([$status,$id]);
+    }
 }

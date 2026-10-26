@@ -42,6 +42,9 @@ final class OrderController extends Controller
         if ($this->orders === null) { http_response_code(503); echo 'Service indisponible.'; return; }
         try {
             $data = $this->orders->forUser($this->userId(), $this->request->queryInteger('commande'));
+            if (in_array($data['order']['statut'], ['en_preparation','en_livraison','livree'],true)) {
+                Response::redirect('/compte/commande?commande=' . (int)$data['order']['id_commande']);
+            }
             if ($data['order']['statut'] === 'confirmee') { Response::redirect('/checkout/confirmation?commande=' . (int) $data['order']['id_commande']); return; }
             $data['cashAvailable'] = $this->payments?->cashAvailable() ?? false;
             $data['csrfToken'] = CsrfMiddleware::token();
