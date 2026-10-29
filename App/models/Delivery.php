@@ -38,6 +38,12 @@ final class Delivery
         $query->execute([$id]);
     }
 
+    public function assignCourier(int $id, string $name): void
+    {
+        $query=$this->database->prepare('UPDATE livraison SET nom_livreur_snapshot=? WHERE id_commande=?');
+        $query->execute([$name,$id]);
+    }
+
     public function advance(int $id, string $status): void
     {
         $date = match ($status) {

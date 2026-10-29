@@ -40,6 +40,7 @@ $adminOrderController = new \App\Controllers\Admin\OrderController($adminOrderSe
 /** @var \App\Services\AdminOrderReadService|null $adminOrderReadService */
 $adminOrderReadController = new \App\Controllers\Admin\OrderReadController($adminOrderReadService, $request);
 return [
+    '/admin' => [$adminOrderReadController, 'index'],
     '/admin/commandes' => [$adminOrderReadController, 'index'],
     '/admin/commande' => [$adminOrderReadController, 'detail'],
     '/api/admin/commandes/preparer' => [$adminOrderController, 'prepare'],

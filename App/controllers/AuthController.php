@@ -185,6 +185,7 @@ final class AuthController extends Controller
     /** Accepte uniquement une destination interne sûre après authentification. */
     private function safeReturnPath(string $path): ?string
     {
-        return in_array($path, ['/favoris', '/panier', '/boutique', '/checkout'], true) ? $path : null;
+        if (in_array($path, ['/favoris', '/panier', '/boutique', '/checkout'], true)) return $path;
+        return \App\Services\AdminNavigation::safeReturn($path);
     }
 }

@@ -64,6 +64,8 @@ require_once dirname(__DIR__) . '/App/models/PaymentMethod.php';
 require_once dirname(__DIR__) . '/App/services/PaymentService.php';
 require_once dirname(__DIR__) . '/App/models/AdminOrderJournal.php';
 require_once dirname(__DIR__) . '/App/services/AdminAccessService.php';
+require_once dirname(__DIR__) . '/App/services/AdminNavigation.php';
+require_once dirname(__DIR__) . '/App/controllers/Admin/AccessController.php';
 require_once dirname(__DIR__) . '/App/services/AdminOrderService.php';
 require_once dirname(__DIR__) . '/App/models/AdminOrderRead.php';
 require_once dirname(__DIR__) . '/App/services/AdminOrderReadService.php';
@@ -133,6 +135,8 @@ try {
 $moneyService = $moneyService ?? new MoneyService();
 $request = new Request();
 $userModel = $database instanceof PDO ? new User($database) : null;
+$adminAccess = new \App\Services\AdminAccessService($userModel);
+\App\Core\Controller::configureAdminAccess($adminAccess);
 $mailConfig = require dirname(__DIR__) . '/Config/mail.php';
 $emailSender = new SmtpEmailSender($mailConfig);
 $emailVerificationService = new EmailVerificationService($userModel, $emailSender);
@@ -168,7 +172,7 @@ $orderService = $database instanceof PDO ? new \App\Services\OrderService(
 ) : null;
 $paymentService = $database instanceof PDO ? new \App\Services\PaymentService($database) : null;
 $adminOrderService = $database instanceof PDO ? new \App\Services\AdminOrderService($database, new \App\Services\AdminAccessService($userModel), $moneyService) : null;
-$adminOrderReadService = $database instanceof PDO ? new \App\Services\AdminOrderReadService(new \App\Services\AdminAccessService($userModel),new \App\Models\AdminOrderRead($database),new \App\Models\OrderItem($database),new \App\Models\Delivery($database),new \App\Models\Payment($database),new \App\Models\AdminOrderJournal($database),$moneyService,$productService) : null;
+$adminOrderReadService = $database instanceof PDO ? new \App\Services\AdminOrderReadService(new \App\Services\AdminAccessService($userModel),new \App\Models\AdminOrderRead($database),new \App\Models\OrderItem($database),new \App\Models\Delivery($database),new \App\Models\Payment($database),new \App\Models\AdminOrderJournal($database),$moneyService,$productService,$adminOrderService) : null;
 $customerOrderService = $database instanceof PDO ? new \App\Services\CustomerOrderService(new \App\Models\Order($database), new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $moneyService, $productService) : null;
 $deliveryZoneService = new \App\Services\DeliveryZoneService(
     $userModel,
@@ -178,6 +182,10 @@ $deliveryZoneService = new \App\Services\DeliveryZoneService(
 $routes = require dirname(__DIR__) . '/Routes/web.php';
 $requestPath = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 $route = $routes[$requestPath] ?? null;
+// Les pages HTML Admin ont un parcours d'accès commun ; les API ne sont pas redirigées.
+if ($requestPath === '/admin' || str_starts_with($requestPath,'/admin/')) {
+    if (!(new \App\Controllers\Admin\AccessController())->guard($adminAccess,(string)($_SERVER['REQUEST_URI']??'/admin/commandes'))) return;
+}
 
 if ($route === null) {
     (new ErrorController())->notFound();

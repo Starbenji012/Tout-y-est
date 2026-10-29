@@ -25,6 +25,21 @@ final class AdminOrderRead
         $q->execute([$reference]); return $q->fetch() ?: null;
     }
 
+    /** Deux lectures pour toute la page, quel que soit le nombre de cartes. */
+    public function relatedForPage(array $ids): array
+    {
+        $result=['payments'=>[],'deliveries'=>[]];
+        if ($ids===[]) return $result;
+        $marks=implode(',',array_fill(0,count($ids),'?'));
+        $q=$this->database->prepare('SELECT p.*,m.nom AS mode FROM paiement p JOIN mode_paiement m USING(id_mode_paiement) WHERE p.id_commande IN ('.$marks.') ORDER BY p.id_paiement');
+        $q->execute(array_values($ids));
+        foreach($q->fetchAll() as $row) $result['payments'][(int)$row['id_commande']][]=$row;
+        $q=$this->database->prepare('SELECT * FROM livraison WHERE id_commande IN ('.$marks.')');
+        $q->execute(array_values($ids));
+        foreach($q->fetchAll() as $row) $result['deliveries'][(int)$row['id_commande']]=$row;
+        return $result;
+    }
+
     private function select(): string
     {
         // Pas de jointure paiement ici : plusieurs tentatives ne dupliquent pas les commandes.

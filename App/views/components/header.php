@@ -22,6 +22,7 @@ $siteSocialLinks = array_values(array_filter(
     <div class="top-bar">
         <div class="container top-bar__inner">
             <div class="top-bar__highlights" aria-label="Informations commerciales">
+                <?php if ($showAdminBridge ?? false): ?><a href="/admin/commandes">Administration</a><?php endif; ?>
                 <span>Bienvenue chez Tout y est</span>
                 <span class="top-bar__item">
                     <i data-lucide="truck" aria-hidden="true"></i>
@@ -143,6 +144,7 @@ $siteSocialLinks = array_values(array_filter(
         <?php require __DIR__ . '/category-navigation.php'; ?>
 
         <ul class="container site-navigation__list site-navigation__personal" aria-label="Actions personnelles">
+            <?php if ($showAdminBridge ?? false): ?><li class="site-navigation__mobile-action"><a class="site-navigation__link" href="/admin/commandes">Administration</a></li><?php endif; ?>
             <li class="site-navigation__mobile-action site-navigation__mobile-action--first">
                 <a class="site-navigation__link<?= $activePage === 'favorites' ? ' is-active' : '' ?>" href="/favoris" aria-label="Favoris, 0 article" data-favorites-link<?= $activePage === 'favorites' ? ' aria-current="page"' : '' ?>>
                     <span class="header-action__icon">

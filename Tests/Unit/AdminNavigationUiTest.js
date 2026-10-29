@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const handlers = {}, globalHandlers = {};
+const attributes = {'aria-expanded': 'false'};
+const classes = new Set();
+let focused = false;
+const button = {hidden: true, setAttribute: (k,v) => attributes[k]=v, getAttribute: k => attributes[k], addEventListener: (k,v) => handlers[k]=v, contains: target => target===button, focus: () => focused=true};
+const nav = {contains: target => target===nav, classList: {add: x => classes.add(x), remove: x => classes.delete(x), toggle: (x,on) => on?classes.add(x):classes.delete(x)}};
+vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../../Public/assets/js/admin-navigation.js'),'utf8'), {document:{querySelector:()=>button,getElementById:()=>nav,addEventListener:(k,v)=>globalHandlers[k]=v}});
+assert.equal(button.hidden,false);
+handlers.click(); assert.equal(attributes['aria-expanded'],'true'); assert.ok(classes.has('is-open'));
+globalHandlers.pointerdown({target:nav}); assert.equal(attributes['aria-expanded'],'true');
+globalHandlers.keydown({key:'Escape'}); assert.equal(attributes['aria-expanded'],'false'); assert.ok(focused);
+handlers.click(); globalHandlers.pointerdown({target:{}}); assert.equal(attributes['aria-expanded'],'false');
+console.log('ADMIN_NAVIGATION_UI_OK (menu mobile, ARIA, Escape, focus, clic extérieur).');

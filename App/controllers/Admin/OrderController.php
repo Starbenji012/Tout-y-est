@@ -26,13 +26,13 @@ final class OrderController
             $this->orders->authorize();
             $input = $this->request->postParameters();
             if (!CsrfMiddleware::isValid($input['_token'] ?? null)) { Response::json(['error'=>'Session expirée. Rechargez la page.'],419); return; }
-            $allowed = $action === 'cancel' ? ['commande','motif','_token'] : ['commande','_token'];
+            $allowed = match($action) {'cancel'=>['commande','motif','_token'],'ship'=>['commande','livreur','_token'],default=>['commande','_token']};
             if (array_diff(array_keys($input),$allowed) !== []) throw new DomainException('Paramètres non autorisés.',422);
             $id = filter_var($input['commande'] ?? null,FILTER_VALIDATE_INT);
             if (!$id || $id < 1) throw new DomainException('Commande invalide.',422);
             $result = $action === 'cancel'
                 ? $this->orders->cancel($id,is_string($input['motif'] ?? null) ? $input['motif'] : '')
-                : $this->orders->{$action}($id);
+                : ($action==='ship'?$this->orders->ship($id,is_string($input['livreur']??null)?$input['livreur']:''):$this->orders->{$action}($id));
             Response::json($result);
         } catch (DomainException $error) {
             $code = in_array($error->getCode(),[401,403,404,409,422,503],true) ? $error->getCode() : 422;

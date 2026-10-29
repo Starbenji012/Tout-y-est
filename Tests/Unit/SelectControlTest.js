@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const {URLSearchParams} = require('node:url');
 const handlers = {};
 let focused;
 class Node {
@@ -17,7 +18,7 @@ class Node {
   getAttribute(name) {return this.attributes[name] ?? null;}
   removeAttribute(name) {delete this.attributes[name];}
   addEventListener(name, fn) {(this.events[name] ??= []).push(fn);}
-  dispatchEvent(event) {event.target ??= this;(this.events[event.type] ?? []).forEach(fn => fn(event));return true;}
+  dispatchEvent(event) {event.target ??= this;(this.events[event.type] ?? []).forEach(fn => fn(event));if(event.bubbles && this.parent)this.parent.dispatchEvent(event);return true;}
   focus() {focused = this;}
   querySelector() {return this.caption;}
   scrollIntoView() {}
@@ -62,6 +63,25 @@ assert.equal(select.selectedIndex, 1);assert.equal(picker.value.textContent, 'Ce
 picker.open();const second = make('month').picker;second.open();assert.equal(picker.list.hidden, true);
 select.disabled = true;picker.sync();picker.open();assert.equal(picker.trigger.disabled, true);assert.equal(picker.list.hidden, true);
 second.root.dispatchEvent(new Event('focusout', {relatedTarget: new Node('outside')}));assert.equal(second.list.hidden, true);
+// Enchaînement navigateur réel : pointerdown → éventuelle perte de focus → click → GET.
+select.disabled = false; select.name = 'etat'; select.options[1].value = 'confirmee'; select.options[1].textContent = 'À préparer';
+select.selectedIndex = 0; picker.sync();
+const form = new Node('form'); form.append(label);
+let submissions = 0, url, pageshow;
+form.requestSubmit = () => { submissions++; url = '/admin/commandes?' + new URLSearchParams({etat: select.options[select.selectedIndex].value, encaisser: '1'}); };
+context.document.querySelectorAll = () => [select]; context.document.querySelector = () => form;
+context.window.addEventListener = (name, handler) => {if(name==='pageshow')pageshow=handler;};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../Public/assets/js/admin-orders.js'),'utf8'),context);
+picker.trigger.dispatchEvent(new Event('click'));
+assert.equal(picker.list.hidden,false);
+const down = new Event('pointerdown',{button:0});picker.options[1].dispatchEvent(down);
+if(!down.prevented)picker.root.dispatchEvent(new Event('focusout',{relatedTarget:null}));
+if(!picker.list.hidden)picker.options[1].dispatchEvent(new Event('click'));
+assert.equal(down.prevented,true,'Empêche le blur qui supprimait la cible avant click.');
+assert.equal(select.selectedIndex,1);assert.equal(picker.value.textContent,'À préparer');assert.equal(picker.list.hidden,true);
+assert.equal(url,'/admin/commandes?etat=confirmee&encaisser=1');assert.equal(submissions,1);
+select.dispatchEvent(new Event('change',{bubbles:true}));assert.equal(submissions,1,'Pas de double GET.');
+pageshow();key('Enter');key('End');key('Enter');assert.equal(submissions,2);assert.equal(url,'/admin/commandes?etat=month&encaisser=1');
 const css = fs.readFileSync(path.join(__dirname, '../../Public/assets/css/select-control.css'), 'utf8');
 assert.match(css, /position: absolute/);assert.match(css, /overflow-y: auto/);assert.match(css, /aria-selected/);
 console.log('SELECT_CONTROL_OK (ARIA, clavier, Escape, Tab, clic extérieur, choix, disabled, synchronisation, instance unique).');

@@ -22,22 +22,26 @@
                 <?php require dirname(__DIR__) . '/components/brand.php'; ?>
                 <span class="admin-header__label">Administration</span>
             </div>
-            <nav class="admin-header__actions" aria-label="Navigation administration">
+            <button class="admin-menu-toggle" type="button" hidden data-admin-menu aria-expanded="false" aria-controls="admin-navigation">Menu</button>
+            <nav id="admin-navigation" class="admin-header__actions" aria-label="Navigation administration">
+                <div class="admin-header__tabs">
+                <a href="/admin/commandes"<?= ($adminPage ?? '') === 'orders' ? ' aria-current="page"' : '' ?>>Commandes</a>
+                <a href="/admin/zones-livraison"<?= ($adminPage ?? '') !== 'orders' ? ' aria-current="page"' : '' ?>>Zones de livraison</a>
+                </div>
+                <div class="admin-header__utilities">
                 <a class="admin-header__shop" href="/boutique"><i data-lucide="arrow-up-right" aria-hidden="true"></i>Voir la boutique</a>
                 <a class="admin-header__account" href="/compte" aria-label="Mon compte">
                     <?php $avatarName = is_array($adminUser) ? ($adminUser['name'] ?? '') : ''; $avatarSize = 'compact'; require dirname(__DIR__) . '/components/user-avatar.php'; ?>
                     <span>Mon compte</span>
                 </a>
+                </div>
             </nav>
         </div>
     </header>
-    <nav class="container admin-section-nav" aria-label="Modules administration">
-        <a href="/admin/commandes"<?= ($adminPage ?? '') === 'orders' ? ' aria-current="page"' : '' ?>>Commandes</a>
-        <a href="/admin/zones-livraison"<?= ($adminPage ?? '') !== 'orders' ? ' aria-current="page"' : '' ?>>Zones de livraison</a>
-    </nav>
     <main id="main-content" class="admin-main"><?= $content ?? '' ?></main>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>window.lucide?.createIcons();</script>
+    <script src="/assets/js/admin-navigation.js"></script>
     <?php foreach ($pageScripts ?? [] as $script): ?><script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>"></script><?php endforeach; ?>
 </body>
 </html>

@@ -1,0 +1,27 @@
+<?php
+declare(strict_types=1);
+$root=dirname(__DIR__,2);
+spl_autoload_register(static function(string $class)use($root):void{if(!str_starts_with($class,'App\\'))return;$parts=explode('\\',substr($class,4));$parts[0]=strtolower($parts[0]);$file=$root.'/App/'.implode('/',$parts).'.php';if(is_file($file))require_once $file;});
+require_once $root.'/App/services/AdminNavigation.php';
+require_once $root.'/App/services/AdminOrderReadService.php';
+$assert=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeException($why);};
+foreach(['/admin','/admin/commandes','/admin/zones-livraison','/admin/commande?reference=TYE-001','/admin/commande?reference=TYE-20261019-A713584AB8AC8BE0']as$url)$assert(App\Services\AdminNavigation::safeReturn($url)===$url,'Retour interne valide');
+foreach(['https://evil.invalid','//evil.invalid','/admin/../evil','/admin?next=https://evil.invalid',"/admin\r\nLocation: x",'/admin/commande?reference=TYE-001&next=evil','/admin/commande?reference=%2F%2Fevil']as$url)$assert(App\Services\AdminNavigation::safeReturn($url)===null,'Retour dangereux refusé');
+$assert(App\Services\AdminOrderReadService::rateLabel('2450.0000')==='1 USD = 2 450 FC','Taux');
+$assert(App\Services\AdminOrderReadService::rateLabel('2450.1250')==='1 USD = 2 450,125 FC','Taux décimal');
+$assert(App\Services\AdminOrderReadService::dateLabel('2026-10-24 18:42:00')==='24/10/2026 à 18:42','Date journal');
+$header=file_get_contents($root.'/App/views/components/header.php');
+$assert(substr_count($header,'if ($showAdminBridge ?? false)')===2,'Pont desktop et mobile conditionnel');
+$controller=file_get_contents($root.'/App/core/Controller.php');
+$assert(str_contains($controller,'accessForUser((int)$user[\'id\'])'),'Droits du pont relus serveur');
+$entry=file_get_contents($root.'/Public/index.php');
+$assert(str_contains($entry,"str_starts_with(\$requestPath,'/admin/')"),'Protection commune pages Admin');
+$list=file_get_contents($root.'/App/views/admin/orders.php');$assert(str_contains($list,'<noscript>')&&!str_contains($list,"'label'=>'Filtrer'"),'Fallback seulement sans JS');
+App\Core\Session::start();App\Core\Session::remove('user');
+$accessController=new App\Controllers\Admin\AccessController();
+ob_start();$allowed=$accessController->guard(new App\Services\AdminAccessService(null),'/admin/commandes');$body=ob_get_clean();
+$assert(!$allowed&&http_response_code()===303&&$body==='','Visiteur redirigé sans donnée Admin');
+ob_start();$accessController->failure(403);$body=ob_get_clean();
+$assert(http_response_code()===403&&str_contains($body,'Accès réservé')&&str_contains($body,'Retour à la boutique'),'403 propre');
+$assert(!str_contains($body,'href="/admin/commandes"'),'Aucun pont pour visiteur');
+echo "ADMIN_UX_OK (retours sûrs, taux/date, pont conditionnel, garde Admin, fallback).\n";

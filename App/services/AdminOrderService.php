@@ -20,12 +20,12 @@ final class AdminOrderService
 
     public function authorize(): int { return $this->access->requireCurrentAdmin(); }
     public function prepare(int $id): array { return $this->apply($id, 'prepare'); }
-    public function ship(int $id): array { return $this->apply($id, 'ship'); }
+    public function ship(int $id, string $courier = ''): array { return $this->apply($id, 'ship', '', $courier); }
     public function deliver(int $id): array { return $this->apply($id, 'deliver'); }
     public function collectCash(int $id): array { return $this->apply($id, 'collect-cash'); }
     public function cancel(int $id, string $reason): array { return $this->apply($id, 'cancel', $reason); }
 
-    private function apply(int $id, string $action, string $reason = ''): array
+    private function apply(int $id, string $action, string $reason = '', string $courier = ''): array
     {
         $this->database->beginTransaction();
         try {
@@ -44,11 +44,16 @@ final class AdminOrderService
             if (count($rows) !== 1 || $rows[0]['mode'] !== PaymentMethod::CASH || !$delivery) $this->conflict();
             $payment = $rows[0];
             $before = $this->state($order,$payment,$delivery);
+            if ($action==='ship') {
+                if (!array_key_exists('nom_livreur_snapshot',$delivery)) throw new DomainException('Affectation du livreur indisponible. La mise à jour du schéma doit être effectuée.',503);
+                $courier=$this->courier($courier);
+            }
             $existing = $journal->findAction($id,$action);
             if ($existing) {
                 $this->checkReplay($action,$existing,$before,$order,$payment,$reason);
+                if ($action==='ship' && ($delivery['nom_livreur_snapshot']??null)!==$courier) $this->conflict();
                 $this->database->commit();
-                return ['success'=>true,'commande'=>$id,'action'=>$action,'reused'=>true];
+                return ['success'=>true,'commande'=>$id,'action'=>$action,'reused'=>true,'message'=>$this->message($action,$courier)];
             }
             if ($order['stock_restitue_at'] !== null || $order['reservation_expire_at'] !== null
                 || $payment['statut'] !== 'a_encaisser' || $payment['date_paiement'] !== null) $this->conflict();
@@ -58,6 +63,10 @@ final class AdminOrderService
                 if ($order['statut'] !== $source || $delivery['statut'] !== $shipping || !$this->datesMatch($delivery,$stage)) $this->conflict();
                 $orders->advance($id,$target);
                 $deliveries->advance($id,$target);
+                if ($action==='ship') {
+                    $deliveries->assignCourier($id,$courier);
+                    $data=['livreur'=>$courier];
+                } elseif ($action==='deliver' && !empty($delivery['nom_livreur_snapshot'])) $data=['livreur'=>$delivery['nom_livreur_snapshot']];
             } elseif ($action === 'cancel') {
                 $stage = match ($order['statut']) { 'confirmee'=>0, 'en_preparation'=>1, default=>-1 };
                 $shipping = $stage === 0 ? 'en_attente' : 'en_preparation';
@@ -74,7 +83,7 @@ final class AdminOrderService
             $afterDelivery = $deliveries->forOrder($id);
             $journal->append($id,$actor,(int)$payment['id_paiement'],$action,$before,$this->state($afterOrder,$afterPayment,$afterDelivery),$data);
             $this->database->commit();
-            return ['success'=>true,'commande'=>$id,'action'=>$action,'reused'=>false];
+            return ['success'=>true,'commande'=>$id,'action'=>$action,'reused'=>false,'message'=>$this->message($action,$courier)];
         } catch (Throwable $error) {
             if ($this->database->inTransaction()) $this->database->rollBack();
             throw $error;
@@ -110,7 +119,41 @@ final class AdminOrderService
         return ['commande'=>$order['statut'],'livraison'=>$delivery['statut'],'paiement'=>$payment['statut'],
             'reservation_expire_at'=>$order['reservation_expire_at'],'stock_restitue_at'=>$order['stock_restitue_at'],
             'date_preparation'=>$delivery['date_preparation'],'date_expedition'=>$delivery['date_expedition'],
-            'date_livraison'=>$delivery['date_livraison'],'date_paiement'=>$payment['date_paiement']];
+            'date_livraison'=>$delivery['date_livraison'],'date_paiement'=>$payment['date_paiement'],
+            'livreur'=>$delivery['nom_livreur_snapshot']??null];
+    }
+
+    /** Prévisualisation sans écriture ; apply() revalide tout sous verrou au POST. */
+    public function availableActions(array $order,array $rows,?array $delivery): array
+    {
+        if (count($rows)!==1 || !$delivery || $rows[0]['mode']!==PaymentMethod::CASH
+            || $rows[0]['statut']!=='a_encaisser' || $rows[0]['date_paiement']!==null
+            || $order['stock_restitue_at']!==null || $order['reservation_expire_at']!==null) return [];
+        $actions=[];
+        foreach(self::PROGRESS as $action=>[$source,$shipping,$target,$stage]) {
+            if ($order['statut']===$source && $delivery['statut']===$shipping && $this->datesMatch($delivery,$stage)
+                && ($action!=='ship'||array_key_exists('nom_livreur_snapshot',$delivery))) $actions[$action]=true;
+        }
+        if (isset($actions['prepare'])||isset($actions['ship'])||($order['statut']==='en_preparation'&&$delivery['statut']==='en_preparation'&&$this->datesMatch($delivery,1))) $actions['cancel']=true;
+        if ($order['statut']==='livree' && $delivery['statut']==='livree' && $this->datesMatch($delivery,3)) {
+            try {$actions['collectCash']=$this->receipt($order,$rows[0]);}catch(\InvalidArgumentException|DomainException) {}
+        }
+        return $actions;
+    }
+
+    private function courier(string $value): string
+    {
+        $value=trim($value);
+        if (!preg_match('//u',$value)||preg_match('/[\x00-\x1f\x7f]/u',$value)) throw new DomainException('Indiquez un nom de livreur valide.',422);
+        $value=preg_replace('/\s+/u',' ',$value);
+        $length=function_exists('mb_strlen')?mb_strlen($value):preg_match_all('/./u',$value);
+        if ($length<2||$length>120) throw new DomainException('Le nom du livreur doit contenir entre 2 et 120 caractères.',422);
+        return $value;
+    }
+
+    private function message(string $action,string $courier): string
+    {
+        return match($action){'prepare'=>'La préparation de la commande a commencé.','ship'=>'La commande a été confiée à '.$courier.' et mise en livraison.','deliver'=>'La commande a été marquée comme livrée.','collect-cash'=>'Paiement encaissé avec succès.','cancel'=>'La commande a été annulée.'};
     }
 
     /** Aucun taux courant et aucun montant navigateur : uniquement les snapshots serveur. */

@@ -376,6 +376,7 @@ CREATE TABLE livraison (
     date_preparation DATETIME NULL,
     date_expedition DATETIME NULL,
     date_livraison DATETIME NULL,
+    nom_livreur_snapshot VARCHAR(120) NULL,
     CONSTRAINT pk_livraison PRIMARY KEY (id_livraison),
     CONSTRAINT uq_livraison_commande UNIQUE (id_commande),
     CONSTRAINT chk_livraison_frais CHECK (frais_snapshot >= 0),

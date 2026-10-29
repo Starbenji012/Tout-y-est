@@ -1,15 +1,29 @@
 /* Administration légère, indépendante du Header et des actions clients. */
-.admin-section-nav { display:flex; flex-wrap:wrap; gap:var(--spacing-lg); padding-block:var(--spacing-md); border-bottom:var(--border); }
-.admin-section-nav a[aria-current] { font-weight:var(--font-weight-semibold); border-bottom:var(--border-width) solid var(--color-gold); }
-.admin-orders { padding-block:var(--spacing-xl); }
+.admin-orders { padding-block:var(--spacing-lg); }
 .admin-orders > header { margin-block:var(--spacing-lg); }
 .admin-orders h1,.admin-orders h2 { overflow-wrap:anywhere; }
+.admin-orders h1 { font-size:var(--font-size-h3); }
+.admin-orders > header p { font-size:var(--font-size-sm); color:var(--color-text-muted); }
+.admin-orders__check input { appearance:none; width:1.25rem; height:1.25rem; border:var(--border); border-radius:var(--radius-field); background:var(--brand-gray-50); display:grid; place-items:center; cursor:pointer; flex-shrink:0; }
+.admin-orders__check input:checked { background:var(--color-heading); border-color:var(--color-gold); }
+.admin-orders__check input:checked::after { content:'✓'; color:var(--color-gold); font-size:var(--font-size-sm); }
+.admin-orders__check:has(input:focus-visible) { outline:var(--border-width) solid var(--color-gold); outline-offset:var(--spacing-xs); }
+.admin-orders__check { padding-inline:var(--spacing-sm); border:var(--border); border-radius:var(--radius-field); cursor:pointer; }
+.admin-header__actions a[aria-current] { color:var(--color-gold-dark); font-weight:var(--font-weight-semibold); }
+.admin-header__tabs,.admin-header__utilities { display:flex; align-items:center; gap:var(--spacing-md); }
+.admin-header__tabs { flex-wrap:nowrap; }
+.admin-header__tabs > a { display:flex; align-items:center; min-height:var(--control-height); padding-block:var(--spacing-sm); border-bottom:var(--border-width) solid transparent; white-space:nowrap; }
+.admin-header__tabs > a[aria-current="page"] { border-bottom-color:var(--color-gold); }
+.admin-header__utilities { margin-left:auto; }
+.admin-orders__filters .select-control__options { max-height:calc(var(--control-height) * 5); }
+@media(min-width:64rem) { .admin-header__inner { flex-wrap:nowrap; } .admin-header__actions { flex:1; justify-content:space-between; margin-left:var(--spacing-lg); } }
+.admin-menu-toggle { display:none; border:var(--border); border-radius:var(--radius-field); padding:var(--spacing-sm) var(--spacing-md); }
 .admin-orders h2 { font-size:var(--font-size-lg); margin-bottom:var(--spacing-sm); }
 .admin-orders__filters { display:flex; flex-wrap:wrap; align-items:end; gap:var(--spacing-md); margin-block:var(--spacing-lg); }
 .admin-orders__filters > label:first-child { width:min(100%,22rem); display:grid; gap:var(--spacing-xs); }
 .admin-orders__check { display:flex; align-items:center; gap:var(--spacing-sm); min-height:var(--control-height); }
-.admin-orders__list,.admin-orders__stack { display:grid; gap:var(--spacing-lg); min-width:0; align-content:start; }
-.admin-order-card { min-width:0; padding:var(--spacing-lg); background:var(--brand-gray-100); border:var(--border); border-radius:var(--radius-card); overflow-wrap:anywhere; }
+.admin-orders__list,.admin-orders__stack { display:grid; gap:var(--spacing-md); min-width:0; align-content:start; }
+.admin-order-card { min-width:0; padding:var(--spacing-md); background:var(--brand-gray-100); border:var(--border); border-radius:var(--radius-card); overflow-wrap:anywhere; }
 .admin-order-card > header { display:flex; justify-content:space-between; flex-wrap:wrap; gap:var(--spacing-md); }
 .admin-orders__facts { display:grid; gap:var(--spacing-md); margin-block:var(--spacing-md); }
 .admin-orders dt,.admin-orders__muted { color:var(--color-text-muted); font-size:var(--font-size-sm); }
@@ -23,6 +37,12 @@
 .admin-orders__image img { width:100%; height:100%; object-fit:contain; }
 .admin-orders__journal { padding-left:var(--spacing-lg); display:grid; gap:var(--spacing-md); }
 .admin-orders__pagination { display:flex; flex-wrap:wrap; justify-content:center; gap:var(--spacing-lg); margin-top:var(--spacing-xl); }
+.admin-order-actions { margin-block:var(--spacing-md); }
+.admin-order-actions form { display:grid; gap:var(--spacing-sm); max-width:32rem; margin-top:var(--spacing-md); }
+.admin-order-actions .btn { justify-self:start; }
+.admin-order-actions form[data-order-action="cancel"] { border-top:var(--border); padding-top:var(--spacing-md); }
+[data-order-action-message]:empty { display:none; }
+[data-order-action-message]:not(:empty) { margin-block:var(--spacing-md); padding:var(--spacing-sm); border-left:var(--border-width) solid var(--color-gold); }
 @media(min-width:768px) { .admin-orders__facts { grid-template-columns:repeat(3,minmax(0,1fr)); } .admin-orders__detail { grid-template-columns:minmax(0,2fr) minmax(0,1fr); } }
 .admin-header { border-bottom: var(--border); background: var(--brand-gray-100); }
 .admin-header__inner, .admin-header__brand, .admin-header__actions, .admin-header__account, .admin-header__shop { display: flex; align-items: center; gap: var(--spacing-md); }
@@ -67,6 +87,17 @@
 .admin-zone-form .btn { grid-column: 1 / -1; justify-self: start; }
 .admin-zone-form [data-zone-message]:not(:empty) { margin-top: var(--spacing-md); overflow-wrap: anywhere; }
 @media (max-width: 48rem) {
+  .admin-header__tabs,.admin-header__utilities { display:contents; }
+  .admin-header__tabs > a { border-bottom:0; }
+  .admin-header__inner { gap:var(--spacing-sm); align-items:center; padding-block:var(--spacing-md); }
+  .admin-header__brand { flex:1; }
+  .admin-header .brand-slogan { display:none; }
+  .admin-header__label { font-size:var(--font-size-xs); }
+  .admin-menu-toggle:not([hidden]) { display:block; }
+  .admin-header__actions.is-enhanced:not(.is-open) { display:none; }
+  .admin-header__actions { flex-basis:100%; display:grid; grid-template-columns:minmax(0,1fr); gap:var(--spacing-xs); padding-top:var(--spacing-sm); border-top:var(--border); }
+  .admin-header__actions a { display:flex; align-items:center; padding:var(--spacing-sm); }
+  .admin-orders__filters > label:first-child { width:100%; }
   .admin-zone-form fieldset { grid-template-columns: minmax(0, 1fr); }
   .admin-header__inner { align-items: flex-start; }
   .admin-header__brand { gap: var(--spacing-sm); }

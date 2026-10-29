@@ -21,9 +21,7 @@ final class DeliveryController extends Controller
         try { $result = $this->service->listing($this->userId()); }
         catch (PDOException) { $result = ['error' => 'Administration temporairement indisponible.', 'status' => 503]; }
         if (isset($result['error'])) {
-            http_response_code($result['status']);
-            header('Cache-Control: no-store');
-            echo htmlspecialchars($result['error'], ENT_QUOTES, 'UTF-8');
+            (new AccessController())->failure($result['status'],'/admin/zones-livraison');
             return;
         }
         header('Cache-Control: no-store');

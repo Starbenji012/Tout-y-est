@@ -8,6 +8,8 @@ ob_end_clean();
 $database->exec('ALTER TABLE zone_livraison MODIFY id_zone_livraison BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, ADD UNIQUE (nom)');
 require_once $root . '/App/services/DeliveryZoneService.php';
 require_once $root . '/App/controllers/Admin/DeliveryController.php';
+require_once $root . '/App/services/AdminNavigation.php';
+require_once $root . '/App/controllers/Admin/AccessController.php';
 $database->exec("INSERT INTO utilisateur (id_utilisateur,nom,prenom,email,telephone,mot_de_passe,role,statut) VALUES (90003,'TEST','Admin','admin@example.invalid','+243812345680','unused','admin','actif')");
 $adminService = new App\Services\DeliveryZoneService(new App\Models\User($database), $zones, new App\Services\MoneyService(new App\Models\Setting($database)));
 $assert($adminService->access(0)['status'] === 401, 'Session requise');

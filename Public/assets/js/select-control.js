@@ -39,6 +39,8 @@
         node.className = 'select-control__option'; node.setAttribute('role', 'option');
         node.textContent = option.textContent;
         node.setAttribute('aria-disabled', String(option.disabled));
+        // Garder le focus sur le combobox : sinon focusout masque l'option avant son clic.
+        node.addEventListener('pointerdown', event => { if (event.button === 0 || event.button === undefined) event.preventDefault(); });
         node.addEventListener('click', event => { event.preventDefault(); this.choose(index); });
         node.addEventListener('pointermove', () => { if (!option.disabled) this.activate(index); });
         this.list.append(node); return node;

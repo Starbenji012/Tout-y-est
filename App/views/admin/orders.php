@@ -1,10 +1,10 @@
 <?php $escape=static fn($v):string=>htmlspecialchars((string)$v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'); ?>
 <section class="container admin-orders">
     <header><h1>Commandes</h1><p>Consultez les commandes, leur livraison et les règlements à recevoir.</p></header>
-    <form class="admin-orders__filters" method="get" action="/admin/commandes">
+    <form class="admin-orders__filters" method="get" action="/admin/commandes" data-admin-orders-filter>
         <label><span id="admin-state-label" data-select-label>État de la commande</span><select id="admin-state" name="etat" data-select-control><?php foreach($states as $value=>$label): ?><option value="<?= $escape($value) ?>"<?= $state===$value?' selected':'' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
-        <label class="admin-orders__check"><input type="checkbox" name="encaisser" value="1"<?= $cash?' checked':'' ?>> À encaisser</label>
-        <?php $button=['label'=>'Filtrer','type'=>'submit','variant'=>'secondary'];require dirname(__DIR__).'/components/button.php'; ?>
+        <label class="admin-orders__check"><input type="checkbox" name="encaisser" value="1"<?= $cash?' checked':'' ?>><span>À encaisser</span></label>
+        <noscript><?php $button=['label'=>'Appliquer les filtres','type'=>'submit','variant'=>'secondary'];require dirname(__DIR__).'/components/button.php'; ?></noscript>
     </form>
     <?php if(!$orders): ?><p class="admin-order-card">Aucune commande pour cette sélection. <a href="/admin/commandes">Voir toutes les commandes</a></p><?php endif; ?>
     <div class="admin-orders__list"><?php foreach($orders as $order): ?><article class="admin-order-card">

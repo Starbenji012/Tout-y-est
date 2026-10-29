@@ -29,6 +29,7 @@ if(($argv[1]??'')==='worker') {
             'confirm'=>(new App\Services\PaymentService($db))->confirmCash(1,$id),
             'expire'=>['released'=>$orderService($db)->releaseReservation($id)],
             'cancel'=>$build($db)->cancel($id,'TEST annulation'),
+            'ship'=>$build($db)->ship($id,'TEST Livreur'),
             default=>$build($db)->{$action}($id),
         };
         echo json_encode(['ok'=>true]+$result);
@@ -43,6 +44,10 @@ $reject=static function(callable $fn,int $code=409)use($assert):void {
 };
 try {
     $db->exec(str_replace('tout_y_est',$name,file_get_contents($root.'/Database/schema.sql')));
+    // S1.12 uniquement dans cette base jetable : ajout réel puis rejeu sans perte.
+    $courierMigration=file_get_contents($root.'/Database/migrations/S1.12_delivery_courier.sql');
+    $db->exec('ALTER TABLE livraison DROP COLUMN nom_livreur_snapshot');
+    $db->exec($courierMigration);$db->exec($courierMigration);
     $migration=file_get_contents($root.'/Database/migrations/S1.11_admin_order_actions.sql');
     $db->exec('DROP TABLE journal_commande'); $db->exec($migration); $db->exec($migration);
     $db->exec("INSERT INTO utilisateur(id_utilisateur,nom,prenom,email,mot_de_passe,role,statut,email_verified_at) VALUES
@@ -71,19 +76,36 @@ try {
     $stock=static fn():int=>(int)$db->query('SELECT stock FROM variante_produit WHERE id_variante=1')->fetchColumn();
     $events=static function(int $id)use($db):array {$q=$db->prepare('SELECT * FROM journal_commande WHERE id_commande=? ORDER BY id_journal');$q->execute([$id]);return $q->fetchAll();};
     $allState=static fn(int $id):array=>[$order($id),$payment($id),$shipping($id),$stock(),$events($id)];
-    $finish=static function(int $id)use($service):void {$service->prepare($id);$service->ship($id);$service->deliver($id);};
+    $actionHtml=static function(int $id)use($service,$order,$payment,$shipping,$root):string {
+        $row=$order($id);$actions=$service->availableActions($row,[$payment($id)],$shipping($id));$order=['number'=>$row['numero_commande']];
+        $escape=static fn($value):string=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+        ob_start();require $root.'/App/views/admin/order-actions.php';return ob_get_clean();
+    };
+    $finish=static function(int $id)use($service):void {$service->prepare($id);$service->ship($id,'TEST Livreur');$service->deliver($id);};
     $id=$make(); $initial=$allState($id);
-    $reject(fn()=>$service->ship($id)); $reject(fn()=>$service->deliver($id)); $reject(fn()=>$service->collectCash($id));
+    $html=$actionHtml($id);$assert(str_contains($html,'data-order-action="prepare"')&&str_contains($html,'data-order-action="cancel"')&&!str_contains($html,'data-order-action="ship"'),'UI confirmée');
+    $reject(fn()=>$service->ship($id,'TEST Livreur')); $reject(fn()=>$service->deliver($id)); $reject(fn()=>$service->collectCash($id));
     $assert($allState($id)===$initial,'Refus sans effet');
     $assert(!$service->prepare($id)['reused'],'Préparation'); $prepared=$allState($id);
     $assert($order($id)['statut']==='en_preparation' && $shipping($id)['date_preparation']!==null && $stock()===$initial[3],'Préparation sans stock');
     $assert($service->prepare($id)['reused'] && $allState($id)===$prepared,'Retry préparation sans date/journal supplémentaire');
-    $service->ship($id); $shipped=$allState($id);
+    $html=$actionHtml($id);$assert(str_contains($html,'name="livreur"')&&str_contains($html,'data-order-action="ship"')&&!str_contains($html,'data-order-action="prepare"'),'UI préparation et affectation');
+    $assert(array_keys($service->availableActions($order($id),[$payment($id)],$shipping($id)))===['ship','cancel'],'Actions préparation');
+    foreach(['','A',str_repeat('A',121),"Livreur\nAutre"] as $invalid)$reject(fn()=>$service->ship($id,$invalid),422);
+    $assert($allState($id)===$prepared,'Livreur invalide : aucune mutation');
+    $service->ship($id,'TEST Livreur'); $shipped=$allState($id);
+    $html=$actionHtml($id);$assert(str_contains($html,'data-order-action="deliver"')&&!str_contains($html,'data-order-action="cancel"'),'UI en livraison');
+    $assert($shipping($id)['nom_livreur_snapshot']==='TEST Livreur','Livreur enregistré');
+    $shipLog=$events($id)[1];$assert(json_decode($shipLog['donnees_complementaires'],true)['livreur']==='TEST Livreur'&&(int)$shipLog['id_administrateur']===3,'Livreur distinct de l’acteur');
+    $reject(fn()=>$service->ship($id,'Autre livreur'));
     $assert($order($id)['statut']==='en_livraison' && $shipping($id)['date_expedition']!==null,'Expédition');
     $reject(fn()=>$service->prepare($id)); $reject(fn()=>$service->cancel($id,'TEST annulation'));
-    $assert($service->ship($id)['reused'] && $allState($id)===$shipped,'Retry expédition');
+    $assert($service->ship($id,'TEST Livreur')['reused'] && $allState($id)===$shipped,'Retry expédition');
     $service->deliver($id); $delivered=$allState($id);
     $assert($order($id)['statut']==='livree' && $payment($id)['statut']==='a_encaisser' && $shipping($id)['date_livraison']!==null && $stock()===$initial[3],'Livrée ne signifie pas payée');
+    $assert($shipping($id)['nom_livreur_snapshot']==='TEST Livreur'&&json_decode($events($id)[2]['donnees_complementaires'],true)['livreur']==='TEST Livreur','Livreur conservé après livraison');
+    $assert(isset($service->availableActions($order($id),[$payment($id)],$shipping($id))['collectCash']),'Encaissement seul après livraison');
+    $html=$actionHtml($id);$assert(str_contains($html,'data-order-action="collectCash"')&&!str_contains($html,'name="montant"'),'UI encaissement sans montant client');
     $assert($service->deliver($id)['reused'] && $allState($id)===$delivered,'Retry livraison');
     $reject(fn()=>$service->cancel($id,'TEST annulation'));
     // Le taux actuel et la désactivation du cash n'altèrent pas les commandes historiques.
@@ -92,6 +114,8 @@ try {
     $service->collectCash($id); $paid=$allState($id);
     $assert($order($id)['statut']==='livree' && $payment($id)['statut']==='paye' && $payment($id)['montant_reglement']==='45.00' && $payment($id)['devise_reglement']==='USD' && $payment($id)['date_paiement']!==null,'Encaissement USD historique');
     $assert($service->collectCash($id)['reused'] && $allState($id)===$paid,'Encaissement unique');
+    $assert($service->availableActions($order($id),[$payment($id)],$shipping($id))===[],'Aucune action après encaissement');
+    $assert(!str_contains($actionHtml($id),'data-order-action="'),'Aucune action UI après encaissement');
     $assert($service->deliver($id)['reused'] && $allState($id)===$paid,'Livraison déjà faite après encaissement');
     $reject(fn()=>$service->cancel($id,'TEST annulation'));
     $assert(count((new App\Models\Payment($db))->forOrder($id))===1 && $stock()===$initial[3],'Paiement unique, stock engagé');
@@ -139,12 +163,12 @@ try {
     foreach(['prepare','ship','deliver','cancel','collectCash'] as $action) {
         $rollback=$make();
         if(in_array($action,['ship','deliver'],true))$service->prepare($rollback);
-        if($action==='deliver')$service->ship($rollback);
+        if($action==='deliver')$service->ship($rollback,'TEST Livreur');
         if($action==='collectCash')$finish($rollback);
         $before=$allState($rollback);
         $db->exec("CREATE TRIGGER fail_admin_journal BEFORE INSERT ON journal_commande FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='TEST journal failure'");
         try {
-            if($action==='cancel')$service->cancel($rollback,'TEST annulation');else $service->{$action}($rollback);
+            if($action==='cancel')$service->cancel($rollback,'TEST annulation');elseif($action==='ship')$service->ship($rollback,'TEST Livreur');else $service->{$action}($rollback);
             throw new RuntimeException('Erreur journal attendue.');
         } catch(PDOException) {} finally {$db->exec('DROP TRIGGER fail_admin_journal');}
         $assert($allState($rollback)===$before && !$db->inTransaction(),'Rollback complet : '.$action);
@@ -176,7 +200,7 @@ try {
     };
     $double=$make();$results=$race($double,['prepare','prepare']);
     $assert($results[0]['ok'] && $results[1]['ok'] && $results[0]['reused']!==$results[1]['reused'] && count($events($double))===1,'Préparation concurrente unique');
-    $service->ship($double);$service->deliver($double);$results=$race($double,['collectCash','collectCash']);
+    $service->ship($double,'TEST Livreur');$service->deliver($double);$results=$race($double,['collectCash','collectCash']);
     $assert($results[0]['ok'] && $results[1]['ok'] && count($events($double))===4 && count((new App\Models\Payment($db))->forOrder($double))===1,'Encaissement concurrent unique');
     $collectRace=$make();$finish($collectRace);$reserved=$stock();$results=$race($collectRace,['collectCash','cancel']);
     $assert($payment($collectRace)['statut']==='paye' && !$results[1]['ok'] && $stock()===$reserved,'Encaissement/annulation : aucune restitution après livraison');

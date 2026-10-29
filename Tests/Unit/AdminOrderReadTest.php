@@ -3,6 +3,16 @@ declare(strict_types=1);
 // Base jetable : aucune commande du navigateur n'est utilisée comme fixture.
 $root=dirname(__DIR__,2);require_once $root.'/vendor/autoload.php';
 spl_autoload_register(static function($class)use($root){if(!str_starts_with($class,'App\\'))return;$parts=explode('\\',substr($class,4));$parts[0]=strtolower($parts[0]);$file=$root.'/App/'.implode('/',$parts).'.php';if(is_file($file))require_once $file;});
+
+/** Page de test nommée pour rendre show() identifiable par l'analyse statique. */
+final class AdminOrderReadTestPage extends App\Core\Controller
+{
+    public function show(): void
+    {
+        $this->render('admin/access-error',['accessStatus'=>403]);
+    }
+}
+
 $c=require $root.'/Config/database.php';if(!in_array($c['host'],['localhost','127.0.0.1','::1'],true))throw new RuntimeException('Local uniquement');
 $db=new PDO('mysql:host='.$c['host'].';port='.$c['port'].';dbname='.$c['database'].';charset=utf8mb4',$c['username'],$c['password'],$c['options']);
 $name='tout_y_est_admin_read_test_'.bin2hex(random_bytes(8));
@@ -36,7 +46,13 @@ try {
  extract($service->listing(['page'=>999]));ob_start();require $root.'/App/views/admin/orders.php';$empty=ob_get_clean();$assert(str_contains($empty,'Aucune commande pour cette sélection'),'État vide');
  $_SERVER['REQUEST_METHOD']='GET';$_GET=['reference'=>'TYE-001'];$controller=new App\Controllers\Admin\OrderReadController($service,new App\Core\Request());ob_start();$controller->detail();$rendered=ob_get_clean();$assert(str_contains($rendered,'Nom historique')&&str_contains($rendered,'/admin/zones-livraison'),'Contrôleur et layout');
  $_GET=['reference'=>'absente'];ob_start();$controller->detail();$error=ob_get_clean();$assert(http_response_code()===404&&str_contains($error,'introuvable'),'404 contrôleur');
+ $assert(str_contains($rendered,'1 USD = 2 450 FC')&&!str_contains($rendered,'2450.0000'),'Taux lisible');
+ $assert(str_contains($rendered,'Par :')&&str_contains($rendered,'Admin'),'Auteur journal');
  $assert($before===$fingerprint(),'Aucune expiration ni écriture');
+ App\Core\Controller::configureAdminAccess(new App\Services\AdminAccessService(new App\Models\User($db)));
+ $page=new AdminOrderReadTestPage();
+ ob_start();$page->show();$adminHtml=ob_get_clean();$assert(str_contains($adminHtml,'href="/admin/commandes"'),'Pont Admin actif');
  $db->exec("UPDATE utilisateur SET role='client' WHERE id_utilisateur=2");try{$service->listing([]);throw new RuntimeException('Admin rétrogradé accepté');}catch(DomainException$e){$assert($e->getCode()===403,'Rétrogradation');}
+ ob_start();$page->show();$clientHtml=ob_get_clean();$assert(!str_contains($clientHtml,'href="/admin/commandes"'),'Pont retiré après rétrogradation');
  echo "ADMIN_ORDER_READ_OK (droits, 20/page, ordre, filtres, snapshots, journal, XSS, lecture sans effet).\n";
 }finally{if(!preg_match('/^tout_y_est_admin_read_test_[a-f0-9]{16}$/D',$name))throw new RuntimeException('Nettoyage refusé');$db->exec('USE `'.$c['database'].'`');$db->exec('DROP DATABASE IF EXISTS `'.$name.'`');}
