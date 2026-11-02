@@ -39,7 +39,12 @@ $productController = new ProductController($productService, $request);
 $adminOrderController = new \App\Controllers\Admin\OrderController($adminOrderService, $request);
 /** @var \App\Services\AdminOrderReadService|null $adminOrderReadService */
 $adminOrderReadController = new \App\Controllers\Admin\OrderReadController($adminOrderReadService, $request);
+/** @var \App\Services\AdminCourierService|null $adminCourierService */
+$adminCourierController = new \App\Controllers\Admin\CourierController($adminCourierService,$request);
 return [
+    '/admin/livreurs' => [$adminCourierController,'index'],
+    '/admin/livreurs/enregistrer' => [$adminCourierController,'save'],
+    '/admin/livreurs/disponibilite' => [$adminCourierController,'availability'],
     '/admin' => [$adminOrderReadController, 'index'],
     '/admin/commandes' => [$adminOrderReadController, 'index'],
     '/admin/commande' => [$adminOrderReadController, 'detail'],

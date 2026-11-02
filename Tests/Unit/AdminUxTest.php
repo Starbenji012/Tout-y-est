@@ -5,7 +5,7 @@ spl_autoload_register(static function(string $class)use($root):void{if(!str_star
 require_once $root.'/App/services/AdminNavigation.php';
 require_once $root.'/App/services/AdminOrderReadService.php';
 $assert=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeException($why);};
-foreach(['/admin','/admin/commandes','/admin/zones-livraison','/admin/commande?reference=TYE-001','/admin/commande?reference=TYE-20261019-A713584AB8AC8BE0']as$url)$assert(App\Services\AdminNavigation::safeReturn($url)===$url,'Retour interne valide');
+foreach(['/admin','/admin/commandes','/admin/zones-livraison','/admin/livreurs','/admin/commande?reference=TYE-001','/admin/commande?reference=TYE-20261019-A713584AB8AC8BE0']as$url)$assert(App\Services\AdminNavigation::safeReturn($url)===$url,'Retour interne valide');
 foreach(['https://evil.invalid','//evil.invalid','/admin/../evil','/admin?next=https://evil.invalid',"/admin\r\nLocation: x",'/admin/commande?reference=TYE-001&next=evil','/admin/commande?reference=%2F%2Fevil']as$url)$assert(App\Services\AdminNavigation::safeReturn($url)===null,'Retour dangereux refusé');
 $assert(App\Services\AdminOrderReadService::rateLabel('2450.0000')==='1 USD = 2 450 FC','Taux');
 $assert(App\Services\AdminOrderReadService::rateLabel('2450.1250')==='1 USD = 2 450,125 FC','Taux décimal');

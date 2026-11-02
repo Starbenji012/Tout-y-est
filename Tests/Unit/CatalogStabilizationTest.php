@@ -33,6 +33,9 @@ try {
         $columns->execute([$config['database'],$table]); $migrated=$columns->fetchAll();
         // S1.11 est testée sur base éphémère ; son application locale reste manuelle.
         if ($table === 'journal_commande' && $migrated === []) continue;
+        if ($table === 'livreur' && $migrated === []) continue; // S1.13 attend son application autorisée.
+        $pendingCourierIdentity=$table==='livraison'&&!in_array('id_livreur',array_column($migrated,'COLUMN_NAME'),true);
+        if($pendingCourierIdentity)$fresh=array_values(array_filter($fresh,static fn(array $column):bool=>$column['COLUMN_NAME']!=='id_livreur'));
         // Seule la colonne S1.12 peut manquer tant que sa migration locale attend validation.
         if ($table==='livraison' && !in_array('nom_livreur_snapshot',array_column($migrated,'COLUMN_NAME'),true)) {
             $fresh=array_values(array_filter($fresh,static fn(array $column):bool=>$column['COLUMN_NAME']!=='nom_livreur_snapshot'));
@@ -40,10 +43,12 @@ try {
         $assert($fresh === $migrated, 'Colonnes installation/migrations : '.$table);
         $keys = $db->prepare("SELECT COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY COLUMN_NAME");
         $keys->execute([$name,$table]); $freshKeys=$keys->fetchAll();
+        if($pendingCourierIdentity)$freshKeys=array_values(array_filter($freshKeys,static fn(array $key):bool=>$key['COLUMN_NAME']!=='id_livreur'));
         $keys->execute([$config['database'],$table]);
         $assert($freshKeys === $keys->fetchAll(), 'FK installation/migrations : '.$table);
         $indexes = $db->prepare('SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns_list,NON_UNIQUE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? GROUP BY INDEX_NAME,NON_UNIQUE ORDER BY columns_list,NON_UNIQUE');
         $indexes->execute([$name,$table]); $freshIndexes=$indexes->fetchAll();
+        if($pendingCourierIdentity)$freshIndexes=array_values(array_filter($freshIndexes,static fn(array $index):bool=>$index['columns_list']!=='id_livreur'));
         $indexes->execute([$config['database'],$table]);
         $assert($freshIndexes === $indexes->fetchAll(), 'Index/UNIQUE installation/migrations : '.$table);
     }

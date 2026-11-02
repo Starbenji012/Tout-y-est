@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace App\Controllers\Admin;
 
-use App\Core\{Request, Response};
+use App\Core\{Request, Response, Session};
 use App\Middleware\CsrfMiddleware;
 use App\Services\AdminOrderService;
 use DomainException;
@@ -26,13 +26,18 @@ final class OrderController
             $this->orders->authorize();
             $input = $this->request->postParameters();
             if (!CsrfMiddleware::isValid($input['_token'] ?? null)) { Response::json(['error'=>'Session expirée. Rechargez la page.'],419); return; }
-            $allowed = match($action) {'cancel'=>['commande','motif','_token'],'ship'=>['commande','livreur','_token'],default=>['commande','_token']};
+            $allowed = match($action) {'cancel'=>['commande','motif','_token'],'ship'=>['commande','id_livreur','_token'],default=>['commande','_token']};
             if (array_diff(array_keys($input),$allowed) !== []) throw new DomainException('Paramètres non autorisés.',422);
             $id = filter_var($input['commande'] ?? null,FILTER_VALIDATE_INT);
             if (!$id || $id < 1) throw new DomainException('Commande invalide.',422);
             $result = $action === 'cancel'
                 ? $this->orders->cancel($id,is_string($input['motif'] ?? null) ? $input['motif'] : '')
-                : ($action==='ship'?$this->orders->ship($id,is_string($input['livreur']??null)?$input['livreur']:''):$this->orders->{$action}($id));
+                : ($action==='ship'?$this->orders->ship($id,(int)(filter_var($input['id_livreur']??null,FILTER_VALIDATE_INT)?:0)):$this->orders->{$action}($id));
+            $result['redirect']='/admin/commande?'.http_build_query(['reference'=>$result['reference']]);
+            if (str_contains((string)($_SERVER['HTTP_ACCEPT']??''),'text/html')) {
+                Session::set('_admin_order_flash',['reference'=>$result['reference'],'message'=>$result['message']]);
+                Response::redirect($result['redirect']);
+            }
             Response::json($result);
         } catch (DomainException $error) {
             $code = in_array($error->getCode(),[401,403,404,409,422,503],true) ? $error->getCode() : 422;

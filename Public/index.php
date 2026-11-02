@@ -68,6 +68,9 @@ require_once dirname(__DIR__) . '/App/services/AdminNavigation.php';
 require_once dirname(__DIR__) . '/App/controllers/Admin/AccessController.php';
 require_once dirname(__DIR__) . '/App/services/AdminOrderService.php';
 require_once dirname(__DIR__) . '/App/models/AdminOrderRead.php';
+require_once dirname(__DIR__) . '/App/models/Courier.php';
+require_once dirname(__DIR__) . '/App/services/AdminCourierService.php';
+require_once dirname(__DIR__) . '/App/controllers/Admin/CourierController.php';
 require_once dirname(__DIR__) . '/App/services/AdminOrderReadService.php';
 require_once dirname(__DIR__) . '/App/controllers/Admin/OrderReadController.php';
 require_once dirname(__DIR__) . '/App/controllers/Admin/OrderController.php';
@@ -172,6 +175,7 @@ $orderService = $database instanceof PDO ? new \App\Services\OrderService(
 ) : null;
 $paymentService = $database instanceof PDO ? new \App\Services\PaymentService($database) : null;
 $adminOrderService = $database instanceof PDO ? new \App\Services\AdminOrderService($database, new \App\Services\AdminAccessService($userModel), $moneyService) : null;
+$adminCourierService = $database instanceof PDO ? new \App\Services\AdminCourierService($database,$adminAccess) : null;
 $adminOrderReadService = $database instanceof PDO ? new \App\Services\AdminOrderReadService(new \App\Services\AdminAccessService($userModel),new \App\Models\AdminOrderRead($database),new \App\Models\OrderItem($database),new \App\Models\Delivery($database),new \App\Models\Payment($database),new \App\Models\AdminOrderJournal($database),$moneyService,$productService,$adminOrderService) : null;
 $customerOrderService = $database instanceof PDO ? new \App\Services\CustomerOrderService(new \App\Models\Order($database), new \App\Models\OrderItem($database), new \App\Models\Delivery($database), $moneyService, $productService) : null;
 $deliveryZoneService = new \App\Services\DeliveryZoneService(

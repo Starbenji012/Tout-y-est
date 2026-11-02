@@ -12,13 +12,29 @@
     sessionStorage.removeItem(storageKey);
   } catch (_) { /* Un stockage bloqué ne doit pas empêcher l'action. */ }
   let busy = false;
+  forms.forEach(form => {
+    const select = form.querySelector('[name="id_livreur"]');
+    if (select?.hidden) {
+      // Le select enrichi est caché : son trigger reçoit le focus en cas de choix manquant.
+      select.required = false;
+      document.getElementById?.(select.id + '-trigger')?.setAttribute('aria-required','true');
+    }
+  });
   forms.forEach(form => form.querySelectorAll('button[type="submit"]').forEach(button => { button.disabled = false; }));
   forms.forEach(form => form.addEventListener('submit', async event => {
     event.preventDefault();
-    if (busy || !form.reportValidity()) return;
+    if (busy) return;
     const action = form.dataset.orderAction;
+    const select = form.querySelector('[name="id_livreur"]');
+    if (action === 'ship' && !select?.value) {
+      message.textContent = 'Sélectionnez un livreur actif disponible.';
+      const trigger = document.getElementById?.(select?.id + '-trigger');
+      if (trigger) trigger.focus(); else select?.focus?.();
+      return;
+    }
+    if (!form.reportValidity()) return;
     const data = new FormData(form);
-    const courier = String(data.get('livreur') || '').trim();
+    const courier = select?.selectedOptions[0]?.textContent.trim() || '';
     const confirmations = {prepare:'Commencer la préparation de cette commande ?',ship:`Confier la commande à ${courier} et la mettre en livraison ?`,deliver:'Confirmer que cette commande a réellement été livrée ?',collectCash:'Confirmer que le paiement a réellement été reçu ?',cancel:'Annuler cette commande ? Le stock sera restitué. Cette action est définitive.'};
     if (!window.confirm(confirmations[action])) return;
     busy = true;
@@ -33,7 +49,8 @@
       const text = typeof result.message === 'string' ? result.message : (action === 'ship' ? `La commande a été confiée à ${courier} et mise en livraison.` : labels[action]);
       try { sessionStorage.setItem(storageKey,JSON.stringify({reference:form.dataset.orderReference,text,time:Date.now()})); } catch (_) {}
       message.textContent = text;
-      window.location.reload();
+      if (typeof result.redirect === 'string' && result.redirect.startsWith('/admin/commande?reference=')) window.location.assign(result.redirect);
+      else window.location.reload();
     } catch (error) {
       message.textContent = error?.message || 'Connexion interrompue. Rechargez la commande avant de réessayer.';
       busy = false; buttons.forEach(button => { button.disabled = false; }); form.removeAttribute('aria-busy');

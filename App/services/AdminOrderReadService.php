@@ -49,7 +49,11 @@ final class AdminOrderReadService
         foreach($events as &$event){$event['label']=match($event['action']){'prepare'=>'Préparation commencée','ship'=>'Mise en livraison','deliver'=>'Livraison confirmée','collect-cash'=>'Encaissement confirmé','cancel'=>'Commande annulée',default=>'Événement de commande'};$extra=json_decode($event['donnees_complementaires'],true);$event['details']=is_array($extra)?array_intersect_key($extra,array_flip(['motif','devise','montant','taux_usd_cdf','livreur'])):[];} unset($event);
         $actions=$this->actions?->availableActions($row,$order['payments'],$order['delivery'])??[];
         foreach($events as $event) unset($actions[$event['action']==='collect-cash'?'collectCash':$event['action']]);
-        return ['order'=>$order,'items'=>$items,'events'=>$events,'actions'=>$actions];
+        $couriers=isset($actions['ship'])?$this->actions->couriersForAssignment():[];
+        $courierNotice=null;
+        if (isset($actions['ship'])&&$couriers===[]) {$courierNotice='Aucun livreur actif disponible. Faites renseigner les vrais livreurs avant l’expédition.';unset($actions['ship']);}
+        elseif ($row['statut']==='en_preparation'&&!array_key_exists('id_livreur',$order['delivery']??[])) $courierNotice='L’affectation des livreurs n’est pas encore disponible.';
+        return ['order'=>$order,'items'=>$items,'events'=>$events,'actions'=>$actions,'couriers'=>$couriers,'courierNotice'=>$courierNotice];
     }
 
     public static function deliveryStatus(?string $status): string

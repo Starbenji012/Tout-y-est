@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const root=path.resolve(__dirname,'../..');
+const buttons=[{disabled:false},{disabled:false}];let pageshow;
+const forms=buttons.map(button=>({attributes:{},querySelectorAll:()=>[button],setAttribute(k,v){this.attributes[k]=v;},removeAttribute(k){delete this.attributes[k];},addEventListener(type,handler){if(type==='submit')this.submit=handler;}}));
+vm.runInNewContext(fs.readFileSync(path.join(root,'Public/assets/js/admin-couriers.js'),'utf8'),{document:{querySelectorAll:()=>forms},window:{addEventListener:(type,handler)=>{if(type==='pageshow')pageshow=handler;}}});
+let prevented=false;forms[0].submit({preventDefault(){prevented=true;}});
+assert.equal(prevented,false,'Le premier POST natif fonctionne.');assert.ok(buttons.every(button=>button.disabled));
+forms[1].submit({preventDefault(){prevented=true;}});assert.equal(prevented,true,'Pas de double soumission.');
+pageshow();assert.ok(buttons.every(button=>!button.disabled));assert.equal(forms[0].attributes['aria-busy'],undefined);
+const view=fs.readFileSync(path.join(root,'App/views/admin/couriers.php'),'utf8');
+assert.match(view,/method="post"/);assert.match(view,/name="_token"/);assert.match(view,/Disponible/);assert.match(view,/Indisponible/);
+assert.doesNotMatch(view,/type="password"|name="email"|name="telephone"|Supprimer/);
+const css=fs.readFileSync(path.join(root,'Public/assets/css/admin.css'),'utf8');assert.match(css,/admin-courier-status\.is-available/);assert.match(css,/--color-success/);assert.match(css,/--color-error/);
+console.log('ADMIN_COURIERS_UI_OK (POST natif, doubles clics, retour navigateur, libellés, disponibilité accessible).');

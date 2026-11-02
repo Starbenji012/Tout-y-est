@@ -28,6 +28,7 @@ $reject = static function (string $sql) use ($database): void {
 };
 $tables = ['adresse_utilisateur', 'zone_livraison', 'commande', 'ligne_commande', 'livraison', 'mode_paiement', 'paiement'];
 $before = [];
+$courierIdentityApplied=false;
 $schema = file_get_contents(dirname(__DIR__, 2) . '/Database/schema.sql');
 $columnsQuery = $database->prepare('SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION');
 foreach ($tables as $table) {
@@ -41,6 +42,10 @@ foreach ($tables as $table) {
     preg_match_all('/^    (\w+) ((?:BIGINT|INT)(?: UNSIGNED)?|BOOLEAN|(?:VAR)?CHAR\(\d+\)|DECIMAL\(\d+,\s*\d+\)|DATETIME|TEXT)([^\n]*)/m', $definition[1] ?? '', $expected, PREG_SET_ORDER);
     $columnsQuery->execute([$table]);
     $actual = $columnsQuery->fetchAll();
+    if($table==='livraison') {
+        $courierIdentityApplied=in_array('id_livreur',array_column($actual,'COLUMN_NAME'),true);
+        if(!$courierIdentityApplied){$expected=array_values(array_filter($expected,static fn(array $column):bool=>$column[1]!=='id_livreur'));echo "S1.13_PENDING_LOCAL (identité livreur).\n";}
+    }
     // S1.12 reste volontairement non appliquée à la base navigateur ; ses contraintes
     // et son rejeu sont vérifiés par AdminOrderActionsTest dans une base jetable.
     if ($table==='livraison' && !in_array('nom_livreur_snapshot',array_column($actual,'COLUMN_NAME'),true)) {
@@ -61,7 +66,7 @@ foreach ($tables as $table) {
 $foreignKeys = $database->query("SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME FROM information_schema.KEY_COLUMN_USAGE
     WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL
     AND TABLE_NAME IN ('adresse_utilisateur','commande','ligne_commande','livraison','paiement')")->fetchAll();
-$assert(count($foreignKeys) === 10, 'Les dix FK checkout sont requises.');
+$assert(count($foreignKeys) === 10+($courierIdentityApplied?1:0), 'Les FK checkout sont requises, plus celle du livreur après S1.13.');
 $money = $database->query("SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE() AND (
         (TABLE_NAME = 'commande' AND COLUMN_NAME IN ('sous_total','frais_livraison','total')) OR

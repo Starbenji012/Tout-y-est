@@ -26,7 +26,8 @@
             <nav id="admin-navigation" class="admin-header__actions" aria-label="Navigation administration">
                 <div class="admin-header__tabs">
                 <a href="/admin/commandes"<?= ($adminPage ?? '') === 'orders' ? ' aria-current="page"' : '' ?>>Commandes</a>
-                <a href="/admin/zones-livraison"<?= ($adminPage ?? '') !== 'orders' ? ' aria-current="page"' : '' ?>>Zones de livraison</a>
+                <a href="/admin/zones-livraison"<?= !in_array($adminPage ?? '',['orders','couriers'],true) ? ' aria-current="page"' : '' ?>>Zones de livraison</a>
+                <a href="/admin/livreurs"<?= ($adminPage ?? '') === 'couriers' ? ' aria-current="page"' : '' ?>>Livreurs</a>
                 </div>
                 <div class="admin-header__utilities">
                 <a class="admin-header__shop" href="/boutique"><i data-lucide="arrow-up-right" aria-hidden="true"></i>Voir la boutique</a>

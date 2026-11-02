@@ -355,6 +355,14 @@ CREATE TABLE adresse_utilisateur (
     INDEX idx_adresse_zone (id_zone_livraison)
 ) ENGINE=InnoDB;
 
+CREATE TABLE livreur (
+    id_livreur BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(120) NOT NULL,
+    statut VARCHAR(20) NOT NULL DEFAULT 'inactif',
+    CONSTRAINT chk_livreur_nom CHECK (CHAR_LENGTH(TRIM(nom)) BETWEEN 2 AND 120),
+    CONSTRAINT chk_livreur_statut CHECK (statut IN ('actif','inactif'))
+) ENGINE=InnoDB;
+
 CREATE TABLE livraison (
     id_livraison BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     id_commande BIGINT UNSIGNED NOT NULL,
@@ -377,6 +385,7 @@ CREATE TABLE livraison (
     date_expedition DATETIME NULL,
     date_livraison DATETIME NULL,
     nom_livreur_snapshot VARCHAR(120) NULL,
+    id_livreur BIGINT UNSIGNED NULL,
     CONSTRAINT pk_livraison PRIMARY KEY (id_livraison),
     CONSTRAINT uq_livraison_commande UNIQUE (id_commande),
     CONSTRAINT chk_livraison_frais CHECK (frais_snapshot >= 0),
@@ -390,6 +399,9 @@ CREATE TABLE livraison (
         REFERENCES zone_livraison (id_zone_livraison)
         ON DELETE SET NULL
         ON UPDATE RESTRICT,
+    CONSTRAINT fk_livraison_livreur FOREIGN KEY (id_livreur)
+        REFERENCES livreur(id_livreur) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    INDEX idx_livraison_livreur (id_livreur),
     INDEX idx_livraison_zone (id_zone_livraison)
 ) ENGINE=InnoDB;
 

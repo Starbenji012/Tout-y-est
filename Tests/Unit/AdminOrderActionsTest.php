@@ -24,12 +24,18 @@ if(($argv[1]??'')==='worker') {
     $name=$argv[2]; if(!preg_match('/^tout_y_est_admin_orders_test_[a-f0-9]{16}$/D',$name)) throw new RuntimeException('Base refusée.');
     $db=$connect($name); $action=$argv[3]; $id=(int)$argv[4];
     App\Core\Session::set('user',['id'=>3,'role'=>'client']);
+    if($action==='html-prepare') {
+        $_SERVER['REQUEST_METHOD']='POST';$_SERVER['HTTP_ACCEPT']='text/html';
+        $_POST=['commande'=>$id,'_token'=>App\Middleware\CsrfMiddleware::token()];
+        register_shutdown_function(static function():void {echo json_encode(['status'=>http_response_code(),'flash'=>App\Core\Session::get('_admin_order_flash')]);});
+        (new App\Controllers\Admin\OrderController($build($db),new App\Core\Request()))->prepare();exit;
+    }
     try {
         $result=match($action) {
             'confirm'=>(new App\Services\PaymentService($db))->confirmCash(1,$id),
             'expire'=>['released'=>$orderService($db)->releaseReservation($id)],
             'cancel'=>$build($db)->cancel($id,'TEST annulation'),
-            'ship'=>$build($db)->ship($id,'TEST Livreur'),
+            'ship'=>$build($db)->ship($id,1),
             default=>$build($db)->{$action}($id),
         };
         echo json_encode(['ok'=>true]+$result);
@@ -48,6 +54,12 @@ try {
     $courierMigration=file_get_contents($root.'/Database/migrations/S1.12_delivery_courier.sql');
     $db->exec('ALTER TABLE livraison DROP COLUMN nom_livreur_snapshot');
     $db->exec($courierMigration);$db->exec($courierMigration);
+    // S1.13 ajout et rejeu réels, exclusivement dans la base jetable.
+    $identityMigration=file_get_contents($root.'/Database/migrations/S1.13_courier_identity.sql');
+    $db->exec('ALTER TABLE livraison DROP FOREIGN KEY fk_livraison_livreur');
+    $db->exec('ALTER TABLE livraison DROP COLUMN id_livreur');$db->exec('DROP TABLE livreur');
+    $db->exec($identityMigration);$db->exec($identityMigration);
+    $db->exec("INSERT INTO livreur(id_livreur,nom,statut) VALUES(1,'TEST Livreur','actif'),(2,'TEST Inactif','inactif'),(3,'TEST Autre','actif')");
     $migration=file_get_contents($root.'/Database/migrations/S1.11_admin_order_actions.sql');
     $db->exec('DROP TABLE journal_commande'); $db->exec($migration); $db->exec($migration);
     $db->exec("INSERT INTO utilisateur(id_utilisateur,nom,prenom,email,mot_de_passe,role,statut,email_verified_at) VALUES
@@ -77,30 +89,42 @@ try {
     $events=static function(int $id)use($db):array {$q=$db->prepare('SELECT * FROM journal_commande WHERE id_commande=? ORDER BY id_journal');$q->execute([$id]);return $q->fetchAll();};
     $allState=static fn(int $id):array=>[$order($id),$payment($id),$shipping($id),$stock(),$events($id)];
     $actionHtml=static function(int $id)use($service,$order,$payment,$shipping,$root):string {
-        $row=$order($id);$actions=$service->availableActions($row,[$payment($id)],$shipping($id));$order=['number'=>$row['numero_commande']];
+        $couriers=$service->couriersForAssignment();$row=$order($id);$actions=$service->availableActions($row,[$payment($id)],$shipping($id));$order=['number'=>$row['numero_commande']];
         $escape=static fn($value):string=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         ob_start();require $root.'/App/views/admin/order-actions.php';return ob_get_clean();
     };
-    $finish=static function(int $id)use($service):void {$service->prepare($id);$service->ship($id,'TEST Livreur');$service->deliver($id);};
+    $finish=static function(int $id)use($service):void {$service->prepare($id);$service->ship($id,1);$service->deliver($id);};
     $id=$make(); $initial=$allState($id);
     $html=$actionHtml($id);$assert(str_contains($html,'data-order-action="prepare"')&&str_contains($html,'data-order-action="cancel"')&&!str_contains($html,'data-order-action="ship"'),'UI confirmée');
-    $reject(fn()=>$service->ship($id,'TEST Livreur')); $reject(fn()=>$service->deliver($id)); $reject(fn()=>$service->collectCash($id));
+    $reject(fn()=>$service->ship($id,1)); $reject(fn()=>$service->deliver($id)); $reject(fn()=>$service->collectCash($id));
     $assert($allState($id)===$initial,'Refus sans effet');
     $assert(!$service->prepare($id)['reused'],'Préparation'); $prepared=$allState($id);
     $assert($order($id)['statut']==='en_preparation' && $shipping($id)['date_preparation']!==null && $stock()===$initial[3],'Préparation sans stock');
     $assert($service->prepare($id)['reused'] && $allState($id)===$prepared,'Retry préparation sans date/journal supplémentaire');
-    $html=$actionHtml($id);$assert(str_contains($html,'name="livreur"')&&str_contains($html,'data-order-action="ship"')&&!str_contains($html,'data-order-action="prepare"'),'UI préparation et affectation');
+    $html=$actionHtml($id);$assert(str_contains($html,'name="id_livreur"')&&str_contains($html,'data-order-action="ship"')&&!str_contains($html,'data-order-action="prepare"'),'UI préparation et affectation');
     $assert(array_keys($service->availableActions($order($id),[$payment($id)],$shipping($id)))===['ship','cancel'],'Actions préparation');
-    foreach(['','A',str_repeat('A',121),"Livreur\nAutre"] as $invalid)$reject(fn()=>$service->ship($id,$invalid),422);
+    $reader=new App\Services\AdminOrderReadService(new App\Services\AdminAccessService(new App\Models\User($db)),new App\Models\AdminOrderRead($db),new App\Models\OrderItem($db),new App\Models\Delivery($db),new App\Models\Payment($db),new App\Models\AdminOrderJournal($db),new App\Services\MoneyService(),null,$service);
+    $preview=$reader->detail($order($id)['numero_commande']);
+    $courierIds=array_map('intval',array_column($preview['couriers'],'id_livreur'));sort($courierIds);
+    $assert(isset($preview['actions']['ship'])&&$courierIds===[1,3],'Sélection : uniquement livreurs actifs');
+    $db->exec("UPDATE livreur SET statut='inactif' WHERE id_livreur IN (1,3)");
+    $preview=$reader->detail($order($id)['numero_commande']);$assert(!isset($preview['actions']['ship'])&&$preview['courierNotice']!==null,'Pas de bouton mort sans livreur actif');
+    $db->exec("UPDATE livreur SET statut='actif' WHERE id_livreur IN (1,3)");
+    foreach([0,-1,2,999999] as $invalid)$reject(fn()=>$service->ship($id,$invalid),422);
     $assert($allState($id)===$prepared,'Livreur invalide : aucune mutation');
-    $service->ship($id,'TEST Livreur'); $shipped=$allState($id);
+    $service->ship($id,1); $shipped=$allState($id);
     $html=$actionHtml($id);$assert(str_contains($html,'data-order-action="deliver"')&&!str_contains($html,'data-order-action="cancel"'),'UI en livraison');
     $assert($shipping($id)['nom_livreur_snapshot']==='TEST Livreur','Livreur enregistré');
+    $assert((int)$shipping($id)['id_livreur']===1,'Relation persistante vers le livreur');
+    try{$db->exec('DELETE FROM livreur WHERE id_livreur=1');throw new RuntimeException('Livreur assigné supprimé');}catch(PDOException $e){$assert((int)$e->errorInfo[1]===1451,'FK livreur RESTRICT');}
     $shipLog=$events($id)[1];$assert(json_decode($shipLog['donnees_complementaires'],true)['livreur']==='TEST Livreur'&&(int)$shipLog['id_administrateur']===3,'Livreur distinct de l’acteur');
-    $reject(fn()=>$service->ship($id,'Autre livreur'));
+    $reject(fn()=>$service->ship($id,3));
     $assert($order($id)['statut']==='en_livraison' && $shipping($id)['date_expedition']!==null,'Expédition');
     $reject(fn()=>$service->prepare($id)); $reject(fn()=>$service->cancel($id,'TEST annulation'));
-    $assert($service->ship($id,'TEST Livreur')['reused'] && $allState($id)===$shipped,'Retry expédition');
+    $assert($service->ship($id,1)['reused'] && $allState($id)===$shipped,'Retry expédition');
+    $db->exec("UPDATE livreur SET nom='TEST Nom modifié',statut='inactif' WHERE id_livreur=1");
+    $assert($service->ship($id,1)['reused']&&$allState($id)===$shipped,'Retry identité désactivée/renommée : snapshot intact');
+    $db->exec("UPDATE livreur SET nom='TEST Livreur',statut='actif' WHERE id_livreur=1");
     $service->deliver($id); $delivered=$allState($id);
     $assert($order($id)['statut']==='livree' && $payment($id)['statut']==='a_encaisser' && $shipping($id)['date_livraison']!==null && $stock()===$initial[3],'Livrée ne signifie pas payée');
     $assert($shipping($id)['nom_livreur_snapshot']==='TEST Livreur'&&json_decode($events($id)[2]['donnees_complementaires'],true)['livreur']==='TEST Livreur','Livreur conservé après livraison');
@@ -163,12 +187,12 @@ try {
     foreach(['prepare','ship','deliver','cancel','collectCash'] as $action) {
         $rollback=$make();
         if(in_array($action,['ship','deliver'],true))$service->prepare($rollback);
-        if($action==='deliver')$service->ship($rollback,'TEST Livreur');
+        if($action==='deliver')$service->ship($rollback,1);
         if($action==='collectCash')$finish($rollback);
         $before=$allState($rollback);
         $db->exec("CREATE TRIGGER fail_admin_journal BEFORE INSERT ON journal_commande FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='TEST journal failure'");
         try {
-            if($action==='cancel')$service->cancel($rollback,'TEST annulation');elseif($action==='ship')$service->ship($rollback,'TEST Livreur');else $service->{$action}($rollback);
+            if($action==='cancel')$service->cancel($rollback,'TEST annulation');elseif($action==='ship')$service->ship($rollback,1);else $service->{$action}($rollback);
             throw new RuntimeException('Erreur journal attendue.');
         } catch(PDOException) {} finally {$db->exec('DROP TRIGGER fail_admin_journal');}
         $assert($allState($rollback)===$before && !$db->inTransaction(),'Rollback complet : '.$action);
@@ -189,7 +213,14 @@ try {
     $db->exec("UPDATE utilisateur SET role='client' WHERE id_utilisateur=3");$assert($api(3,'prepare',$secure)[0]===403,'Révocation BDD immédiate');
     $db->exec("UPDATE utilisateur SET role='admin' WHERE id_utilisateur=3");
     $assert($api(3,'prepare',$secure)[0]===200 && $api(3,'prepare',$secure)[1]['reused'],'API + retry');
+    $assert($api(3,'ship',$secure,[])[0]===422&&$api(3,'ship',$secure,['id_livreur'=>2])[0]===422,'Livreur absent/inactif refusé API');
+    $assert($api(3,'ship',$secure,['livreur'=>'Nom imposé'])[0]===422,'Nom libre non accepté');
     $assert($api(3,'cancel',$secure,['motif'=>'TEST annulation'])[0]===200,'API annulation');
+    $prg=$make();$reserved=$stock();
+    $process=proc_open([PHP_BINARY,__FILE__,'worker',$name,'html-prepare',(string)$prg],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+    fclose($pipes[0]);$output=stream_get_contents($pipes[1]);$error=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);
+    $assert(proc_close($process)===0,$error);$prgResult=json_decode($output,true,512,JSON_THROW_ON_ERROR);
+    $assert($prgResult['status']===303&&$prgResult['flash']['reference']===$order($prg)['numero_commande']&&$order($prg)['statut']==='en_preparation'&&$stock()===$reserved,'POST HTML puis redirection GET et message serveur');
     // Deux processus PHP distincts entrent en concurrence sur le même verrou de commande.
     $race=static function(int $id,array $actions)use($db,$name,$assert):array {
         $db->beginTransaction(); (new App\Models\Order($db))->find($id,true); $workers=[];
@@ -200,7 +231,7 @@ try {
     };
     $double=$make();$results=$race($double,['prepare','prepare']);
     $assert($results[0]['ok'] && $results[1]['ok'] && $results[0]['reused']!==$results[1]['reused'] && count($events($double))===1,'Préparation concurrente unique');
-    $service->ship($double,'TEST Livreur');$service->deliver($double);$results=$race($double,['collectCash','collectCash']);
+    $service->ship($double,1);$service->deliver($double);$results=$race($double,['collectCash','collectCash']);
     $assert($results[0]['ok'] && $results[1]['ok'] && count($events($double))===4 && count((new App\Models\Payment($db))->forOrder($double))===1,'Encaissement concurrent unique');
     $collectRace=$make();$finish($collectRace);$reserved=$stock();$results=$race($collectRace,['collectCash','cancel']);
     $assert($payment($collectRace)['statut']==='paye' && !$results[1]['ok'] && $stock()===$reserved,'Encaissement/annulation : aucune restitution après livraison');
