@@ -24,7 +24,7 @@ final class AdminCourierService
     {
         return $this->mutate(function()use($id,$name):array {
             $name=Courier::cleanName($name);
-            if($id===null)return ['id'=>$this->couriers->create($name),'message'=>'Livreur ajouté. Rendez-le disponible lorsqu’il peut effectuer une livraison.'];
+            if($id===null)return ['id'=>$this->couriers->create($name),'message'=>'Livreur ajouté. Il est indisponible par défaut.'];
             $this->existing($id);$this->couriers->rename($id,$name);
             return ['id'=>$id,'message'=>'Nom du livreur mis à jour. Les anciennes livraisons restent inchangées.'];
         });
@@ -34,7 +34,7 @@ final class AdminCourierService
         return $this->mutate(function()use($id,$status):array {
             if(!in_array($status,['actif','inactif'],true))throw new DomainException('Choisissez une disponibilité valide.',422);
             $this->existing($id);$this->couriers->setAvailability($id,$status);
-            return ['id'=>$id,'message'=>$status==='actif'?'Livreur désormais disponible.':'Livreur désormais indisponible. Les affectations passées sont conservées.'];
+            return ['id'=>$id,'message'=>$status==='actif'?'Livreur désormais disponible.':'Livreur désormais indisponible.'];
         });
     }
     private function existing(int $id): array

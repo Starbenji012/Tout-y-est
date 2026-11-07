@@ -11,8 +11,10 @@ if($flashText!=='')\App\Core\Session::remove('_admin_order_flash');
 <?php if($courierNotice??null): ?><p><?= $escape($courierNotice) ?></p><?php endif; ?>
 <?php if($actions): ?><section class="admin-order-card admin-order-actions" aria-labelledby="order-actions-title">
   <h2 id="order-actions-title">Actions sur la commande</h2>
+  <div class="admin-order-actions__layout">
   <?php foreach($actionLabels as $action=>$label): ?><?php if(isset($actions[$action])): ?>
   <form method="post" action="/api/admin/commandes/<?= $actionPaths[$action] ?>" data-order-action="<?= $action ?>" data-order-reference="<?= $escape($order['number']) ?>">
+    <?php if($action==='cancel'): ?><h3>Annulation</h3><p class="admin-orders__muted">Cette action annule la commande. Un motif est obligatoire.</p><?php endif; ?>
     <input type="hidden" name="_token" value="<?= $escape(\App\Middleware\CsrfMiddleware::token()) ?>">
     <input type="hidden" name="commande" value="<?= (int)$row['id_commande'] ?>">
     <?php if($action==='ship'): ?><label for="order-courier"><span id="order-courier-label" data-select-label>Livreur affecté</span><select id="order-courier" name="id_livreur" required data-select-control><option value="">Choisir un livreur</option><?php foreach($couriers??[] as $courier): ?><option value="<?= (int)$courier['id_livreur'] ?>"><?= $escape($courier['nom']) ?></option><?php endforeach; ?></select></label><?php endif; ?>
@@ -21,5 +23,6 @@ if($flashText!=='')\App\Core\Session::remove('_admin_order_flash');
     <?php $button=['label'=>$label,'type'=>'submit','variant'=>$action==='cancel'?'ghost':'primary','attributes'=>['disabled'=>true]];require dirname(__DIR__).'/components/button.php'; ?>
   </form>
   <?php endif; ?><?php endforeach; ?>
+  </div>
   <noscript><p>Activez JavaScript pour utiliser les actions avec confirmation et suivi du résultat.</p></noscript>
 </section><?php endif; ?>

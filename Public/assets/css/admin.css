@@ -26,6 +26,22 @@
 .admin-order-card { min-width:0; padding:var(--spacing-md); background:var(--brand-gray-100); border:var(--border); border-radius:var(--radius-card); overflow-wrap:anywhere; }
 .admin-order-card > header { display:flex; justify-content:space-between; flex-wrap:wrap; gap:var(--spacing-md); }
 .admin-orders__facts { display:grid; gap:var(--spacing-md); margin-block:var(--spacing-md); }
+/* Cartes de liste compactes, sans modifier les cartes du détail. */
+.admin-order-summary { display:grid; gap:var(--spacing-sm); }
+.admin-order-summary__identity { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--spacing-sm) var(--spacing-lg); min-width:0; }
+.admin-order-summary h2 { margin:0; font-size:var(--font-size-h3); }
+.admin-order-summary__amount { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--spacing-xs) var(--spacing-sm); }
+.admin-order-summary__amount > strong { color:var(--color-gold-dark); font-size:var(--font-size-lg); }
+.admin-order-summary__amount small,.admin-order-summary__meta,.admin-order-summary__mode { color:var(--color-text-muted); font-size:var(--font-size-sm); }
+.admin-order-summary__meta { display:flex; flex-wrap:wrap; gap:var(--spacing-xs) var(--spacing-md); margin:0; }
+.admin-order-summary .admin-orders__facts { margin:0; gap:var(--spacing-sm); padding-block:var(--spacing-sm); border-block:var(--border); }
+.admin-order-summary .admin-orders__facts > div { min-width:0; }
+.admin-order-summary .admin-orders__facts dd { margin:0; }
+.admin-order-summary__mode { display:block; }
+.admin-order-summary > .btn { justify-self:start; }
+.admin-order-status--positive { color:var(--color-success); }
+.admin-order-status--negative { color:var(--color-error); }
+.admin-order-status--pending { color:var(--color-gold-dark); font-weight:var(--font-weight-semibold); }
 .admin-orders dt,.admin-orders__muted { color:var(--color-text-muted); font-size:var(--font-size-sm); }
 .admin-orders__detail { display:grid; gap:var(--spacing-lg); margin-top:var(--spacing-lg); }
 .admin-orders__fields { display:grid; gap:var(--spacing-sm); margin-block:var(--spacing-md); }
@@ -52,9 +68,14 @@
 .admin-courier-status > span { width:.65rem; height:.65rem; border-radius:50%; background:var(--color-error); flex-shrink:0; }
 .admin-courier-status.is-available > span { background:var(--color-success); }
 @media(min-width:48.01rem) and (max-width:75rem) { .admin-header__inner { flex-wrap:wrap; } .admin-header__actions { flex-basis:100%; margin-left:0; } }
-.admin-order-actions form { display:grid; gap:var(--spacing-sm); max-width:32rem; margin-top:var(--spacing-md); }
+.admin-order-actions__layout { display:grid; gap:var(--spacing-md); align-items:start; }
+.admin-order-actions form { display:grid; gap:var(--spacing-sm); min-width:0; margin:0; align-content:start; }
 .admin-order-actions .btn { justify-self:start; }
 .admin-order-actions form[data-order-action="cancel"] { border-top:var(--border); padding-top:var(--spacing-md); }
+.admin-order-actions form[data-order-action="cancel"] h3 { font-size:var(--font-size-sm); margin:0; }
+.admin-order-actions form[data-order-action="cancel"] .btn { color:var(--color-error); border:var(--border-width) solid currentColor; }
+.admin-order-actions form[data-order-action="cancel"] .btn:hover:not(:disabled),.admin-order-actions form[data-order-action="cancel"] .btn:focus-visible { background:color-mix(in srgb,var(--color-error) 8%,var(--brand-gray-100)); }
+@media(min-width:64rem) { .admin-order-actions__layout:has(>form:not([data-order-action="cancel"])) { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-lg); } .admin-order-actions__layout:has(>form:not([data-order-action="cancel"])) >form[data-order-action="cancel"] { border-top:0; border-left:var(--border); padding-top:0; padding-left:var(--spacing-lg); } }
 [data-order-action-message]:empty { display:none; }
 [data-order-action-message]:not(:empty) { margin-block:var(--spacing-md); padding:var(--spacing-sm); border-left:var(--border-width) solid var(--color-gold); }
 @media(min-width:768px) { .admin-orders__facts { grid-template-columns:repeat(3,minmax(0,1fr)); } .admin-orders__detail { grid-template-columns:minmax(0,2fr) minmax(0,1fr); } }

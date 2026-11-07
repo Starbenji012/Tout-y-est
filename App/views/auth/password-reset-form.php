@@ -5,12 +5,13 @@ $resetStatus = is_string($resetStatus ?? null) ? $resetStatus : 'invalid';
 $authErrors = is_array($authErrors ?? null) ? $authErrors : [];
 $csrfTokenValue = htmlspecialchars((string) ($csrfToken ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $tokenValue = htmlspecialchars($token, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$invalidLink = $resetStatus !== 'valid' && $resetStatus !== 'expired' && $authErrors === [];
 ?>
 
 <section class="account-access" aria-labelledby="password-reset-title">
     <div class="container account-access__container">
         <div class="account-auth-shell" data-motion="section">
-            <article class="account-panel">
+            <article class="account-panel<?= $invalidLink ? ' account-panel--invalid-link' : '' ?>">
                 <?php if ($resetStatus === 'valid' || $authErrors !== []): ?>
                     <div class="account-panel__heading">
                         <i data-lucide="key-round" aria-hidden="true"></i>
@@ -29,13 +30,15 @@ $tokenValue = htmlspecialchars($token, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                     <div class="account-panel__heading"><i data-lucide="clock-alert" aria-hidden="true"></i><div><h1 id="password-reset-title">Lien expiré</h1><p>Demandez un nouveau lien de réinitialisation pour continuer.</p></div></div>
                     <a class="account-form__link" href="/mot-de-passe-oublie">Demander un nouveau lien</a>
                 <?php else: ?>
-                    <div class="account-panel__heading"><i data-lucide="circle-alert" aria-hidden="true"></i><div><h1 id="password-reset-title">Lien invalide</h1><p>Ce lien est incorrect ou n’est plus utilisable.</p></div></div>
-                    <a class="account-form__link" href="/mot-de-passe-oublie">Demander un nouveau lien</a>
+                    <div class="account-panel__heading"><div><h1 id="password-reset-title">Lien invalide</h1><p>Ce lien est incorrect ou n’est plus utilisable.</p></div></div>
                 <?php endif; ?>
-                <p class="account-panel__switch"><a href="/connexion">Retour à la connexion</a></p>
+                <?php if($invalidLink): ?><div class="account-invalid-link__actions">
+                    <?php $button=['label'=>'Demander un nouveau lien','href'=>'/mot-de-passe-oublie','variant'=>'primary']; require dirname(__DIR__).'/components/button.php'; ?>
+                    <?php $button=['label'=>'Retour à la connexion','href'=>'/connexion','variant'=>'outline']; require dirname(__DIR__).'/components/button.php'; ?>
+                </div><?php else: ?><p class="account-panel__switch"><a href="/connexion">Retour à la connexion</a></p><?php endif; ?>
             </article>
         </div>
     </div>
 </section>
 
-<?php unset($token, $resetStatus, $authErrors, $csrfTokenValue, $tokenValue, $button); ?>
+<?php unset($token, $resetStatus, $authErrors, $csrfTokenValue, $tokenValue, $button, $invalidLink); ?>

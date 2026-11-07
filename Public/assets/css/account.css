@@ -145,6 +145,16 @@
   display: none;
 }
 
+/* Une erreur de lien reste compacte et guide directement vers les actions. */
+.account-panel.account-panel--invalid-link { display:flex; flex-direction:column; width:min(100%,42rem); margin-inline:auto; padding:var(--spacing-md); gap:var(--spacing-md); }
+.account-panel--invalid-link .account-panel__heading { padding:0; min-height:0; background:none; color:var(--color-heading); border-radius:0; animation:none; }
+.account-panel--invalid-link .account-panel__heading h1 { color:var(--color-heading); }
+.account-panel--invalid-link .account-panel__heading p { color:var(--color-text-muted); max-width:none; }
+.account-panel--invalid-link .account-panel__heading::before,.account-panel--invalid-link .account-panel__heading::after { display:none; }
+.account-invalid-link__actions { display:flex; flex-wrap:wrap; justify-content:center; gap:var(--spacing-sm); }
+.account-invalid-link__actions .btn { white-space:normal; text-align:center; }
+@media(max-width:40rem) { .account-invalid-link__actions { flex-direction:column; } .account-invalid-link__actions .btn { width:100%; } }
+
 .account-panel__heading {
   position: relative;
   isolation: isolate;

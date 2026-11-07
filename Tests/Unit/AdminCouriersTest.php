@@ -31,6 +31,9 @@ try {
     $assert($service->listing()['installed']&&$service->listing()['couriers']===[],'État vide');
     foreach(['','A',str_repeat('A',121),"Nom\0Interdit","Nom\nInterdit","\xff"]as$invalid)$reject(fn()=>$service->save(null,$invalid));
     $created=$service->save(null,'  TEST   Gérant  ');$id=$created['id'];$row=$model->listing()[0];
+    $assert($created['message']==='Livreur ajouté. Il est indisponible par défaut.','Message de création distinct');
+    $assert($service->setAvailability($id,'actif')['message']==='Livreur désormais disponible.','Message activation');
+    $assert($service->setAvailability($id,'inactif')['message']==='Livreur désormais indisponible.','Message désactivation');
     $assert($row['nom']==='TEST Gérant'&&$row['statut']==='inactif','Nom normalisé, création indisponible');
     $service->setAvailability($id,'actif');$assert(count($model->active())===1,'Disponible proposé');
     $service->setAvailability($id,'actif');$assert(count($model->listing())===1,'Cible explicite idempotente');

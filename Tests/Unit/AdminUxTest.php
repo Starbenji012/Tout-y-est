@@ -10,6 +10,25 @@ foreach(['https://evil.invalid','//evil.invalid','/admin/../evil','/admin?next=h
 $assert(App\Services\AdminOrderReadService::rateLabel('2450.0000')==='1 USD = 2 450 FC','Taux');
 $assert(App\Services\AdminOrderReadService::rateLabel('2450.1250')==='1 USD = 2 450,125 FC','Taux décimal');
 $assert(App\Services\AdminOrderReadService::dateLabel('2026-10-24 18:42:00')==='24/10/2026 à 18:42','Date journal');
+$assert(App\Services\AdminOrderReadService::dateLabel('2026-11-07 17:15:12')==='07/11/2026 à 17:15','Format date Admin');
+$assert(App\Services\AdminOrderReadService::dateLabel(null)==='Date non renseignée','Date absente');
+$detail=file_get_contents($root.'/App/views/admin/order-detail.php');
+$assert(str_contains($detail,"str_starts_with(\$key,'date_')")&&str_contains($detail,'dateLabel($delivery[$key])'),'Dates livraison via helper commun');
+$actionsView=file_get_contents($root.'/App/views/admin/order-actions.php');
+$assert(str_contains($actionsView,'if(isset($actions[$action]))')&&str_contains($actionsView,'admin-order-actions__layout')&&str_contains($actionsView,'<h3>Annulation</h3>')&&str_contains($actionsView,'name="motif" required'),'Actions toujours conditionnelles et annulation séparée');
+$resetStatus='invalid';ob_start();require $root.'/App/views/auth/password-reset-form.php';$resetHtml=ob_get_clean();
+$assert(str_contains($resetHtml,'Lien invalide')&&str_contains($resetHtml,'btn-primary')&&str_contains($resetHtml,'btn-outline')&&str_contains($resetHtml,'href="/mot-de-passe-oublie"')&&str_contains($resetHtml,'href="/connexion"'),'Liens reset invalides et hiérarchie');
+$assert(substr_count($resetHtml,'href="/mot-de-passe-oublie"')===1,'Aucune action dupliquée');
+$assert(!str_contains($resetHtml,'circle-alert'),'Icône isolée retirée du lien invalide');
+$orders=[];$states=[];$state='';$cash=false;$page=1;$hasNext=false;$filters=[];
+foreach(['confirmee','en_preparation','en_livraison','livree','annulee','en_attente_paiement'] as $index=>$status){
+    $orders[]=['number'=>'TYE-'.str_pad((string)($index+1),3,'0',STR_PAD_LEFT),'date'=>'07/11/2026 à 17:15','total'=>'$25.00','cdf'=>'61 250 FC','row'=>['statut'=>$status,'client_prenom'=>'Client','client_nom'=>'TEST'],'status'=>$status,'mode'=>'Espèces à la livraison','paymentStatus'=>$status==='livree'?'Payé':'À encaisser','delivery'=>['statut'=>$status],'deliveryStatus'=>$status];
+}
+ob_start();require $root.'/App/views/admin/orders.php';$cards=ob_get_clean();
+$assert(substr_count($cards,'class="admin-order-card admin-order-summary"')===6,'Même carte pour tous les états');
+$assert(substr_count($cards,'aria-label="Voir la commande')===6&&str_contains($cards,'reference=TYE-001'),'Liens détail conservés');
+$assert(str_contains($cards,'admin-order-status--positive')&&str_contains($cards,'admin-order-status--negative')&&str_contains($cards,'admin-order-status--pending'),'Tons états séparés');
+$assert(str_contains($cards,'61 250 FC')&&str_contains($cards,'Client TEST')&&str_contains($cards,'07/11/2026 à 17:15'),'Informations secondaires conservées');
 $header=file_get_contents($root.'/App/views/components/header.php');
 $assert(substr_count($header,'if ($showAdminBridge ?? false)')===2,'Pont desktop et mobile conditionnel');
 $controller=file_get_contents($root.'/App/core/Controller.php');

@@ -70,7 +70,7 @@ final class AdminOrderReadService
         $cdf=null;
         // Un ancien taux invalide n'empêche pas de consulter la commande.
         if($row['devise_reference']==='USD'&&$row['taux_usd_cdf']!==null){try{$cdf=$this->money->format($this->money->usdToCdfAtRate($this->money->minor($row['total']),$row['taux_usd_cdf']),'CDF');}catch(\InvalidArgumentException|\DomainException){}}
-        return ['row'=>$row,'number'=>$row['numero_commande'],'date'=>(new \DateTimeImmutable($row['date_commande']))->format('d/m/Y à H:i'),'status'=>CustomerOrderService::orderStatus($row['statut']),'total'=>$this->amount($row['total'],$row['devise_reference']),'subtotal'=>$this->amount($row['sous_total'],$row['devise_reference']),'shipping'=>$this->amount($row['frais_livraison'],$row['devise_reference']),'cdf'=>$cdf,'payments'=>$payments,'mode'=>$selected['mode']??'Non choisi','paymentStatus'=>$selected['label']??'Aucun paiement enregistré','delivery'=>$delivery,'deliveryStatus'=>self::deliveryStatus($delivery['statut']??null)];
+        return ['row'=>$row,'number'=>$row['numero_commande'],'date'=>self::dateLabel($row['date_commande']),'status'=>CustomerOrderService::orderStatus($row['statut']),'total'=>$this->amount($row['total'],$row['devise_reference']),'subtotal'=>$this->amount($row['sous_total'],$row['devise_reference']),'shipping'=>$this->amount($row['frais_livraison'],$row['devise_reference']),'cdf'=>$cdf,'payments'=>$payments,'mode'=>$selected['mode']??'Non choisi','paymentStatus'=>$selected['label']??'Aucun paiement enregistré','delivery'=>$delivery,'deliveryStatus'=>self::deliveryStatus($delivery['statut']??null)];
     }
 
     private function amount(string $value,?string $currency): string
