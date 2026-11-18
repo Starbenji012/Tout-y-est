@@ -29,7 +29,7 @@ final class PaymentService
             if (!$order || (int) $order['id_utilisateur'] !== $userId) throw new DomainException('Commande introuvable pour ce compte.');
             $payments = new Payment($this->database);
             $existing = $payments->forOrder($orderId);
-            if (in_array($order['statut'], ['confirmee','en_preparation','en_livraison','livree'], true) && count($existing) === 1 && $existing[0]['mode'] === PaymentMethod::CASH && ($existing[0]['statut'] === 'a_encaisser' || ($order['statut'] === 'livree' && $existing[0]['statut'] === 'paye'))) {
+            if (in_array($order['statut'], ['confirmee','en_preparation','en_livraison','livree'], true) && count($existing) === 1 && $existing[0]['mode'] === PaymentMethod::CASH && ($existing[0]['statut'] === 'a_encaisser' || ($order['statut'] === 'livree' && in_array($existing[0]['statut'],['collecte_livreur','paye'],true)))) {
                 $this->database->commit();
                 return ['id' => $orderId, 'paymentId' => (int) $existing[0]['id_paiement'], 'reused' => true];
             }
@@ -53,8 +53,8 @@ final class PaymentService
     {
         $order = (new Order($this->database))->find($orderId);
         $payments = (new Payment($this->database))->forOrder($orderId);
-        if ($userId < 1 || !$order || (int) $order['id_utilisateur'] !== $userId || !in_array($order['statut'], ['confirmee','en_preparation','en_livraison','livree'],true) || count($payments) !== 1 || $payments[0]['mode'] !== PaymentMethod::CASH || !in_array($payments[0]['statut'], ['a_encaisser','paye'],true)) throw new DomainException('Confirmation introuvable pour ce compte.');
-        return ['order' => $order, 'delivery' => (new Delivery($this->database))->forOrder($orderId)];
+        if ($userId < 1 || !$order || (int) $order['id_utilisateur'] !== $userId || !in_array($order['statut'], ['confirmee','en_preparation','en_livraison','livree'],true) || count($payments) !== 1 || $payments[0]['mode'] !== PaymentMethod::CASH || !in_array($payments[0]['statut'], ['a_encaisser','collecte_livreur','paye'],true)) throw new DomainException('Confirmation introuvable pour ce compte.');
+        return ['order' => $order, 'delivery' => (new Delivery($this->database))->forOrder($orderId),'payment'=>$payments[0]];
     }
 
     /** Entrée existante : conserve la gestion transactionnelle pour les appels internes. */
@@ -75,6 +75,8 @@ final class PaymentService
     public function cancelCashInTransaction(int $orderId): bool
     {
         if (!$this->database->inTransaction()) throw new \LogicException('Transaction requise pour annuler.');
+        $tours=new CourierTourService($this->database);
+        if($tours->installed())$tours->lock();
         $orders = new Order($this->database);
         $order = $orders->find($orderId, true);
         if ($order && $order['statut'] === 'annulee' && $order['stock_restitue_at'] !== null) {
@@ -95,6 +97,7 @@ final class PaymentService
         $orders->release($orderId, 'annulee');
         $payments->cancel((int) $rows[0]['id_paiement']);
         $deliveryModel->cancel($orderId);
+        if($tours->installed())$tours->cancelledAssignment($orderId);
         return true;
     }
 }

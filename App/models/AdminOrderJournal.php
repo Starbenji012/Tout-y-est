@@ -18,7 +18,9 @@ final class AdminOrderJournal
     /** Les noms actuels identifient les acteurs ; les événements restent historiques. */
     public function forOrder(int $orderId): array
     {
-        $query = $this->database->prepare('SELECT j.*,u.nom AS admin_nom,u.prenom AS admin_prenom FROM journal_commande j LEFT JOIN utilisateur u ON u.id_utilisateur=j.id_administrateur WHERE j.id_commande=? ORDER BY j.date_action,j.id_journal');
+        $modern=(int)$this->database->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='journal_commande' AND COLUMN_NAME='id_acteur'")->fetchColumn()===1;
+        $actor=$modern?'COALESCE(j.id_acteur,j.id_administrateur)':'j.id_administrateur';
+        $query = $this->database->prepare('SELECT j.*,u.nom AS admin_nom,u.prenom AS admin_prenom FROM journal_commande j LEFT JOIN utilisateur u ON u.id_utilisateur='.$actor.' WHERE j.id_commande=? ORDER BY j.date_action,j.id_journal');
         $query->execute([$orderId]); return $query->fetchAll();
     }
 

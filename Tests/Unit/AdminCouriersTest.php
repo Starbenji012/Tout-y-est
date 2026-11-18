@@ -23,7 +23,8 @@ $db=$connect($config['database']);$name='tout_y_est_couriers_test_'.bin2hex(rand
 $assert=static function(bool $ok,string $why):void {if(!$ok)throw new RuntimeException($why);};
 $reject=static function(callable $fn,int $code=422)use($assert):void {try{$fn();}catch(DomainException $e){$assert($e->getCode()===$code,'Code de refus '.$e->getCode().' attendu '.$code);return;}throw new RuntimeException('Opération refusée attendue.');};
 try {
-    $db->exec(str_replace('tout_y_est',$name,file_get_contents($root.'/Database/schema.sql')));
+    // Régression historique S1.14 ; le workflow multi-colis S1.15 possède sa propre suite.
+    $db->exec(str_replace('tout_y_est',$name,explode('-- BEGIN S1.15',file_get_contents($root.'/Database/schema.sql'),2)[0]));
     $db->exec("INSERT INTO utilisateur(id_utilisateur,nom,prenom,email,mot_de_passe,role,statut) VALUES(1,'Admin','TEST','admin@example.invalid','unused','admin','actif'),(2,'Client','TEST','client@example.invalid','unused','client','actif'),(3,'Inactive','TEST','inactive@example.invalid','unused','admin','inactif')");
     $service=$build($db);$model=new App\Models\Courier($db);
     foreach([0=>401,2=>403,3=>403,999=>403]as$actor=>$code){App\Core\Session::set('user',['id'=>$actor,'role'=>'admin']);$reject(fn()=>$service->listing(),$code);$reject(fn()=>$service->save(null,'TEST Interdit'),$code);$reject(fn()=>$service->setAvailability(1,'actif'),$code);}

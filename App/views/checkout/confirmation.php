@@ -6,7 +6,7 @@
     <div class="checkout-layout">
         <section class="checkout-panel" data-motion="section">
             <h2>Espèces à la livraison</h2>
-            <p>Votre commande est enregistrée. Le paiement sera effectué en espèces à la livraison. Aucun montant n’a été encaissé.</p>
+            <p><?= ($payment['statut']??'a_encaisser')==='collecte_livreur'?'Votre règlement a été reçu par le livreur.':(($payment['statut']??'')==='paye'?'Votre paiement est confirmé.':'Votre commande est enregistrée. Le paiement sera effectué en espèces à la livraison. Aucun montant n’a été encaissé.') ?></p>
             <p>Vos articles sont réservés pour cette commande.</p>
             <?php $button = ['label' => 'Continuer mes achats', 'href' => '/boutique', 'variant' => 'primary']; require dirname(__DIR__) . '/components/button.php'; ?>
         </section>

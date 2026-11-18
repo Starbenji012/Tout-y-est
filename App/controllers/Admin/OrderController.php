@@ -17,6 +17,7 @@ final class OrderController
     public function deliver(): void { $this->handle('deliver'); }
     public function collectCash(): void { $this->handle('collectCash'); }
     public function cancel(): void { $this->handle('cancel'); }
+    public function assign(): void { $this->handle('assign'); }
 
     private function handle(string $action): void
     {
@@ -26,13 +27,15 @@ final class OrderController
             $this->orders->authorize();
             $input = $this->request->postParameters();
             if (!CsrfMiddleware::isValid($input['_token'] ?? null)) { Response::json(['error'=>'Session expirée. Rechargez la page.'],419); return; }
-            $allowed = match($action) {'cancel'=>['commande','motif','_token'],'ship'=>['commande','id_livreur','_token'],default=>['commande','_token']};
+            $allowed = match($action) {'cancel'=>['commande','motif','_token'],'ship'=>['commande','id_livreur','_token'],'assign'=>['commande','id_livreur','ancien_id_livreur','_token'],default=>['commande','_token']};
             if (array_diff(array_keys($input),$allowed) !== []) throw new DomainException('Paramètres non autorisés.',422);
             $id = filter_var($input['commande'] ?? null,FILTER_VALIDATE_INT);
             if (!$id || $id < 1) throw new DomainException('Commande invalide.',422);
+            if ($action==='assign' && filter_var($input['ancien_id_livreur']??null,FILTER_VALIDATE_INT)===false) throw new DomainException('Affectation précédente invalide.',422);
             $result = $action === 'cancel'
                 ? $this->orders->cancel($id,is_string($input['motif'] ?? null) ? $input['motif'] : '')
-                : ($action==='ship'?$this->orders->ship($id,(int)(filter_var($input['id_livreur']??null,FILTER_VALIDATE_INT)?:0)):$this->orders->{$action}($id));
+                : ($action==='assign'?$this->orders->assign($id,(int)(filter_var($input['id_livreur']??null,FILTER_VALIDATE_INT)?:0),(int)$input['ancien_id_livreur'])
+                    :($action==='ship'?$this->orders->ship($id,(int)(filter_var($input['id_livreur']??null,FILTER_VALIDATE_INT)?:0)):$this->orders->{$action}($id)));
             $result['redirect']='/admin/commande?'.http_build_query(['reference'=>$result['reference']]);
             if (str_contains((string)($_SERVER['HTTP_ACCEPT']??''),'text/html')) {
                 Session::set('_admin_order_flash',['reference'=>$result['reference'],'message'=>$result['message']]);

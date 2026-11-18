@@ -19,19 +19,43 @@ final class AdminOrderService
     public function __construct(private readonly PDO $database, private readonly AdminAccessService $access, private readonly MoneyService $money) {}
 
     public function authorize(): int { return $this->access->requireCurrentAdmin(); }
-    public function prepare(int $id): array { return $this->apply($id, 'prepare'); }
+    public function prepare(int $id): array {
+        $tours=new CourierTourService($this->database);
+        return $tours->installed()?$tours->ready($id,$this->access):$this->apply($id,'prepare');
+    }
     public function ship(int $id, int $courierId = 0): array { return $this->apply($id, 'ship', '', $courierId); }
     public function deliver(int $id): array { return $this->apply($id, 'deliver'); }
     public function collectCash(int $id): array { return $this->apply($id, 'collect-cash'); }
     public function cancel(int $id, string $reason): array { return $this->apply($id, 'cancel', $reason); }
 
+    public function assign(int $id,int $courierId,int $expectedId): array
+    {
+        $this->database->beginTransaction();
+        try {
+            $actor=$this->access->requireCurrentAdmin(true);
+            $dispatch=new CourierAssignmentService($this->database);$dispatch->lock();
+            if ($id<1 || $courierId<1 || $expectedId<0) throw new DomainException('Affectation invalide.',422);
+            $changed=$dispatch->assign($id,$courierId,$actor,$expectedId?:null);
+            $order=(new Order($this->database))->find($id);
+            $dispatch->dispatch($actor);
+            $this->database->commit();
+            return ['success'=>true,'commande'=>$id,'action'=>'assign','reused'=>!$changed,
+                'reference'=>$order['numero_commande'],'message'=>'Affectation enregistrée. Le départ reste à confirmer.'];
+        } catch (Throwable $error) {
+            if($this->database->inTransaction())$this->database->rollBack();throw $error;
+        }
+    }
+
     private function apply(int $id, string $action, string $reason = '', int $courierId = 0): array
     {
+        if($action!=='cancel'&&(new CourierTourService($this->database))->installed()
+            && !($action==='collect-cash'&&$this->legacyOrder($id)))throw new DomainException('Utilisez l’espace Livreur ou la remise cash par tournée.',409);
         $courierName='';
         $this->database->beginTransaction();
         try {
-            // Droits verrouillés puis commande, paiement, livraison ; stock seulement à l'annulation.
+            // Droits puis livreurs, commande, paiement, livraison ; stock seulement à l'annulation.
             $actor = $this->access->requireCurrentAdmin(true);
+            $dispatch=new CourierAssignmentService($this->database);$dispatch->lock();
             if ($id < 1) throw new DomainException('Commande invalide.',422);
             if ($action === 'cancel') $reason = $this->reason($reason);
             $orders = new Order($this->database);
@@ -68,7 +92,8 @@ final class AdminOrderService
                 if ($action==='ship') {
                     $courier=(new Courier($this->database))->findForAssignment($courierId);
                     if (!$courier||$courier['statut']!=='actif') throw new DomainException('Ce livreur n’est plus disponible. Choisissez un livreur actif.',422);
-                    $courierName=$this->courier($courier['nom']);
+                    if ((int)($delivery['id_livreur']??0)!==$courierId) throw new DomainException('Confirmez d’abord l’affectation de ce livreur avant le départ.',409);
+                    $courierName=(string)$delivery['nom_livreur_snapshot'];
                 }
                 $orders->advance($id,$target);
                 $deliveries->advance($id,$target);
@@ -91,6 +116,7 @@ final class AdminOrderService
             $afterPayment = $payments->forOrder($id)[0];
             $afterDelivery = $deliveries->forOrder($id);
             $journal->append($id,$actor,(int)$payment['id_paiement'],$action,$before,$this->state($afterOrder,$afterPayment,$afterDelivery),$data);
+            if (in_array($action,['prepare','deliver','cancel'],true)) $dispatch->dispatch($actor);
             $this->database->commit();
             return ['success'=>true,'commande'=>$id,'action'=>$action,'reused'=>false,'reference'=>$order['numero_commande'],'message'=>$this->message($action,$courierName)];
         } catch (Throwable $error) {
@@ -105,6 +131,8 @@ final class AdminOrderService
         $data = json_decode($event['donnees_complementaires'],true,512,JSON_THROW_ON_ERROR);
         if ((int)$event['id_paiement'] !== (int)$payment['id_paiement']) $this->conflict();
         foreach ($after as $key=>$value) {
+            // L'affectation est un événement distinct et peut évoluer avant le départ.
+            if ($action==='prepare' && in_array($key,['livreur','id_livreur'],true)) continue;
             // La livraison déjà faite reste faite après encaissement, sans toucher à ses dates.
             if ($action === 'deliver' && in_array($key,['paiement','date_paiement'],true)) continue;
             if (!array_key_exists($key,$state) || $state[$key] !== $value) $this->conflict();
@@ -147,18 +175,32 @@ final class AdminOrderService
         if ($order['statut']==='livree' && $delivery['statut']==='livree' && $this->datesMatch($delivery,3)) {
             try {$actions['collectCash']=$this->receipt($order,$rows[0]);}catch(\InvalidArgumentException|DomainException) {}
         }
+        if((new CourierTourService($this->database))->installed())$actions=array_intersect_key($actions,['prepare'=>true,'cancel'=>true]+($this->legacyOrder((int)$order['id_commande'])?['collectCash'=>true]:[]));
         return $actions;
     }
 
-    public function couriersForAssignment(): array
+    public function couriersForAssignment(int $orderId=0): array
     {
         $this->authorize();
-        return (new Courier($this->database))->active();
+        return (new Courier($this->database))->active($orderId);
+    }
+    public function tourNotice(array $delivery): ?string
+    {
+        if(!(new CourierTourService($this->database))->installed())return null;
+        $q=$this->database->prepare('SELECT a.resultat,t.statut FROM tentative_livraison a JOIN tournee t ON t.id_tournee=a.id_tournee WHERE a.id_livraison=? ORDER BY a.id_tentative DESC LIMIT 1');$q->execute([$delivery['id_livraison']]);$row=$q->fetch();
+        if($row&&$row['resultat']==='probleme')return $row['statut']==='retour_termine'?'Colis retourné après un problème : décision humaine nécessaire. Aucun stock restitué automatiquement.':'Problème signalé. Le colis reste sous la responsabilité du livreur jusqu’au retour.';
+        if($row&&$row['statut']==='chargement')return 'Colis affecté à '.$delivery['nom_livreur_snapshot'].' — départ groupé depuis l’espace Livreur.';
+        if($row&&$row['statut']==='en_cours')return 'Tournée en cours. Le livreur doit confirmer son retour physique après ses livraisons.';
+        return $delivery['statut']==='en_preparation'?'Commande prête en attente d’un livreur et d’une tournée éligible.':null;
     }
 
     private function courier(string $value): string
     {
         return Courier::cleanName($value);
+    }
+    private function legacyOrder(int $id): bool
+    {
+        $q=$this->database->prepare('SELECT COUNT(*) FROM tentative_livraison a JOIN livraison l ON l.id_livraison=a.id_livraison WHERE l.id_commande=?');$q->execute([$id]);return (int)$q->fetchColumn()===0;
     }
 
     private function message(string $action,string $courier): string

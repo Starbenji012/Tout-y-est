@@ -12,7 +12,7 @@ use App\Services\EmailVerificationService;
 /** Affiche l'espace personnel de l'utilisateur connecté. */
 final class AccountController extends Controller
 {
-    public function __construct(private readonly EmailVerificationService $emailVerificationService)
+    public function __construct(private readonly EmailVerificationService $emailVerificationService,private readonly ?\App\Services\CourierTourService $courierTours=null)
     {
     }
 
@@ -31,7 +31,10 @@ final class AccountController extends Controller
             $verificationNotice = 'unavailable';
         }
 
+        $courierAccess=false;
+        try {if($this->courierTours!==null){$this->courierTours->identity();$courierAccess=true;}}catch(\Throwable){}
         $this->render('account/dashboard', [
+            'courierAccess'=>$courierAccess,
             'title' => 'Mon compte | Tout y est',
             'metaDescription' => 'Gérez votre compte Tout y est.',
             'activePage' => 'account',

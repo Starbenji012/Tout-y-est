@@ -14,4 +14,7 @@ const view=fs.readFileSync(path.join(root,'App/views/admin/couriers.php'),'utf8'
 assert.match(view,/method="post"/);assert.match(view,/name="_token"/);assert.match(view,/Disponible/);assert.match(view,/Indisponible/);
 assert.doesNotMatch(view,/type="password"|name="email"|name="telephone"|Supprimer/);
 const css=fs.readFileSync(path.join(root,'Public/assets/css/admin.css'),'utf8');assert.match(css,/admin-courier-status\.is-available/);assert.match(css,/--color-success/);assert.match(css,/--color-error/);
+assert.match(css,/\.admin-couriers__list\s*\{[^}]*align-items:\s*start\s*;/,'Ouvrir une carte ne doit pas etirer ses voisines.');
+assert.match(view,/Affecté — départ en attente/);assert.match(view,/En tournée/);assert.match(view,/en_course/);assert.match(view,/affecte/);assert.match(css,/--color-warning/);
+assert.match(view,/class="admin-couriers__actions"/);assert.match(view,/>Gérer<\/summary>/);assert.match(view,/Compte associé :/);
 console.log('ADMIN_COURIERS_UI_OK (POST natif, doubles clics, retour navigateur, libellés, disponibilité accessible).');

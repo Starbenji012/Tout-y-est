@@ -72,6 +72,7 @@ final class CustomerOrderService
     {
         return match ($status) {
             'a_encaisser' => $mode === \App\Models\PaymentMethod::CASH ? 'À régler à la livraison' : 'À régler',
+            'collecte_livreur' => 'Réglé au livreur',
             'paye', 'payee' => 'Payé', 'annule', 'annulee' => 'Paiement annulé',
             'echoue' => 'Paiement non abouti', 'en_attente' => 'En attente de règlement',
             null => 'Aucun paiement enregistré', default => 'État du paiement en cours de mise à jour',

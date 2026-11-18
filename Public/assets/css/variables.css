@@ -16,6 +16,7 @@
   --color-gold-dark: #a7831f;
   --color-error: #b42318;
   --color-success: #237747; /* État disponible : indicateur accompagné d'un libellé. */
+  --color-warning: #a35d0b; /* Affecté / en course, toujours accompagné d'un texte. */
 
   /* Typographie */
   --font-family-primary: "Poppins", sans-serif;

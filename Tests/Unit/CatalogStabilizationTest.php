@@ -25,12 +25,19 @@ if (!in_array($config['host'], ['localhost', '127.0.0.1', '::1'], true)) throw n
 $db = new PDO('mysql:host=' . $config['host'] . ';port=' . $config['port'] . ';charset=utf8mb4', $config['username'], $config['password'], $config['options']);
 $name = 'tout_y_est_catalog_test_' . bin2hex(random_bytes(8));
 try {
-    $db->exec(str_replace('tout_y_est', $name, file_get_contents($root . '/Database/schema.sql')));
+    $reference=file_get_contents($root . '/Database/schema.sql');
+    $version=$db->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME='verrou_dispatch'");$version->execute([$config['database']]);
+    // Comparer la version effectivement déployée. S1.15 est vérifiée séparément sur base jetable.
+    if((int)$version->fetchColumn()===0)$reference=explode('-- BEGIN S1.15',$reference,2)[0];
+    $db->exec(str_replace('tout_y_est', $name, $reference));
     // Comparaison en lecture seule avec les tables migrées, sans dépendre du nom des index.
     foreach ($db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {
         $columns = $db->prepare('SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? ORDER BY COLUMN_NAME');
         $columns->execute([$name,$table]); $fresh=$columns->fetchAll();
         $columns->execute([$config['database'],$table]); $migrated=$columns->fetchAll();
+        $dispatchColumn=match($table){'livraison'=>'id_livreur_engage','journal_commande'=>'action_unique',default=>null};
+        $pendingDispatch=$dispatchColumn!==null&&!in_array($dispatchColumn,array_column($migrated,'COLUMN_NAME'),true);
+        if($pendingDispatch)$fresh=array_values(array_filter($fresh,static fn(array $column):bool=>$column['COLUMN_NAME']!==$dispatchColumn));
         // S1.11 est testée sur base éphémère ; son application locale reste manuelle.
         if ($table === 'journal_commande' && $migrated === []) continue;
         if ($table === 'livreur' && $migrated === []) continue; // S1.13 attend son application autorisée.
@@ -48,6 +55,8 @@ try {
         $assert($freshKeys === $keys->fetchAll(), 'FK installation/migrations : '.$table);
         $indexes = $db->prepare('SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns_list,NON_UNIQUE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? GROUP BY INDEX_NAME,NON_UNIQUE ORDER BY columns_list,NON_UNIQUE');
         $indexes->execute([$name,$table]); $freshIndexes=$indexes->fetchAll();
+        if($pendingDispatch&&$table==='livraison')$freshIndexes=array_values(array_filter($freshIndexes,static fn(array $index):bool=>$index['columns_list']!=='id_livreur_engage'));
+        if($pendingDispatch&&$table==='journal_commande')foreach($freshIndexes as &$index){if($index['columns_list']==='id_commande,action_unique')$index['columns_list']='id_commande,action';}unset($index);
         if($pendingCourierIdentity)$freshIndexes=array_values(array_filter($freshIndexes,static fn(array $index):bool=>$index['columns_list']!=='id_livreur'));
         $indexes->execute([$config['database'],$table]);
         $assert($freshIndexes === $indexes->fetchAll(), 'Index/UNIQUE installation/migrations : '.$table);

@@ -1,8 +1,8 @@
 <?php
 // Les actions proviennent du serveur ; aucune liste de statuts modifiables côté client.
 $actions=$actions??[];
-$actionLabels=['prepare'=>'Préparer la commande','ship'=>'Mettre en livraison','deliver'=>'Marquer comme livrée','collectCash'=>'Confirmer l’encaissement','cancel'=>'Annuler la commande'];
-$actionPaths=['prepare'=>'preparer','ship'=>'mettre-en-livraison','deliver'=>'livrer','collectCash'=>'encaisser-cash','cancel'=>'annuler'];
+$actionLabels=['prepare'=>'Commande prête','assign'=>'Confirmer l’affectation','ship'=>'Démarrer la livraison','deliver'=>'Marquer comme livrée','collectCash'=>'Confirmer l’encaissement','cancel'=>'Annuler la commande'];
+$actionPaths=['prepare'=>'preparer','assign'=>'affecter','ship'=>'mettre-en-livraison','deliver'=>'livrer','collectCash'=>'encaisser-cash','cancel'=>'annuler'];
 $flash=\App\Core\Session::get('_admin_order_flash');
 $flashText=is_array($flash)&&($flash['reference']??null)===$order['number']?($flash['message']??''):'';
 if($flashText!=='')\App\Core\Session::remove('_admin_order_flash');
@@ -17,7 +17,8 @@ if($flashText!=='')\App\Core\Session::remove('_admin_order_flash');
     <?php if($action==='cancel'): ?><h3>Annulation</h3><p class="admin-orders__muted">Cette action annule la commande. Un motif est obligatoire.</p><?php endif; ?>
     <input type="hidden" name="_token" value="<?= $escape(\App\Middleware\CsrfMiddleware::token()) ?>">
     <input type="hidden" name="commande" value="<?= (int)$row['id_commande'] ?>">
-    <?php if($action==='ship'): ?><label for="order-courier"><span id="order-courier-label" data-select-label>Livreur affecté</span><select id="order-courier" name="id_livreur" required data-select-control><option value="">Choisir un livreur</option><?php foreach($couriers??[] as $courier): ?><option value="<?= (int)$courier['id_livreur'] ?>"><?= $escape($courier['nom']) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+    <?php if($action==='assign'): ?><input type="hidden" name="ancien_id_livreur" value="<?= (int)($order['delivery']['id_livreur']??0) ?>"><label for="order-courier"><span id="order-courier-label" data-select-label>Affecter / changer le livreur avant départ</span><select id="order-courier" name="id_livreur" required data-select-control><option value="">Choisir un livreur</option><?php foreach($couriers??[] as $courier): ?><option value="<?= (int)$courier['id_livreur'] ?>"<?= (int)$courier['id_livreur']===(int)($order['delivery']['id_livreur']??0)?' selected':'' ?>><?= $escape($courier['nom']) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+    <?php if($action==='ship'): ?><input type="hidden" name="id_livreur" value="<?= (int)$order['delivery']['id_livreur'] ?>"><p>Livreur : <strong><?= $escape($order['delivery']['nom_livreur_snapshot']) ?></strong></p><?php endif; ?>
     <?php if($action==='cancel'): ?><label for="order-cancel-reason">Motif de l’annulation</label><textarea id="order-cancel-reason" name="motif" required minlength="1" maxlength="500" rows="2"></textarea><?php endif; ?>
     <?php if($action==='collectCash'): ?><p>Montant à encaisser : <strong><?= $escape($actions[$action]['montant'].' '.$actions[$action]['devise']) ?></strong></p><?php endif; ?>
     <?php $button=['label'=>$label,'type'=>'submit','variant'=>$action==='cancel'?'ghost':'primary','attributes'=>['disabled'=>true]];require dirname(__DIR__).'/components/button.php'; ?>

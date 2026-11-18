@@ -3,7 +3,7 @@
   const forms = [...document.querySelectorAll('[data-order-action]')];
   const message = document.querySelector('[data-order-action-message]');
   if (!message) return;
-  const labels = {prepare:'La préparation de la commande a commencé.', deliver:'La commande a été marquée comme livrée.', collectCash:'Paiement encaissé avec succès.', cancel:'La commande a été annulée.'};
+  const labels = {prepare:'Commande prête.', deliver:'La commande a été marquée comme livrée.', collectCash:'Paiement encaissé avec succès.', cancel:'La commande a été annulée.'};
   const storageKey = 'tout-y-est:admin-order-action';
   try {
     const flash = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
@@ -26,7 +26,7 @@
     if (busy) return;
     const action = form.dataset.orderAction;
     const select = form.querySelector('[name="id_livreur"]');
-    if (action === 'ship' && !select?.value) {
+    if ((action === 'ship' || action === 'assign') && !select?.value) {
       message.textContent = 'Sélectionnez un livreur actif disponible.';
       const trigger = document.getElementById?.(select?.id + '-trigger');
       if (trigger) trigger.focus(); else select?.focus?.();
@@ -34,9 +34,11 @@
     }
     if (!form.reportValidity()) return;
     const data = new FormData(form);
-    const courier = select?.selectedOptions[0]?.textContent.trim() || '';
+    const courier = select?.selectedOptions?.[0]?.textContent.trim() || '';
     const confirmations = {prepare:'Commencer la préparation de cette commande ?',ship:`Confier la commande à ${courier} et la mettre en livraison ?`,deliver:'Confirmer que cette commande a réellement été livrée ?',collectCash:'Confirmer que le paiement a réellement été reçu ?',cancel:'Annuler cette commande ? Le stock sera restitué. Cette action est définitive.'};
-    if (!window.confirm(confirmations[action])) return;
+    confirmations.assign = 'Confirmer cette affectation avant le départ ?';
+    confirmations.ship = 'Confirmer le départ réel avec le livreur déjà affecté ?';
+    if (action !== 'prepare' && !window.confirm(confirmations[action])) return;
     busy = true;
     const buttons = forms.flatMap(item => [...item.querySelectorAll('button[type="submit"]')]);
     buttons.forEach(button => { button.disabled = true; });

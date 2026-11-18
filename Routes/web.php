@@ -14,7 +14,7 @@ use App\Controllers\PasswordResetController;
 use App\Controllers\ProductController;
 
 // Réunit ici les contrôleurs déjà configurés par le point d'entrée.
-$accountController = new AccountController($emailVerificationService);
+$accountController = new AccountController($emailVerificationService,$database instanceof PDO?new \App\Services\CourierTourService($database):null);
 $authController = new AuthController(
     $authService,
     $request,
@@ -42,6 +42,13 @@ $adminOrderReadController = new \App\Controllers\Admin\OrderReadController($admi
 /** @var \App\Services\AdminCourierService|null $adminCourierService */
 $adminCourierController = new \App\Controllers\Admin\CourierController($adminCourierService,$request);
 return [
+    '/livreur/livraisons' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'index'],
+    '/livreur/tournee/demarrer' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'start'],
+    '/livreur/livraison/resultat' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'outcome'],
+    '/livreur/tournee/retour' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'returned'],
+    '/admin/remises-cash' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'remittances'],
+    '/admin/remises-cash/confirmer' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'remit'],
+    '/admin/livreurs/compte' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'link'],
     '/admin/livreurs' => [$adminCourierController,'index'],
     '/admin/livreurs/enregistrer' => [$adminCourierController,'save'],
     '/admin/livreurs/disponibilite' => [$adminCourierController,'availability'],
@@ -49,6 +56,7 @@ return [
     '/admin/commandes' => [$adminOrderReadController, 'index'],
     '/admin/commande' => [$adminOrderReadController, 'detail'],
     '/api/admin/commandes/preparer' => [$adminOrderController, 'prepare'],
+    '/api/admin/commandes/affecter' => [$adminOrderController, 'assign'],
     '/api/admin/commandes/mettre-en-livraison' => [$adminOrderController, 'ship'],
     '/api/admin/commandes/livrer' => [$adminOrderController, 'deliver'],
     '/api/admin/commandes/encaisser-cash' => [$adminOrderController, 'collectCash'],

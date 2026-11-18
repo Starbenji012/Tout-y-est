@@ -28,7 +28,13 @@ final class Courier
 
     public function listing(): array
     {
-        return $this->database->query('SELECT id_livreur,nom,statut FROM livreur ORDER BY nom,id_livreur')->fetchAll();
+        if($this->toursReady())return $this->database->query("SELECT c.id_livreur,c.nom,c.statut,c.id_utilisateur,(u.statut IN ('actif','active')) AS compte_actif,
+            (t.statut='chargement') AS affecte,(t.statut='en_cours') AS en_course
+            FROM livreur c LEFT JOIN utilisateur u ON u.id_utilisateur=c.id_utilisateur LEFT JOIN tournee t ON t.livreur_ouvert=c.id_livreur ORDER BY c.nom,c.id_livreur")->fetchAll();
+        return $this->database->query("SELECT c.id_livreur,c.nom,c.statut,
+            EXISTS(SELECT 1 FROM livraison l WHERE l.id_livreur=c.id_livreur AND l.statut='en_preparation') AS affecte,
+            EXISTS(SELECT 1 FROM livraison l WHERE l.id_livreur=c.id_livreur AND l.statut='en_livraison') AS en_course
+            FROM livreur c ORDER BY c.nom,c.id_livreur")->fetchAll();
     }
 
     public function create(string $name): int
@@ -55,13 +61,25 @@ final class Courier
         $query=$this->database->prepare('UPDATE livreur SET statut=? WHERE id_livreur=?');
         $query->execute([$status,$id]);
     }
-    public function active(): array
+    public function active(int $includeOrder = 0): array
     {
-        return $this->database->query("SELECT id_livreur,nom FROM livreur WHERE statut='actif' ORDER BY nom,id_livreur")->fetchAll();
+        if($this->toursReady())return $this->database->query("SELECT c.id_livreur,c.nom FROM livreur c
+            JOIN utilisateur u ON u.id_utilisateur=c.id_utilisateur AND u.statut IN ('actif','active')
+            LEFT JOIN tournee t ON t.livreur_ouvert=c.id_livreur
+            WHERE c.statut='actif' AND t.id_tournee IS NULL ORDER BY c.id_livreur")->fetchAll();
+        $query=$this->database->prepare("SELECT c.id_livreur,c.nom FROM livreur c WHERE c.statut='actif'
+            AND NOT EXISTS(SELECT 1 FROM livraison l WHERE l.id_livreur=c.id_livreur
+                AND l.statut IN ('en_preparation','en_livraison') AND l.id_commande<>?)
+            ORDER BY c.id_livreur");
+        $query->execute([$includeOrder]);return $query->fetchAll();
     }
     public function findForAssignment(int $id): ?array
     {
-        $query=$this->database->prepare('SELECT id_livreur,nom,statut FROM livreur WHERE id_livreur=? LOCK IN SHARE MODE');
+        $query=$this->database->prepare('SELECT id_livreur,nom,statut FROM livreur WHERE id_livreur=? FOR UPDATE');
         $query->execute([$id]);return $query->fetch()?:null;
+    }
+    private function toursReady(): bool
+    {
+        return (int)$this->database->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='verrou_dispatch'")->fetchColumn()===1;
     }
 }

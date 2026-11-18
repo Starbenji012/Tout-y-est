@@ -46,13 +46,24 @@ final class AdminOrderReadService
         $images=$this->products?->productImages(array_column($items,'id_produit'))??[];
         foreach($items as &$item){$item['image']=$images[(int)$item['id_produit']][0]??null;$item['unit']=$this->amount($item['prix_unitaire_applique'],$row['devise_reference']);$item['lineTotal']=$this->amount($item['total_ligne'],$row['devise_reference']);} unset($item);
         $events=$this->journal->forOrder((int)$row['id_commande']);
-        foreach($events as &$event){$event['label']=match($event['action']){'prepare'=>'Préparation commencée','ship'=>'Mise en livraison','deliver'=>'Livraison confirmée','collect-cash'=>'Encaissement confirmé','cancel'=>'Commande annulée',default=>'Événement de commande'};$extra=json_decode($event['donnees_complementaires'],true);$event['details']=is_array($extra)?array_intersect_key($extra,array_flip(['motif','devise','montant','taux_usd_cdf','livreur'])):[];} unset($event);
+        foreach($events as &$event){$extra=json_decode($event['donnees_complementaires'],true);$event['label']=match($event['action']){'depart'=>'Départ de la tournée','incident'=>is_array($extra)&&($extra['type']??null)==='ecart_cash'?'Écart de caisse signalé — remise non validée':'Problème de livraison','return'=>'Retour du livreur','cash-collected'=>'Cash collecté par le livreur','cash-remitted'=>'Cash remis au gérant','assign'=>'Affectation du livreur','prepare'=>'Commande prête','ship'=>'Mise en livraison','deliver'=>'Livraison confirmée','collect-cash'=>'Encaissement confirmé','cancel'=>'Commande annulée',default=>'Événement de commande'};$event['details']=is_array($extra)?array_intersect_key($extra,array_flip(['motif','devise','montant','taux_usd_cdf','livreur','ancien_livreur','origine'])):[];} unset($event);
         $actions=$this->actions?->availableActions($row,$order['payments'],$order['delivery'])??[];
         foreach($events as $event) unset($actions[$event['action']==='collect-cash'?'collectCash':$event['action']]);
-        $couriers=isset($actions['ship'])?$this->actions->couriersForAssignment():[];
+        $couriers=isset($actions['ship'])?$this->actions->couriersForAssignment((int)$row['id_commande']):[];
         $courierNotice=null;
-        if (isset($actions['ship'])&&$couriers===[]) {$courierNotice='Aucun livreur actif disponible. Faites renseigner les vrais livreurs avant l’expédition.';unset($actions['ship']);}
+        if (isset($actions['ship'])) {
+            if ($couriers) $actions['assign']=true;
+            $assigned=(int)($order['delivery']['id_livreur']??0);
+            $canDepart=false;foreach($couriers as $courier)if((int)$courier['id_livreur']===$assigned)$canDepart=true;
+            $courierNotice=$assigned?'Affecté — départ en attente : '.$order['delivery']['nom_livreur_snapshot']:'Aucun livreur disponible. La commande reste en attente d’affectation.';
+            if(!$assigned&&$couriers)$courierNotice='Commande en attente d’affectation. Choisissez un livreur libre et confirmez.';
+            if (!$canDepart) {
+                unset($actions['ship']);
+                if($assigned)$courierNotice.=' Ce livreur est indisponible : confirmez une autre affectation avant le départ.';
+            }
+        }
         elseif ($row['statut']==='en_preparation'&&!array_key_exists('id_livreur',$order['delivery']??[])) $courierNotice='L’affectation des livreurs n’est pas encore disponible.';
+        if($order['delivery'])$courierNotice=$this->actions?->tourNotice($order['delivery'])??$courierNotice;
         return ['order'=>$order,'items'=>$items,'events'=>$events,'actions'=>$actions,'couriers'=>$couriers,'courierNotice'=>$courierNotice];
     }
 

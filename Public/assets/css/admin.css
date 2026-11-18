@@ -60,13 +60,14 @@
 .admin-couriers h2 { font-size:var(--font-size-lg); overflow-wrap:anywhere; }
 .admin-couriers p { margin-block:var(--spacing-sm); }
 .admin-couriers__create { margin-block:var(--spacing-lg); }
-.admin-couriers__list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr)); gap:var(--spacing-md); }
+.admin-couriers__list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr)); gap:var(--spacing-md); align-items:start; }
 .admin-couriers form { display:grid; gap:var(--spacing-sm); margin-block:var(--spacing-md); min-width:0; }
 .admin-couriers form .btn { justify-self:start; max-width:100%; }
 .admin-couriers details > summary { cursor:pointer; }
 .admin-courier-status { display:inline-flex; align-items:center; gap:var(--spacing-xs); font-size:var(--font-size-sm); }
 .admin-courier-status > span { width:.65rem; height:.65rem; border-radius:50%; background:var(--color-error); flex-shrink:0; }
 .admin-courier-status.is-available > span { background:var(--color-success); }
+.admin-courier-status.is-busy > span { background:var(--color-warning); }
 @media(min-width:48.01rem) and (max-width:75rem) { .admin-header__inner { flex-wrap:wrap; } .admin-header__actions { flex-basis:100%; margin-left:0; } }
 .admin-order-actions__layout { display:grid; gap:var(--spacing-md); align-items:start; }
 .admin-order-actions form { display:grid; gap:var(--spacing-sm); min-width:0; margin:0; align-content:start; }
@@ -143,3 +144,11 @@
   .admin-zone__status { justify-self: end; }
   .admin-zone-form .btn, .admin-zones__heading .btn { width: 100%; }
 }
+/* Gestion quotidienne visible ; réglages rares repliés. */
+.admin-couriers__actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-block:1rem}
+.admin-couriers__actions .btn{min-height:44px;white-space:normal}
+.admin-couriers__manage{border-top:1px solid var(--color-border);padding-top:.5rem;margin-top:.5rem}
+.admin-couriers__manage>summary{font-weight:500;cursor:pointer;padding-block:.5rem}
+.admin-couriers__help{color:var(--color-text-muted);font-size:.875rem;margin-block:.75rem}
+.admin-couriers__help>summary{padding-block:.5rem;min-height:44px}
+@media(max-width:480px){.admin-couriers__actions .btn{width:100%}}

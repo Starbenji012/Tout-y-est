@@ -49,19 +49,22 @@ $reject=static function(callable $fn,int $code=409)use($assert):void {
     throw new RuntimeException('Action interdite acceptée.');
 };
 try {
-    $db->exec(str_replace('tout_y_est',$name,file_get_contents($root.'/Database/schema.sql')));
+    // Conserver la couverture des installations S1.14, sans migration implicite de la base réelle.
+    $db->exec(str_replace('tout_y_est',$name,explode('-- BEGIN S1.15',file_get_contents($root.'/Database/schema.sql'),2)[0]));
     // S1.12 uniquement dans cette base jetable : ajout réel puis rejeu sans perte.
     $courierMigration=file_get_contents($root.'/Database/migrations/S1.12_delivery_courier.sql');
     $db->exec('ALTER TABLE livraison DROP COLUMN nom_livreur_snapshot');
     $db->exec($courierMigration);$db->exec($courierMigration);
     // S1.13 ajout et rejeu réels, exclusivement dans la base jetable.
     $identityMigration=file_get_contents($root.'/Database/migrations/S1.13_courier_identity.sql');
+    $db->exec('ALTER TABLE livraison DROP INDEX uq_livraison_livreur_engage, DROP COLUMN id_livreur_engage');
     $db->exec('ALTER TABLE livraison DROP FOREIGN KEY fk_livraison_livreur');
     $db->exec('ALTER TABLE livraison DROP COLUMN id_livreur');$db->exec('DROP TABLE livreur');
     $db->exec($identityMigration);$db->exec($identityMigration);
     $db->exec("INSERT INTO livreur(id_livreur,nom,statut) VALUES(1,'TEST Livreur','actif'),(2,'TEST Inactif','inactif'),(3,'TEST Autre','actif')");
     $migration=file_get_contents($root.'/Database/migrations/S1.11_admin_order_actions.sql');
     $db->exec('DROP TABLE journal_commande'); $db->exec($migration); $db->exec($migration);
+    $db->exec(file_get_contents($root.'/Database/migrations/S1.14_courier_dispatch.sql'));
     $db->exec("INSERT INTO utilisateur(id_utilisateur,nom,prenom,email,mot_de_passe,role,statut,email_verified_at) VALUES
         (1,'TEST','Client','client@example.invalid','unused','client','actif',NOW()),
         (2,'TEST','Autre','other@example.invalid','unused','client','actif',NOW()),
@@ -86,10 +89,11 @@ try {
     $payment=static fn(int $id):array=>(new App\Models\Payment($db))->forOrder($id)[0];
     $shipping=static fn(int $id):array=>(new App\Models\Delivery($db))->forOrder($id);
     $stock=static fn():int=>(int)$db->query('SELECT stock FROM variante_produit WHERE id_variante=1')->fetchColumn();
-    $events=static function(int $id)use($db):array {$q=$db->prepare('SELECT * FROM journal_commande WHERE id_commande=? ORDER BY id_journal');$q->execute([$id]);return $q->fetchAll();};
+    // Les assertions historiques comptent les transitions ; CourierDispatchTest vérifie séparément chaque affectation.
+    $events=static function(int $id)use($db):array {$q=$db->prepare("SELECT * FROM journal_commande WHERE id_commande=? AND action<>'assign' ORDER BY id_journal");$q->execute([$id]);return $q->fetchAll();};
     $allState=static fn(int $id):array=>[$order($id),$payment($id),$shipping($id),$stock(),$events($id)];
     $actionHtml=static function(int $id)use($service,$order,$payment,$shipping,$root):string {
-        $couriers=$service->couriersForAssignment();$row=$order($id);$actions=$service->availableActions($row,[$payment($id)],$shipping($id));$order=['number'=>$row['numero_commande']];
+        $couriers=$service->couriersForAssignment($id);$row=$order($id);$actions=$service->availableActions($row,[$payment($id)],$shipping($id));$order=['number'=>$row['numero_commande'],'delivery'=>$shipping($id)];
         $escape=static fn($value):string=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         ob_start();require $root.'/App/views/admin/order-actions.php';return ob_get_clean();
     };
@@ -196,6 +200,9 @@ try {
             throw new RuntimeException('Erreur journal attendue.');
         } catch(PDOException) {} finally {$db->exec('DROP TRIGGER fail_admin_journal');}
         $assert($allState($rollback)===$before && !$db->inTransaction(),'Rollback complet : '.$action);
+        // Ces fixtures ne doivent pas monopoliser le seul livreur utilisé par les scénarios suivants.
+        if($order($rollback)['statut']==='en_livraison')$service->deliver($rollback);
+        elseif(in_array($order($rollback)['statut'],['confirmee','en_preparation'],true))$service->cancel($rollback,'TEST nettoyage fixture');
     }
     // Le contrôleur et le service contrôlent chacun l'acteur réel, jamais les champs clients.
     $controller=new App\Controllers\Admin\OrderController($service,new App\Core\Request());
@@ -221,6 +228,7 @@ try {
     fclose($pipes[0]);$output=stream_get_contents($pipes[1]);$error=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);
     $assert(proc_close($process)===0,$error);$prgResult=json_decode($output,true,512,JSON_THROW_ON_ERROR);
     $assert($prgResult['status']===303&&$prgResult['flash']['reference']===$order($prg)['numero_commande']&&$order($prg)['statut']==='en_preparation'&&$stock()===$reserved,'POST HTML puis redirection GET et message serveur');
+    $service->cancel($prg,'TEST nettoyage PRG');
     // Deux processus PHP distincts entrent en concurrence sur le même verrou de commande.
     $race=static function(int $id,array $actions)use($db,$name,$assert):array {
         $db->beginTransaction(); (new App\Models\Order($db))->find($id,true); $workers=[];

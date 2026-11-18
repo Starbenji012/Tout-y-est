@@ -30,6 +30,17 @@ $tables = ['adresse_utilisateur', 'zone_livraison', 'commande', 'ligne_commande'
 $before = [];
 $courierIdentityApplied=false;
 $schema = file_get_contents(dirname(__DIR__, 2) . '/Database/schema.sql');
+$courierToursApplied=(int)$database->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='verrou_dispatch'")->fetchColumn()===1;
+if($courierToursApplied){
+    $assert((int)$database->query('SELECT version_schema FROM verrou_dispatch WHERE id=1')->fetchColumn()===15,'S1.15 doit etre entierement appliquee.');
+    $indexes=$database->query("SELECT TABLE_NAME,INDEX_NAME,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS colonnes
+        FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND NON_UNIQUE=0
+        AND ((TABLE_NAME='tournee' AND INDEX_NAME='uq_tournee_ouverte')
+          OR (TABLE_NAME='tentative_livraison' AND INDEX_NAME='uq_tentative_active'))
+        GROUP BY TABLE_NAME,INDEX_NAME ORDER BY TABLE_NAME")->fetchAll();
+    $assert(count($indexes)===2&&$indexes[0]['colonnes']==='livraison_active'&&$indexes[1]['colonnes']==='livreur_ouvert','S1.15 exige une affectation active par livraison et une tournee ouverte par livreur.');
+    $assert((int)$database->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='livraison' AND INDEX_NAME='uq_livraison_livreur_engage'")->fetchColumn()===0,'L ancien index exclusif S1.14 doit etre retire apres S1.15.');
+}
 $columnsQuery = $database->prepare('SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION');
 foreach ($tables as $table) {
     $before[$table] = (int) $database->query("SELECT COUNT(*) FROM `$table`")->fetchColumn();
@@ -43,11 +54,17 @@ foreach ($tables as $table) {
     $columnsQuery->execute([$table]);
     $actual = $columnsQuery->fetchAll();
     if($table==='livraison') {
+        if($courierToursApplied){
+            // S1.15 remplace l'exclusivite par livreur de S1.14 par le modele multi-colis.
+            $assert(!in_array('id_livreur_engage',array_column($actual,'COLUMN_NAME'),true),'id_livreur_engage doit etre absent apres S1.15.');
+            $assert(in_array('id_livreur',array_column($actual,'COLUMN_NAME'),true)&&in_array('nom_livreur_snapshot',array_column($actual,'COLUMN_NAME'),true),'S1.15 conserve l identite et le snapshot du livreur.');
+            $expected=array_values(array_filter($expected,static fn(array $column):bool=>$column[1]!=='id_livreur_engage'));
+        }
         $courierIdentityApplied=in_array('id_livreur',array_column($actual,'COLUMN_NAME'),true);
         if(!$courierIdentityApplied){$expected=array_values(array_filter($expected,static fn(array $column):bool=>$column[1]!=='id_livreur'));echo "S1.13_PENDING_LOCAL (identité livreur).\n";}
     }
-    // S1.12 reste volontairement non appliquée à la base navigateur ; ses contraintes
-    // et son rejeu sont vérifiés par AdminOrderActionsTest dans une base jetable.
+    // Compatibilite des anciens schemas sans le snapshot S1.12 ; sa presence est
+    // obligatoire apres S1.15. Son ajout/rejeu est teste sur base jetable.
     if ($table==='livraison' && !in_array('nom_livreur_snapshot',array_column($actual,'COLUMN_NAME'),true)) {
         $expected=array_values(array_filter($expected,static fn(array $column):bool=>$column[1]!=='nom_livreur_snapshot'));
         echo "S1.12_PENDING_LOCAL (colonne livreur uniquement).\n";
