@@ -36,7 +36,11 @@ assert.ok(view.includes('name="stock_initial"') && view.includes('<?php if (!$ed
 assert.ok(view.includes('name="statut" value="brouillon"'));
 assert.ok(view.includes('photo nécessaire'));
 assert.ok(!view.includes('name="taux"') && !view.includes('name="prix_usd"'));
-assert.ok(!view.includes('type="file"'));
+assert.ok(view.includes('type="file"') && view.includes('enctype="multipart/form-data"'));
+assert.ok(view.includes('action="/admin/produits/photo"'));
+assert.ok(view.includes('Photos du produit') && view.includes(' / 6 photos'));
+assert.ok(view.includes('count($photos)<6') && view.includes('Principale'));
+assert.ok(view.includes('accept="image/jpeg,image/png,image/webp"'));
 const script = fs.readFileSync(path.join(root, 'Public/assets/js/admin-product-form.js'), 'utf8');
 assert.ok(!script.includes('fetch(') && !script.includes('2450'));
 serverInvalid = true;
@@ -54,4 +58,4 @@ assert.ok(view.includes('admin-product-notice--success'));
 const css = fs.readFileSync(path.join(root, 'Public/assets/css/admin-products.css'), 'utf8');
 assert.ok(css.includes('@media(max-width:60rem)'));
 assert.ok(css.includes('.admin-products .select-control__trigger:is(:focus-visible,[aria-expanded="true"])'));
-console.log('ADMIN_PRODUCTS_FORM_UI_OK (POST natif, selects accessibles, brouillon, double clic, retour navigateur, aucun taux client/upload).');
+console.log('ADMIN_PRODUCTS_FORM_UI_OK (POST natif, selects accessibles, brouillon, double clic, galerie et upload séparé, aucun taux client).');

@@ -1,0 +1,9 @@
+# Défense Apache : seules les sorties WebP sont accessibles, aucun script source.
+Options -Indexes -ExecCGI
+RemoveHandler .php .phtml .phar .webp
+<FilesMatch "(?i)^(?![a-f0-9]{32}-(thumb|medium|large)\.webp$).+">
+    Require all denied
+</FilesMatch>
+<FilesMatch "(?i)\.webp$">
+    SetHandler none
+</FilesMatch>

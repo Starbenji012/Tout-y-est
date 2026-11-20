@@ -55,4 +55,27 @@ $showPhotoHelp=(!$editing||!$canPublish)&&!str_contains($flash??'','photo')&&!st
         </fieldset>
         <button class="btn btn-primary" type="submit"><?= $editing?'Enregistrer les modifications':'Créer le brouillon' ?></button>
     </form>
+    <?php if ($editing): $photos=$photos??[]; ?>
+    <section class="admin-product-photos" id="product-photos" aria-labelledby="product-photos-title">
+        <h2 id="product-photos-title">Photos du produit</h2>
+        <p><?= count($photos) ?> / 6 photos</p>
+        <?php if ($photos===[]): ?><p>Aucune photo pour le moment.</p><?php else: ?>
+        <ul class="admin-product-photos__gallery">
+            <?php foreach ($photos as $photo): ?><li>
+                <?php if ($photo['thumbnail']!==null): ?><img src="<?= $escape($photo['thumbnail']) ?>" alt="Photo de <?= $escape($product['nom']) ?>" width="150" height="150" loading="lazy"><?php else: ?><span>Sans image</span><?php endif; ?>
+                <?php if ((int)$photo['image_principale']===1): ?><span class="admin-product-photos__badge">Principale</span><?php endif; ?>
+            </li><?php endforeach; ?>
+        </ul><?php endif; ?>
+        <?php if (count($photos)<6): ?>
+        <form method="post" enctype="multipart/form-data" action="/admin/produits/photo" class="admin-product-photos__form">
+            <input type="hidden" name="_token" value="<?= $escape($csrfToken) ?>">
+            <input type="hidden" name="id_produit" value="<?= (int)$product['id_produit'] ?>">
+            <label for="product-photo">Ajouter une photo</label>
+            <input id="product-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="product-photo-help" required>
+            <p id="product-photo-help">JPEG, PNG ou WebP, 10 Mio maximum. Jusqu’à 6 photos par produit.</p>
+            <button class="btn btn-primary" type="submit">Ajouter la photo</button>
+        </form>
+        <?php else: ?><p>La limite de 6 photos est atteinte pour ce produit.</p><?php endif; ?>
+    </section>
+    <?php endif; ?>
 </section>
