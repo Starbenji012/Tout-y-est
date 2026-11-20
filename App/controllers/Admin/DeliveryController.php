@@ -25,7 +25,7 @@ final class DeliveryController extends Controller
             return;
         }
         header('Cache-Control: no-store');
-        $this->render('admin/deliveries', ['title' => 'Zones de livraison | Tout y est', 'zones' => $result['zones'], 'csrfToken' => CsrfMiddleware::token(), 'pageScripts' => ['/assets/js/admin-delivery-zones.js']], 'admin');
+        $this->render('admin/deliveries', ['title' => 'Zones de livraison | Tout y est', 'adminPage'=>'zones', 'zones' => $result['zones'], 'csrfToken' => CsrfMiddleware::token(), 'pageScripts' => ['/assets/js/admin-delivery-zones.js']], 'admin');
     }
 
     public function save(): void

@@ -6,6 +6,8 @@ namespace App\Models;
 
 use PDO;
 
+require_once __DIR__ . '/CatalogVisibility.php';
+
 /** Lit les catégories actives et leur éventuelle hiérarchie en base. */
 final class Category
 {
@@ -29,7 +31,7 @@ final class Category
             'parent_categorie_id',
         ]);
         $statusCondition = in_array('statut', $columns, true)
-            ? " WHERE LOWER(c.statut) NOT IN ('inactif', 'inactive', 'archive', 'supprime')"
+            ? ' WHERE ' . CatalogVisibility::activeSql('c.statut')
             : '';
         $parentSelect = $parentColumn !== null
             ? 'c.`' . $parentColumn . '` AS parent_id'
@@ -38,7 +40,8 @@ final class Category
             'SELECT c.id_categorie, c.nom, c.slug, ' . $parentSelect . ',
                     (SELECT COUNT(*) FROM produit p
                      WHERE p.id_categorie = c.id_categorie
-                       AND LOWER(p.statut) NOT IN (\'inactif\', \'inactive\', \'brouillon\', \'archive\', \'supprime\')) AS product_count
+                       AND ' . CatalogVisibility::activeSql('p.statut') . '
+                       AND EXISTS (SELECT 1 FROM variante_produit v WHERE v.id_produit=p.id_produit AND ' . CatalogVisibility::activeSql('v.statut') . ')) AS product_count
              FROM categorie c' . $statusCondition . '
              ORDER BY c.nom',
         );

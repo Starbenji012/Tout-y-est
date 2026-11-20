@@ -41,7 +41,14 @@ $adminOrderController = new \App\Controllers\Admin\OrderController($adminOrderSe
 $adminOrderReadController = new \App\Controllers\Admin\OrderReadController($adminOrderReadService, $request);
 /** @var \App\Services\AdminCourierService|null $adminCourierService */
 $adminCourierController = new \App\Controllers\Admin\CourierController($adminCourierService,$request);
+/** @var \App\Services\AdminProductReadService|null $adminProductReadService */
+/** @var \App\Services\AdminProductWriteService|null $adminProductWriteService */
+$adminProductController = new \App\Controllers\Admin\ProductController($adminProductReadService,$request,$adminProductWriteService);
 return [
+    '/admin/produits' => [$adminProductController,'index'],
+    '/admin/produit/ajouter' => [$adminProductController,'create'],
+    '/admin/produit' => [$adminProductController,'edit'],
+    '/admin/produits/enregistrer' => [$adminProductController,'save'],
     '/livreur/livraisons' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'index'],
     '/livreur/tournee/demarrer' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'start'],
     '/livreur/livraison/resultat' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'outcome'],

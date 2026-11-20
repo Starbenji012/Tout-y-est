@@ -6,6 +6,8 @@ namespace App\Models;
 
 use PDO;
 
+require_once __DIR__ . '/CatalogVisibility.php';
+
 /** Effectue uniquement les lectures de produits dans la base de données. */
 final class Product
 {
@@ -43,7 +45,7 @@ final class Product
         $query = trim($query);
         $statement = $this->database->prepare(
             $this->selectSql(true)
-            . " WHERE LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"
+            . ' WHERE ' . CatalogVisibility::productSql()
             . ' AND (
                     p.nom LIKE :candidate_name
                     OR c.nom LIKE :candidate_category
@@ -86,10 +88,10 @@ final class Product
         return (int) $statement->fetchColumn();
     }
 
-    /** Recherche un produit précis par son identifiant. */
+    /** Lecture publique uniquement ; le futur Admin aura une lecture distincte. */
     public function findById(int $productId): ?array
     {
-        $statement = $this->database->prepare($this->selectSql() . ' WHERE p.id_produit = :product_id LIMIT 1');
+        $statement = $this->database->prepare($this->selectSql() . ' WHERE p.id_produit = :product_id AND ' . CatalogVisibility::productSql() . ' LIMIT 1');
         $statement->bindValue(':product_id', $productId, PDO::PARAM_INT);
         $statement->execute();
         $product = $statement->fetch();
@@ -116,7 +118,7 @@ final class Product
         $statement = $this->database->prepare(
             $this->selectSql()
             . ' WHERE p.id_produit IN (' . implode(', ', $placeholders) . ')'
-            . " AND LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')",
+            . ' AND ' . CatalogVisibility::productSql(),
         );
         $this->bindParameters($statement, $parameters);
         $statement->execute();
@@ -143,8 +145,8 @@ final class Product
         $statement = $this->database->prepare(
             $this->selectSql(false, true)
             . ' WHERE v.id_variante IN (' . implode(', ', $placeholders) . ')'
-            . " AND LOWER(v.statut) NOT IN ('inactif', 'inactive', 'archive', 'supprime')"
-            . " AND LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')",
+            . ' AND ' . CatalogVisibility::activeSql('v.statut')
+            . ' AND ' . CatalogVisibility::productSql(),
         );
         $this->bindParameters($statement, $parameters);
         $statement->execute();
@@ -152,20 +154,20 @@ final class Product
         return $statement->fetchAll();
     }
 
-    /** Retourne les catégories réellement utilisées par les produits. */
+    /** Retourne les catégories actives proposées aux filtres publics. */
     public function categories(): array
     {
         $statement = $this->database->query(
             "SELECT c.slug, c.nom
              FROM categorie c
-             WHERE LOWER(c.statut) NOT IN ('inactif', 'inactive', 'archive')
+             WHERE " . CatalogVisibility::activeSql('c.statut') . "
                ORDER BY c.nom",
         );
 
         return $statement->fetchAll();
     }
 
-    /** Une lecture groupée évite une requête par article, même pour une commande. */
+    /** Lecture groupée sans filtre de statut : les commandes historiques restent lisibles. */
     public function imagesForProducts(array $ids): array
     {
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
@@ -179,7 +181,7 @@ final class Product
     private function representativeVariantSql(): string
     {
         return "(SELECT vr.id_variante FROM variante_produit vr
-            WHERE vr.id_produit = p.id_produit AND LOWER(vr.statut) IN ('actif', 'active')
+            WHERE vr.id_produit = p.id_produit AND " . CatalogVisibility::activeSql('vr.statut') . "
             ORDER BY (vr.stock > 0) DESC, vr.id_variante LIMIT 1)";
     }
 
@@ -224,7 +226,7 @@ final class Product
     /** Transforme les filtres validés en clauses SQL et paramètres préparés. */
     private function buildFilters(array $filters): array
     {
-        $conditions = ["LOWER(p.statut) NOT IN ('inactif', 'inactive', 'brouillon', 'archive', 'supprime')"];
+        $conditions = [CatalogVisibility::productSql()];
         $parameters = [];
 
         if (($filters['search'] ?? '') !== '') {
@@ -266,9 +268,9 @@ final class Product
         }
 
         if (($filters['availability'] ?? '') === 'in-stock') {
-            $conditions[] = "EXISTS (SELECT 1 FROM variante_produit va WHERE va.id_produit = p.id_produit AND LOWER(va.statut) IN ('actif','active') AND va.stock > 0)";
+            $conditions[] = "EXISTS (SELECT 1 FROM variante_produit va WHERE va.id_produit = p.id_produit AND " . CatalogVisibility::activeSql('va.statut') . " AND va.stock > 0)";
         } elseif (($filters['availability'] ?? '') === 'out-of-stock') {
-            $conditions[] = "NOT EXISTS (SELECT 1 FROM variante_produit va WHERE va.id_produit = p.id_produit AND LOWER(va.statut) IN ('actif','active') AND va.stock > 0)";
+            $conditions[] = "NOT EXISTS (SELECT 1 FROM variante_produit va WHERE va.id_produit = p.id_produit AND " . CatalogVisibility::activeSql('va.statut') . " AND va.stock > 0)";
         }
 
         return [' WHERE ' . implode(' AND ', $conditions), $parameters];

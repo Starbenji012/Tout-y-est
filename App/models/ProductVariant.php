@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Models;
 use PDO;
 
+require_once __DIR__ . '/CatalogVisibility.php';
+
 /** Lectures verrouillées et mouvements de stock sur la connexion de commande. */
 final class ProductVariant
 {
@@ -11,7 +13,7 @@ final class ProductVariant
 
     public function lock(int $id): ?array
     {
-        $query = $this->database->prepare('SELECT v.*, p.nom, p.statut AS produit_statut FROM variante_produit v JOIN produit p ON p.id_produit = v.id_produit WHERE v.id_variante = ? FOR UPDATE');
+        $query = $this->database->prepare('SELECT v.*, p.nom, p.statut AS produit_statut, c.statut AS categorie_statut FROM variante_produit v JOIN produit p ON p.id_produit = v.id_produit JOIN categorie c ON c.id_categorie = p.id_categorie WHERE v.id_variante = ? FOR UPDATE');
         $query->execute([$id]);
         return $query->fetch() ?: null;
     }

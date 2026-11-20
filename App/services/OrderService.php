@@ -6,6 +6,7 @@ use App\Models\{Cart, Delivery, DeliveryZone, Order, OrderItem, ProductVariant, 
 use DomainException;
 use PDO;
 use Throwable;
+use App\Models\CatalogVisibility;
 
 /** Une seule transaction possède la création et tous ses mouvements de stock. */
 final class OrderService
@@ -86,7 +87,7 @@ final class OrderService
         foreach ($rawLines as $raw) {
             $variant = $this->variants->lock((int) $raw['id_variante']);
             $quantity = (int) $raw['quantite'];
-            if ($variant === null || !in_array($variant['statut'], ['actif','active'], true) || !in_array($variant['produit_statut'], ['actif','active'], true)) throw new DomainException('Un article n’est plus disponible. Corrigez votre panier.');
+            if ($variant === null || !CatalogVisibility::isActive($variant['statut']) || !CatalogVisibility::isActive($variant['produit_statut']) || !CatalogVisibility::isActive($variant['categorie_statut'])) throw new DomainException('Un article n’est plus disponible. Corrigez votre panier.');
             if ($quantity < 1 || $quantity > 99 || $quantity > (int) $variant['stock']) throw new DomainException('Stock insuffisant ou quantité invalide. Corrigez votre panier.');
             if ($variant['devise_reference'] !== 'USD') throw new DomainException('Un article possède une devise non définie.');
             $base = $this->money->minor($variant['prix_reference']);

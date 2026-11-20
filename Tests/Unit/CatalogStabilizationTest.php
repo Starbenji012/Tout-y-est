@@ -5,7 +5,21 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 require_once $root . '/App/models/Product.php';
 require_once $root . '/App/models/Favorite.php';
+require_once $root . '/App/models/Category.php';
+require_once $root . '/App/models/Cart.php';
+require_once $root . '/App/services/CartService.php';
 require_once $root . '/App/services/ProductService.php';
+if (($argv[1] ?? '') === 'hidden-product') {
+    $databaseName=$argv[2] ?? '';
+    if (!preg_match('/^tout_y_est_catalog_test_[a-f0-9]{16}$/D',$databaseName)) throw new RuntimeException('Base isolée requise.');
+    putenv('DB_DATABASE='.$databaseName);
+    $_SERVER['REQUEST_METHOD']='GET';
+    $_SERVER['REQUEST_URI']=$argv[3];
+    $_GET=['id'=>1];
+    require $root . '/Public/index.php';
+    echo '\n__HTTP='.http_response_code();
+    exit;
+}
 if (($argv[1] ?? '') === 'outage') {
     putenv('DB_PORT=1');
     putenv('APP_ENV=' . $argv[2]);
@@ -93,6 +107,37 @@ try {
     $assert($service->searchCatalog(['statuses'=>['limited']])['count'] === 2, 'Offre limitée cohérente avec le stock affiché');
     $assert($service->searchCatalog(['availability'=>'in-stock'])['count'] === 3, 'Disponibilité active uniquement');
     $assert($service->searchCatalog(['availability'=>'out-of-stock'])['count'] === 1, 'Actif épuisé conservé sans ajout possible');
+    // Toutes les entrées publiques utilisent le même contrat, y compris les anciens paniers.
+    foreach (['brouillon','archive','inactif','inconnu'] as $status) {
+        $update = $db->prepare('UPDATE produit SET statut=? WHERE id_produit=1');
+        $update->execute([$status]);
+        $assert($model->findById(1) === null && $service->getProductDetails(1) === null && $service->findProduct(1) === null, 'Fiche et aperçu refusés : '.$status);
+        $assert($model->findByIds([1]) === [] && $model->findByVariantIds([2]) === [], 'Favoris/panier non autorisants : '.$status);
+        $assert($model->findSuggestionCandidates('TEST 1') === [], 'Suggestions sans produit masqué : '.$status);
+        $assert(!in_array(1,array_column($service->searchCatalog(['q'=>'TEST 1'])['products'],'id')), 'Recherche exacte ou approchée sans produit masqué : '.$status);
+        $cartService=new App\Services\CartService($service,new App\Models\Cart($db));
+        $assert(!$cartService->mutateConnectedCart(1,'add',2,1), 'Ajout panier refusé : '.$status);
+        $assert($service->searchCatalog([])['count'] === 3, 'Catalogue et compteur excluent : '.$status);
+        if (in_array($status,['brouillon','archive'],true)) {
+            foreach (['/produit','/api/produit/apercu'] as $url) {
+                $process=proc_open([PHP_BINARY,__FILE__,'hidden-product',$name,$url],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+                fclose($pipes[0]); $html=stream_get_contents($pipes[1]); $log=stream_get_contents($pipes[2]); fclose($pipes[1]); fclose($pipes[2]);
+                $assert(proc_close($process)===0 && str_ends_with($html,'__HTTP=404'), 'Route publique 404 : '.$url.'/'.$status.' '.$log);
+            }
+        }
+    }
+    $db->exec("UPDATE produit SET statut='actif' WHERE id_produit=1");
+    foreach (['brouillon','archive','inactif','inconnu'] as $status) {
+        $update=$db->prepare('UPDATE variante_produit SET statut=? WHERE id_variante=2'); $update->execute([$status]);
+        $assert($model->findByVariantIds([2]) === [] && $model->findById(1) === null, 'Variante non active refusée : '.$status);
+    }
+    $db->exec("UPDATE variante_produit SET statut='actif' WHERE id_variante=2");
+    $db->exec("UPDATE categorie SET statut='inactif' WHERE id_categorie=1");
+    $assert($service->searchCatalog([])['count']===0 && $model->findById(1)===null && $model->findByVariantIds([2])===[] && $model->findSuggestionCandidates('TEST')===[] && $model->categories()===[], 'Catégorie inactive masquée partout');
+    $assert((new App\Models\Category($db))->findActiveHierarchy()===[], 'Navigation sans catégorie inactive');
+    $db->exec("UPDATE categorie SET statut='actif' WHERE id_categorie=1");
+    $assert((int)(new App\Models\Category($db))->findActiveHierarchy()[0]['product_count']===4, 'Compteur navigation aligné sur les produits publics');
+    $assert($model->findById(3)!==null && $db->query('SELECT statut FROM produit WHERE id_produit=3')->fetchColumn()==='actif', 'Rupture sans archivage implicite');
     $assert($service->catalogFacets(['test']) === [], 'Aucun filtre contextuel sans SQL fiable');
     ob_start(); $catalogContextFilters=['facets'=>$service->catalogFacets(['test'])];
     require $root . '/App/views/components/catalog-context-filters.php';

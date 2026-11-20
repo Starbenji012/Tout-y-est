@@ -49,9 +49,10 @@ try {
     $rejected(fn () => $service->create(1,$draft,$key));
     $assert((int)$db->query('SELECT quantite FROM ligne_panier WHERE id_panier=1')->fetchColumn()===11,'Quantité refusée, jamais plafonnée');
     $db->exec('UPDATE ligne_panier SET quantite=1 WHERE id_panier=1');
-    foreach (["UPDATE variante_produit SET statut='inactif'", "UPDATE variante_produit SET stock=0", "UPDATE zone_livraison SET statut='inactif'", 'UPDATE variante_produit SET devise_reference=NULL'] as $sql) {
+    foreach (["UPDATE produit SET statut='brouillon'", "UPDATE produit SET statut='archive'", "UPDATE categorie SET statut='inactif'", "UPDATE variante_produit SET statut='brouillon'", "UPDATE variante_produit SET statut='archive'", "UPDATE variante_produit SET statut='inactif'", "UPDATE variante_produit SET stock=0", "UPDATE zone_livraison SET statut='inactif'", 'UPDATE variante_produit SET devise_reference=NULL'] as $sql) {
         $db->exec($sql); $rejected(fn () => $service->create(1, $draft, $key));
         $db->exec("UPDATE variante_produit SET statut='actif',stock=10,devise_reference='USD'"); $db->exec("UPDATE zone_livraison SET statut='actif'");
+        $db->exec("UPDATE produit SET statut='actif'"); $db->exec("UPDATE categorie SET statut='actif'");
     }
     // Forcer une ligne orpheline uniquement dans cette base jetable.
     $db->exec('SET FOREIGN_KEY_CHECKS=0'); $db->exec('UPDATE ligne_panier SET id_variante=999 WHERE id_panier=1'); $db->exec('SET FOREIGN_KEY_CHECKS=1');
@@ -84,7 +85,7 @@ try {
     $assert($db->query('SELECT numero_commande FROM commande')->fetchColumn()===$order['numero_commande'],'Retry conserve la référence');
     $assert((int)$db->query('SELECT COUNT(*) FROM ligne_panier')->fetchColumn()===2,'Panier conservé');
     $rejected(fn () => $service->forUser(2,$id));
-    $db->exec("UPDATE produit SET nom='TEST changé'"); $db->exec("UPDATE variante_produit SET prix_reference=99,sku='TEST-CHANGE',description_variante='TEST changée'");
+    $db->exec("UPDATE produit SET nom='TEST changé',statut='archive'"); $db->exec("UPDATE variante_produit SET prix_reference=99,sku='TEST-CHANGE',description_variante='TEST changée'");
     $db->exec("UPDATE zone_livraison SET frais_reference=99,nom='TEST changée'");
     $db->exec("UPDATE adresse_utilisateur SET adresse='TEST adresse modifiée' WHERE id_adresse=1");
     $db->exec("UPDATE utilisateur SET nom='TEST profil modifié' WHERE id_utilisateur=1");
@@ -93,6 +94,7 @@ try {
     $assert($snapshot['delivery']['adresse_snapshot']==='TEST adresse' && $snapshot['delivery']['nom_destinataire_snapshot']==='TEST' && $snapshot['delivery']['latitude_snapshot']==='-4.3000000','Adresse, profil et GPS figés');
     $assert($snapshot['order']['cdfFormatted']==='61 250 FC' && $snapshot['lines'][0]['nom_produit_snapshot']==='TEST produit' && $snapshot['lines'][0]['sku_snapshot']==='TEST-USD' && $snapshot['lines'][0]['description_variante_snapshot']==='TEST variante' && $snapshot['delivery']['nom_zone_snapshot']==='TEST zone' && $snapshot['delivery']['frais_snapshot']==='5.00','Snapshots historiques');
     $assert(!$service->releaseReservation($id),'Pas d’expiration anticipée');
+    $db->exec("UPDATE produit SET statut='actif'");
     $db->exec("UPDATE commande SET reservation_expire_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id_commande=$id");
     $assert($service->expireReservations()===1 && !$service->releaseReservation($id) && (int)$db->query('SELECT stock FROM variante_produit')->fetchColumn()===10,'Restitution exactement une fois');
     $db->exec('UPDATE variante_produit SET prix_reference=20');$db->exec('UPDATE zone_livraison SET frais_reference=5');
