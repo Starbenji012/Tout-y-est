@@ -29,4 +29,27 @@
   configurer ce dossier en statique sans exécution de scripts. Ce fichier
   Apache ne prétend pas configurer ces autres serveurs.
 
-Aucune migration, publication automatique, suppression ou réorganisation.
+## Gestion de galerie — Phase 3B-3
+
+- Principale, déplacements et suppression reprennent le même verrou produit
+  et la revalidation Admin actif dans la transaction. L'appartenance de la
+  photo est vérifiée avant toute mutation ; les ordres sont normalisés 0..N.
+- La contrainte UNIQUE reste active : retirer d'abord l'ancienne principale,
+  puis désigner la nouvelle, sans fenêtre visible hors transaction.
+- Une dernière photo de produit actif n'est jamais supprimée. Brouillon et
+  archivé peuvent avoir une galerie vide ; une galerie restante sans principale
+  est réparée en promouvant sa première photo selon l'ordre.
+- Les fichiers ne sont supprimés qu'après commit SQL réussi. Un rollback SQL
+  conserve ainsi tous les fichiers. Seuls les trois noms opaques strictement
+  conformes et directement situés dans le dossier autorisé sont éligibles ;
+  les liens symboliques et chemins uploads suspects sont refusés. Toute
+  référence partagée conserve ses fichiers. Aucun fichier assets n'est effacé.
+- Si le nettoyage après commit échoue : la relation est déjà retirée, les
+  fichiers résiduels sont orphelins mais aucune ligne volontairement cassée
+  n'est conservée. Message de maintenance et log explicites. Un arrêt brutal
+  après commit peut également laisser tout ou partie de ces dérivés orphelins.
+  Pas de transaction distribuée ni nettoyage large automatique pour cette V1.
+- L'ordre des miniatures client est indépendant de la principale : celle-ci
+  demeure l'image initialement affichée et la miniature sélectionnée.
+
+Aucune migration ni publication automatique.

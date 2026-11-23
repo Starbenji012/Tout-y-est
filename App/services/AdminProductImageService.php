@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\ProductImage;
+use App\Models\CatalogVisibility;
 use DomainException;
 use PDO;
 use Throwable;
@@ -33,6 +34,76 @@ final class AdminProductImageService
             $row['thumbnail']=ProductService::localProductImage($thumb)??ProductService::localProductImage($path);
         }
         return $rows;
+    }
+
+    /** Même verrou que l'upload : aucune principale/position décidée dans le navigateur. */
+    public function change(int $product,int $image,string $action): string
+    {
+        $this->authorize();
+        if($product<1||$image<1)throw new DomainException('Photo introuvable pour ce produit.',404);
+        if(!in_array($action,['primary','up','down','delete'],true))throw new DomainException('Action photo invalide.',422);
+        if($this->database->inTransaction())throw new DomainException('Modification indisponible pour le moment.',503);
+        $files=[];
+        $this->database->beginTransaction();
+        try {
+            $this->access->requireCurrentAdmin(true);
+            $query=$this->database->prepare('SELECT statut FROM produit WHERE id_produit=? FOR UPDATE');
+            $query->execute([$product]);$status=$query->fetchColumn();
+            if($status===false)throw new DomainException('Produit introuvable.',404);
+            $rows=$this->images->forProduct($product);
+            $ids=array_map('intval',array_column($rows,'id_image'));
+            $position=array_search($image,$ids,true);
+            if($position===false)throw new DomainException('Photo introuvable pour ce produit.',404);
+            if($action==='delete') {
+                if(count($rows)===1&&CatalogVisibility::isActive($status))throw new DomainException('Un produit actif doit conserver au moins une photo.',422);
+                $files=$this->deletableFiles((string)$rows[$position]['chemin'],$image);
+                $this->images->delete($product,$image);
+                array_splice($rows,$position,1);array_splice($ids,$position,1);
+            } elseif($action==='primary') {
+                $this->images->primary($product,$image);
+                foreach($rows as &$row)$row['image_principale']=(int)$row['id_image']===$image?1:0;
+                unset($row);
+            } else {
+                $target=$position+($action==='up'?-1:1);
+                if($target<0||$target>=count($ids))throw new DomainException('Cette photo est déjà à cette position limite.',422);
+                [$ids[$position],$ids[$target]]=[$ids[$target],$ids[$position]];
+            }
+            // Répare aussi les anciennes galeries non vides sans principale.
+            if($ids!==[]&&!array_filter($rows,static fn(array $row):bool=>(int)$row['image_principale']===1))$this->images->primary($product,$ids[0]);
+            $this->images->order($product,$ids);
+            $this->database->commit();
+        } catch(Throwable $error) {
+            if($this->database->inTransaction())$this->database->rollBack();
+            throw $error;
+        }
+        // Jamais avant commit : une erreur SQL ne peut casser une ligne conservée.
+        $clean=true;
+        foreach($files as $file)if(is_file($file)&&!@unlink($file))$clean=false;
+        if(!$clean) {
+            error_log('Suppression photo : nettoyage des dérivés incomplet après commit.');
+            return 'Photo retirée de la galerie. Le nettoyage de certains fichiers reste à effectuer par la maintenance.';
+        }
+        return match($action) {'primary'=>'Image principale mise à jour.','up','down'=>'Ordre des photos mis à jour.',default=>'Photo supprimée.'};
+    }
+
+    /** Seuls trois noms exacts générés par 3B-2 sont éligibles ; assets reste intact. */
+    private function deletableFiles(string $path,int $image): array
+    {
+        if(!preg_match('~^/?uploads/products/([a-f0-9]{32})-large\.webp$~D',$path,$match)) {
+            if(str_starts_with(ltrim($path,'/'),'uploads/'))throw new DomainException('Le chemin de cette photo nécessite une vérification avant suppression.',422);
+            return [];
+        }
+        $root=realpath($this->storage);
+        if($root===false||is_link($this->storage)||!is_dir($root))throw new DomainException('Le stockage des photos est indisponible.',503);
+        $files=[];$paths=[];
+        foreach(['thumb','medium','large'] as $size) {
+            $name=$match[1].'-'.$size.'.webp';$file=$root.DIRECTORY_SEPARATOR.$name;
+            $paths[]='uploads/products/'.$name;$paths[]='/uploads/products/'.$name;
+            if(is_link($file)||(file_exists($file)&&(!is_file($file)||realpath($file)!==$file)))throw new DomainException('Le fichier photo nécessite une vérification avant suppression.',422);
+            $files[]=$file;
+        }
+        // Une référence partagée importée manuellement ne doit jamais être cassée.
+        return $this->images->pathsReferenced($paths,$image)?[]:$files;
     }
 
     /** Source locale déjà vérifiée comme upload HTTP par le contrôleur en production. */

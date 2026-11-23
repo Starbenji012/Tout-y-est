@@ -67,6 +67,10 @@
 .admin-product-photos__form { display:grid; gap:var(--spacing-sm); }
 .admin-product-photos__form input { max-width:100%; min-width:0; }
 .admin-product-photos__form .btn { justify-self:start; }
+.admin-product-photos__actions { display:flex; flex-wrap:wrap; justify-content:center; gap:.35rem; width:100%; }
+.admin-product-photos__actions .btn { white-space:normal; font-size:.85rem; padding:.45rem .65rem; min-height:2.5rem; }
+.admin-product-photos__actions .admin-product-photos__delete { color:var(--color-error,#9c3030); }
+.admin-product-photos__actions .btn:focus-visible { outline:2px solid var(--color-gold,#b69952); outline-offset:2px; }
 @media(max-width:25rem) { .admin-product-form__pair { grid-template-columns:minmax(0,1fr); } }
 @media(max-width:60rem) { .admin-product-form { grid-template-columns:minmax(0,1fr); max-width:48rem; } }
 @media(max-width:25rem) { .admin-product-sales__details { grid-template-columns:minmax(0,1fr); } }

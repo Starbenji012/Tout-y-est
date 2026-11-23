@@ -15,6 +15,32 @@ final class ProductController extends Controller
     public function create(): void {$this->formPage(null);}
     public function edit(): void {$this->formPage($this->request->queryInteger('id'));}
 
+    public function managePhoto(): void
+    {
+        header('Cache-Control: no-store');
+        $id=filter_var($_POST['id_produit']??null,FILTER_VALIDATE_INT);
+        try {
+            if(!$this->images)throw new DomainException('Administration indisponible.',503);
+            $this->images->authorize();
+            if(!$this->request->isPost())throw new DomainException('Méthode non autorisée.',405);
+            if(!CsrfMiddleware::isValid($_POST['_token']??null))throw new DomainException('Session expirée. Rechargez la page avant de réessayer.',419);
+            $image=filter_var($_POST['id_image']??null,FILTER_VALIDATE_INT);
+            $action=$_POST['action']??null;
+            if($id===false||$id<1||$image===false||$image<1)throw new DomainException('Photo introuvable pour ce produit.',404);
+            if(!is_string($action))throw new DomainException('Action photo invalide.',422);
+            $message=$this->images->change($id,$image,$action);
+            Session::set('_admin_product_flash',['id'=>$id,'message'=>$message]);
+            Response::redirect('/admin/produit?'.http_build_query(['id'=>$id]).'#product-photos');
+        } catch(DomainException $error) {
+            if(in_array($error->getCode(),[419,422,409,503],true)&&$id!==false&&$id>0){$this->formPage($id,[],$error->getMessage(),$error->getCode());return;}
+            $this->formFailure($error->getCode(),$error->getMessage());
+        } catch(Throwable $error) {
+            error_log('Gestion photo Admin : '.get_class($error));
+            if($id!==false&&$id>0)$this->formPage($id,[],'Modification de la galerie impossible pour le moment. Réessayez.',503);
+            else $this->formFailure(503,'Modification de la galerie impossible pour le moment.');
+        }
+    }
+
     public function uploadPhoto(): void
     {
         header('Cache-Control: no-store');

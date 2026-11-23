@@ -12,6 +12,8 @@ if (!isset($relatedProducts) || !is_array($relatedProducts)) {
 $productName = (string) $product['name'];
 $productStock = (int) ($product['stock'] ?? 0);
 $productGallery = $product['gallery'] ?? [['src' => $product['image'], 'alt' => $product['alt']]];
+$productMainIndex = array_search($product['image'], array_column($productGallery, 'src'), true);
+$productMainIndex = $productMainIndex === false ? 0 : $productMainIndex;
 $productCharacteristics = $product['characteristics'] ?? [];
 ?>
 
@@ -24,13 +26,13 @@ $productCharacteristics = $product['characteristics'] ?? [];
         <div class="product-detail__layout" data-product-card data-product-id="<?= (int) $product['id'] ?>" data-product-variant-id="<?= (int) ($product['variantId'] ?? $product['id']) ?>">
             <div class="product-detail__media" data-motion="side">
                 <div class="product-detail__image-container">
-                    <img data-gallery-main src="<?= htmlspecialchars((string) $productGallery[0]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $productGallery[0]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) $product['width'] ?>" height="<?= (int) $product['height'] ?>" fetchpriority="high">
+                    <img data-gallery-main src="<?= htmlspecialchars((string) $productGallery[$productMainIndex]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $productGallery[$productMainIndex]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) $product['width'] ?>" height="<?= (int) $product['height'] ?>" fetchpriority="high">
                     <button class="product-detail__zoom" type="button" aria-label="Agrandir l’image" aria-pressed="false" data-product-zoom><i data-lucide="zoom-in" aria-hidden="true"></i></button>
                 </div>
                 <?php if (count($productGallery) > 1): ?>
                     <div class="product-detail__thumbnails" aria-label="Images du produit">
                         <?php foreach ($productGallery as $imageIndex => $image): ?>
-                            <button class="product-detail__thumbnail<?= $imageIndex === 0 ? ' is-active' : '' ?>" type="button" aria-label="Afficher l’image <?= $imageIndex + 1 ?>" aria-pressed="<?= $imageIndex === 0 ? 'true' : 'false' ?>" data-gallery-thumbnail data-image-src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-image-alt="<?= htmlspecialchars((string) $image['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><img src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="" width="112" height="112" loading="lazy"></button>
+                            <button class="product-detail__thumbnail<?= $imageIndex === $productMainIndex ? ' is-active' : '' ?>" type="button" aria-label="Afficher l’image <?= $imageIndex + 1 ?>" aria-pressed="<?= $imageIndex === $productMainIndex ? 'true' : 'false' ?>" data-gallery-thumbnail data-image-src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-image-alt="<?= htmlspecialchars((string) $image['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><img src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="" width="112" height="112" loading="lazy"></button>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>

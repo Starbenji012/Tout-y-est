@@ -14,7 +14,7 @@ const form = {
   setAttribute: (k, v) => attributes[k] = v, removeAttribute: k => delete attributes[k]
 };
 const context = {
-  document: {querySelector: () => form, getElementById: () => trigger},
+  document: {querySelector: () => form, querySelectorAll: () => [], getElementById: () => trigger},
   window: {SelectControl: {enhance: item => {enhanced++; item.hidden = true;}}, addEventListener: (k, v) => windowHandlers[k] = v}
 };
 vm.runInNewContext(fs.readFileSync(path.join(root, 'Public/assets/js/admin-product-form.js'), 'utf8'), context);

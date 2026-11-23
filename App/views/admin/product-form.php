@@ -61,9 +61,20 @@ $showPhotoHelp=(!$editing||!$canPublish)&&!str_contains($flash??'','photo')&&!st
         <p><?= count($photos) ?> / 6 photos</p>
         <?php if ($photos===[]): ?><p>Aucune photo pour le moment.</p><?php else: ?>
         <ul class="admin-product-photos__gallery">
-            <?php foreach ($photos as $photo): ?><li>
+            <?php foreach ($photos as $photoIndex=>$photo): ?><li>
                 <?php if ($photo['thumbnail']!==null): ?><img src="<?= $escape($photo['thumbnail']) ?>" alt="Photo de <?= $escape($product['nom']) ?>" width="150" height="150" loading="lazy"><?php else: ?><span>Sans image</span><?php endif; ?>
                 <?php if ((int)$photo['image_principale']===1): ?><span class="admin-product-photos__badge">Principale</span><?php endif; ?>
+                <form class="admin-product-photos__actions" method="post" action="/admin/produits/photo/modifier" aria-label="Gérer la photo <?= $photoIndex+1 ?>" data-gallery-actions>
+                    <input type="hidden" name="_token" value="<?= $escape($csrfToken) ?>">
+                    <input type="hidden" name="id_produit" value="<?= (int)$product['id_produit'] ?>">
+                    <input type="hidden" name="id_image" value="<?= (int)$photo['id_image'] ?>">
+                    <?php if ($photoIndex>0): ?><button class="btn btn-ghost" type="submit" name="action" value="up">Monter</button><?php endif; ?>
+                    <?php if ($photoIndex<count($photos)-1): ?><button class="btn btn-ghost" type="submit" name="action" value="down">Descendre</button><?php endif; ?>
+                    <?php if ((int)$photo['image_principale']!==1): ?><button class="btn btn-ghost" type="submit" name="action" value="primary">Définir comme principale</button><?php endif; ?>
+                    <?php if (count($photos)>1||!\App\Models\CatalogVisibility::isActive((string)$product['statut'])): ?>
+                    <button class="btn btn-ghost admin-product-photos__delete" type="submit" name="action" value="delete" data-confirm-delete>Supprimer</button>
+                    <?php else: ?><small>Un produit actif doit conserver au moins une photo.</small><?php endif; ?>
+                </form>
             </li><?php endforeach; ?>
         </ul><?php endif; ?>
         <?php if (count($photos)<6): ?>

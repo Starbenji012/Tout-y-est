@@ -11,6 +11,8 @@ $quickViewGallery = $quickViewProduct['gallery'] ?? [[
     'alt' => (string) ($quickViewProduct['alt'] ?? $quickViewName),
 ]];
 $quickViewOptions = $productOptions ?? [];
+$quickViewMainIndex = array_search($quickViewProduct['image'] ?? '', array_column($quickViewGallery, 'src'), true);
+$quickViewMainIndex = $quickViewMainIndex === false ? 0 : $quickViewMainIndex;
 ?>
 
 <dialog class="quick-view" aria-labelledby="quick-view-title" data-quick-view-dialog>
@@ -18,12 +20,12 @@ $quickViewOptions = $productOptions ?? [];
     <div class="quick-view__layout" data-product-card data-product-id="<?= $quickViewId ?>" data-product-variant-id="<?= (int) ($quickViewProduct['variantId'] ?? $quickViewId) ?>">
         <div class="quick-view__gallery">
             <div class="quick-view__media">
-                <img data-gallery-main src="<?= htmlspecialchars((string) $quickViewGallery[0]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $quickViewGallery[0]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) ($quickViewProduct['width'] ?? 1000) ?>" height="<?= (int) ($quickViewProduct['height'] ?? 1000) ?>">
+                <img data-gallery-main src="<?= htmlspecialchars((string) $quickViewGallery[$quickViewMainIndex]['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $quickViewGallery[$quickViewMainIndex]['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" width="<?= (int) ($quickViewProduct['width'] ?? 1000) ?>" height="<?= (int) ($quickViewProduct['height'] ?? 1000) ?>">
             </div>
             <?php if (count($quickViewGallery) > 1): ?>
                 <div class="quick-view__thumbnails" aria-label="Images du produit">
                     <?php foreach ($quickViewGallery as $imageIndex => $image): ?>
-                        <button class="quick-view__thumbnail<?= $imageIndex === 0 ? ' is-active' : '' ?>" type="button" aria-label="Afficher l’image <?= $imageIndex + 1 ?>" aria-pressed="<?= $imageIndex === 0 ? 'true' : 'false' ?>" data-gallery-thumbnail data-image-src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-image-alt="<?= htmlspecialchars((string) $image['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                        <button class="quick-view__thumbnail<?= $imageIndex === $quickViewMainIndex ? ' is-active' : '' ?>" type="button" aria-label="Afficher l’image <?= $imageIndex + 1 ?>" aria-pressed="<?= $imageIndex === $quickViewMainIndex ? 'true' : 'false' ?>" data-gallery-thumbnail data-image-src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" data-image-alt="<?= htmlspecialchars((string) $image['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
                             <img src="<?= htmlspecialchars((string) $image['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" alt="" width="96" height="96" loading="lazy">
                         </button>
                     <?php endforeach; ?>

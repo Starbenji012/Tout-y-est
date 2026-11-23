@@ -62,6 +62,31 @@ PHP;
     [$status,$html]=$request('/admin/produit?id=1');$assert($status===200&&str_contains($html,'6 / 6 photos')&&!str_contains($html,'type="file"'),'Galerie pleine sans action morte');
     $assert((int)$db->query('SELECT COUNT(*) FROM image_produit')->fetchColumn()===6,'Six lignes seulement');
     foreach($created as $file)$assert(is_file($file)&&getimagesize($file)[2]===IMAGETYPE_WEBP,'Sorties publiques GD seulement');
+    $manage=static function(string $token,int $image,string $action)use($request):array {
+        return $request('/admin/produits/photo/modifier','POST',http_build_query(['_token'=>$token,'id_produit'=>1,'id_image'=>$image,'action'=>$action]),['Content-Type: application/x-www-form-urlencoded']);
+    };
+    [$status]=$request('/admin/produits/photo/modifier');$assert($status===405,'Gestion photo POST requis');
+    $rows=$db->query('SELECT * FROM image_produit ORDER BY ordre_affichage,id_image')->fetchAll(PDO::FETCH_ASSOC);
+    $last=(int)$rows[5]['id_image'];$lastPath=$rows[5]['chemin'];
+    [$status]=$manage('wrong',$last,'primary');$assert($status===419,'Gestion photo CSRF requis');
+    $other=$login(2);[$status]=$manage($other,$last,'primary');$assert($status===403,'Gestion photo non-admin refusé');$token=$login(1);
+    [$status]=$manage($token,999999,'delete');$assert($status===404,'Gestion photo inconnue refusée');
+    [$status]=$manage($token,$last,'primary');$assert($status===303,'Changement principale PRG');
+    $assert((int)$db->query('SELECT COUNT(*) FROM image_produit WHERE image_principale=1')->fetchColumn()===1&&(int)$db->query('SELECT id_image FROM image_produit WHERE image_principale=1')->fetchColumn()===$last,'Une seule nouvelle principale');
+    [$status]=$manage($token,$last,'up');$assert($status===303,'Monter HTTP');
+    $ids=array_map('intval',$db->query('SELECT id_image FROM image_produit ORDER BY ordre_affichage,id_image')->fetchAll(PDO::FETCH_COLUMN));$assert($ids[4]===$last,'Monter position réelle');
+    [$status,$html]=$request('/produit?id=1');preg_match('~data-gallery-main src="([^"]+)"~',$html,$main);
+    $assert($status===200&&($main[1]??null)==='/'.$lastPath,'Principale client indépendante de son ordre');
+    [$status]=$manage($token,$last,'down');$assert($status===303,'Descendre HTTP');
+    [$status]=$manage($token,$last,'delete');$assert($status===303,'Suppression principale HTTP');
+    $assert((int)$db->query('SELECT COUNT(*) FROM image_produit WHERE image_principale=1')->fetchColumn()===1,'Promotion automatique HTTP');
+    $ids=array_map('intval',$db->query('SELECT id_image FROM image_produit ORDER BY ordre_affichage,id_image')->fetchAll(PDO::FETCH_COLUMN));
+    foreach(array_slice($ids,1) as $id){[$status]=$manage($token,$id,'delete');$assert($status===303,'Suppression secondaire HTTP');}
+    [$status,$html]=$manage($token,$ids[0],'delete');$assert($status===422&&str_contains($html,'Un produit actif doit conserver au moins une photo.'),'Dernière active refusée HTTP');
+    $db->exec("UPDATE produit SET statut='brouillon' WHERE id_produit=1");
+    [$status]=$manage($token,$ids[0],'delete');$assert($status===303&&(int)$db->query('SELECT COUNT(*) FROM image_produit')->fetchColumn()===0,'Dernière brouillon supprimée HTTP');
+    foreach($created as $file)$assert(!is_file($file),'Dérivés HTTP nettoyés après suppression');
+    echo "ADMIN_PRODUCT_GALLERY_HTTP_OK (POST/CSRF/Admin, principale, ordre, rendu client, suppression, promotion, dernière active protégée).\n";
     echo "ADMIN_PRODUCT_IMAGES_HTTP_OK (vrai multipart, is_uploaded_file, MIME serveur, droits/CSRF/POST, PRG, galerie persistante 0/1/6, principale publique, limite 6).\n";
     if(($argv[1]??'')==='--browser') {
         // Démonstration manuelle facultative, toujours dans la même base jetable.

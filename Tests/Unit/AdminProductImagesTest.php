@@ -77,7 +77,7 @@ try {
         $product=['id_produit'=>1,'nom'=>'TEST','statut'=>'brouillon'];$categories=[];$variants=[];$old=[];$canPublish=true;$flash=null;$formError=null;$csrfToken='test';
         ob_start();require $root.'/App/views/admin/product-form.php';return ob_get_clean();
     };
-    foreach([0,1,6] as $count){$photos=array_fill(0,$count,['thumbnail'=>null,'image_principale'=>1]);$html=$render($photos);$assert(str_contains($html,$count.' / 6 photos'),'Compteur galerie');$assert(str_contains($html,'type="file"')===($count<6),'Ajout présent seulement sous six');}
+    foreach([0,1,6] as $count){$photos=array_fill(0,$count,['id_image'=>1,'thumbnail'=>null,'image_principale'=>1]);$html=$render($photos);$assert(str_contains($html,$count.' / 6 photos'),'Compteur galerie');$assert(str_contains($html,'type="file"')===($count<6),'Ajout présent seulement sous six');}
     $controller=file_get_contents($root.'/App/controllers/Admin/ProductController.php');
     $assert(str_contains($controller,'CsrfMiddleware::isValid')&&str_contains($controller,'HttpImageUpload::source')&&str_contains($controller,'isPost()'),'Frontière HTTP et sécurité branchées');
     echo "ADMIN_PRODUCT_IMAGES_OK (droits, upload HTTP refusé hors HTTP, erreurs PHP, principale/ordre, limite 6, rollback fichiers/BDD, WebP opaques, anciennes images, galeries 0/1/6).\n";

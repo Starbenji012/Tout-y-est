@@ -33,6 +33,7 @@ try {
     $db->exec('UPDATE image_produit SET image_principale=1 WHERE id_image=1');
     $product = $service->findProduct(1);
     $assert($product['image'] === '/assets/images/products/watch.jpg' && count($product['gallery']) === 3, 'Principale prioritaire et galerie complète.');
+    $assert($product['gallery'][0]['src'] === '/assets/images/products/laptop.jpg', 'Ordre galerie indépendant de la principale.');
     $assert(count($model->findByIds([1])) === 1, 'Galerie sans duplication des produits.');
     $db->exec("INSERT INTO utilisateur (id_utilisateur,nom,prenom,email,mot_de_passe) VALUES (1,'TEST','TEST','image@example.invalid','unused')");
     $db->exec('INSERT INTO panier (id_panier,id_utilisateur) VALUES (1,1)');

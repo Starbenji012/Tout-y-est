@@ -51,6 +51,7 @@ return [
     '/admin/produit' => [$adminProductController,'edit'],
     '/admin/produits/enregistrer' => [$adminProductController,'save'],
     '/admin/produits/photo' => [$adminProductController,'uploadPhoto'],
+    '/admin/produits/photo/modifier' => [$adminProductController,'managePhoto'],
     '/livreur/livraisons' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'index'],
     '/livreur/tournee/demarrer' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'start'],
     '/livreur/livraison/resultat' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'outcome'],

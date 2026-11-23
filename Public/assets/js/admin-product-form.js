@@ -1,5 +1,17 @@
 // Le formulaire reste un POST classique, sans conversion monétaire dans le navigateur.
 (() => {
+  document.querySelectorAll('[data-gallery-actions]').forEach(galleryForm => {
+    let pending = false;
+    galleryForm.addEventListener('submit', event => {
+      if (pending) { event.preventDefault(); return; }
+      if (event.submitter?.value === 'delete' && !window.confirm('Supprimer cette photo du produit ?')) {
+        event.preventDefault(); return;
+      }
+      pending = true;
+      galleryForm.setAttribute('aria-busy', 'true');
+    });
+    window.addEventListener('pageshow', () => { pending = false; galleryForm.removeAttribute('aria-busy'); });
+  });
   const form = document.querySelector('.admin-product-form');
   if (!form) return;
   const feedback = form.querySelector('[data-product-form-feedback]');

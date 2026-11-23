@@ -172,7 +172,7 @@ final class Product
     {
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
         if ($ids === []) return [];
-        $query = $this->database->prepare('SELECT id_produit, chemin FROM image_produit WHERE id_produit IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY image_principale DESC, ordre_affichage, id_image');
+        $query = $this->database->prepare('SELECT id_produit, chemin FROM image_produit WHERE id_produit IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY ordre_affichage, id_image');
         $query->execute($ids);
         return $query->fetchAll();
     }
