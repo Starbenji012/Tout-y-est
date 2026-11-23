@@ -9,6 +9,7 @@ use PDOException;
 use Throwable;
 
 require_once __DIR__ . '/ProductFormValidationException.php';
+require_once __DIR__ . '/ProductVariantInput.php';
 
 /** Écritures atomiques du produit ; les mouvements de stock existant sont exclus. */
 final class AdminProductWriteService
@@ -51,8 +52,7 @@ final class AdminProductWriteService
         },$errors);
         $id=$edit?$this->collect(fn()=>$this->integer($input,'id_produit',1,PHP_INT_MAX),$errors):null;
         $manual=$edit?'':$this->collect(function()use($input,$edit){
-        $manual=strtoupper(trim($this->text($input,'sku','')));
-        if (!$edit&&$manual!==''&&!preg_match('/^[A-Z0-9][A-Z0-9._-]{0,99}$/D',$manual)) throw new ProductFormValidationException('sku','Utilisez uniquement des lettres, chiffres, points, tirets ou underscores, en commençant par une lettre ou un chiffre (100 caractères maximum).');
+        $manual=(new ProductVariantInput($this->money))->sku($this->text($input,'sku',''));
         return $manual;
         },$errors);
         $stock=$edit?0:$this->collect(fn()=>$this->integer($input,'stock_initial',0,4294967295),$errors);
@@ -73,7 +73,7 @@ final class AdminProductWriteService
                 } else {
                     if (!$this->products->categoryExists($data['id_categorie'])) throw new ProductFormValidationException('id_categorie','Choisissez une catégorie existante.');
                     if ($manual!==''&&$this->products->skuExists($manual)) throw new ProductFormValidationException('sku','Cette référence (SKU) est déjà utilisée. Choisissez-en une autre ou laissez ce champ vide.');
-                    $sku=$manual!==''?$manual:'TYE-'.strtoupper(bin2hex(random_bytes(8)));
+                    $sku=$manual!==''?$manual:(new ProductVariantInput($this->money))->generatedSku();
                     $slug=$this->slug($data['nom']);
                     if ($attempt>0)$slug.='-'.bin2hex(random_bytes(6));
                     $id=$this->products->create($data,$slug,$sku,$price,$stock);
@@ -109,16 +109,7 @@ final class AdminProductWriteService
     private function referencePrice(array $input): string
     {
         $currency=$this->text($input,'devise');
-        $amount=str_replace([' ',"\u{00A0}","\u{202F}",','],['','','','.'],trim($this->text($input,'prix')));
-        if (!in_array($currency,['USD','CDF'],true)) throw new ProductFormValidationException('devise','Choisissez USD ou CDF.');
-        if ($currency==='USD') {
-            try {$minor=$this->money->minor($amount);}catch(\InvalidArgumentException){throw new ProductFormValidationException('prix','Le prix doit être un nombre et ne peut pas être négatif (deux décimales maximum en dollars).');}
-        } else {
-            if (!preg_match('/^\d{1,12}(?:\.0{1,2})?$/D',$amount)) throw new ProductFormValidationException('prix','Le prix ne peut pas être négatif. En francs congolais, saisissez un nombre entier de 12 chiffres maximum.');
-            try {$minor=$this->money->cdfToUsd((int)$amount);}catch(Throwable){throw new ProductFormValidationException('devise','Le taux de change est indisponible. Réessayez plus tard ou saisissez le prix en USD.');}
-        }
-        if ($minor>999999999999) throw new ProductFormValidationException('prix','Ce prix dépasse la limite autorisée.');
-        return $this->money->decimal($minor);
+        return (new ProductVariantInput($this->money))->price($this->text($input,'prix'),$currency);
     }
 
     private function collect(callable $validate,array &$errors): mixed
