@@ -44,6 +44,15 @@ try {
     // Comparer la version effectivement déployée. S1.15 est vérifiée séparément sur base jetable.
     if((int)$version->fetchColumn()===0)$reference=explode('-- BEGIN S1.15',$reference,2)[0];
     $db->exec(str_replace('tout_y_est', $name, $reference));
+    // Comparer une même version déployée, puis tester le catalogue avec S1.16.
+    // Aucun DDL sur la vraie base : seul ce schéma jetable est rétrogradé/remonté.
+    $options=$db->prepare("SELECT
+        (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME IN ('option_produit','valeur_option_produit','variante_valeur_option'))+
+        (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='variante_produit' AND COLUMN_NAME='cle_combinaison')");
+    $options->execute([$config['database'],$config['database']]);$optionsObjects=(int)$options->fetchColumn();
+    $assert(in_array($optionsObjects,[0,4],true),'S1.16 locale absente ou complète, jamais partielle');
+    $pendingOptions=$optionsObjects===0;
+    if($pendingOptions)$db->exec(file_get_contents($root.'/Database/migrations/S1.16_product_options_rollback.sql'));
     // Comparaison en lecture seule avec les tables migrées, sans dépendre du nom des index.
     foreach ($db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {
         $columns = $db->prepare('SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? ORDER BY COLUMN_NAME');
@@ -75,6 +84,7 @@ try {
         $indexes->execute([$config['database'],$table]);
         $assert($freshIndexes === $indexes->fetchAll(), 'Index/UNIQUE installation/migrations : '.$table);
     }
+    if($pendingOptions)$db->exec(file_get_contents($root.'/Database/migrations/S1.16_product_options.sql'));
     $db->exec("INSERT INTO utilisateur(id_utilisateur,nom,prenom,email,telephone,mot_de_passe) VALUES(1,'TEST','Alice','alice@example.invalid','+243812345678','unused'),(2,'TEST','Bob','bob@example.invalid',NULL,'unused')");
     try {
         $db->exec("UPDATE utilisateur SET telephone='+243812345678' WHERE id_utilisateur=2");
