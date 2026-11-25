@@ -86,6 +86,7 @@ final class OrderService
         $lines = [];
         foreach ($rawLines as $raw) {
             $variant = $this->variants->lock((int) $raw['id_variante']);
+            if ($variant !== null && ($variant['options_pending_selection'] ?? false)) throw new DomainException('Les versions de cet article ne sont pas encore disponibles à l’achat. Retirez-le du panier.');
             $quantity = (int) $raw['quantite'];
             if ($variant === null || !CatalogVisibility::isActive($variant['statut']) || !CatalogVisibility::isActive($variant['produit_statut']) || !CatalogVisibility::isActive($variant['categorie_statut'])) throw new DomainException('Un article n’est plus disponible. Corrigez votre panier.');
             if ($quantity < 1 || $quantity > 99 || $quantity > (int) $variant['stock']) throw new DomainException('Stock insuffisant ou quantité invalide. Corrigez votre panier.');

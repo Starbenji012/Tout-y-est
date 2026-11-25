@@ -8,15 +8,20 @@ use PDOException;
 use Throwable;
 
 require_once __DIR__ . '/ProductVariantInput.php';
+require_once __DIR__ . '/SkuService.php';
 
 /** Moteur 4B, sans route/UI. Toutes les mutations passent par le verrou produit. */
 final class AdminProductVariantService
 {
     private readonly ProductVariantInput $input;
+    private readonly SkuService $skus;
+    private ?string $skuOperation=null;
+    private int $skuItem=0;
 
     public function __construct(private readonly PDO $database, private readonly AdminAccessService $access, MoneyService $money)
     {
         $this->input = new ProductVariantInput($money);
+        $this->skus = new SkuService($database);
     }
 
     /**
@@ -24,9 +29,13 @@ final class AdminProductVariantService
      * Chaque ligne sélectionne {positionOption:positionValeur} (positions 1-based).
      * Toutes les anciennes variantes doivent être explicitement conservées par leur ID.
      */
-    public function initialize(int $productId, array $definitions, array $variants, ?array $commonPrice = null): array
+    public function initialize(int $productId, array $definitions, array $variants, ?array $commonPrice = null, ?string $request = null): array
     {
-        return $this->transaction($productId, function() use ($productId, $definitions, $variants, $commonPrice): array {
+        return $this->transaction($productId, fn(): array => $this->initializeLocked($productId,$definitions,$variants,$commonPrice),['initialize',$request,[$definitions,$variants,$commonPrice]]);
+    }
+
+    private function initializeLocked(int $productId, array $definitions, array $variants, ?array $commonPrice = null): array
+    {
             if ($this->rows('SELECT * FROM option_produit WHERE id_produit=?', [$productId]) !== []) $this->invalid('Les options existent déjà.');
             if (count($definitions) < 1 || count($definitions) > 3 || !array_is_list($definitions)) $this->invalid('Choisissez de une à trois options.');
             $existing = $this->lockedVariants($productId);
@@ -69,19 +78,150 @@ final class AdminProductVariantService
             }
             unset($row);
             return ['options'=>$mapping, 'variantes'=>$this->persist($productId,$variants,$commonPrice,$existing,true)];
-        });
+    }
+
+    public function authorize(): void { $this->access->requireCurrentAdmin(); }
+
+    public function form(int $productId): array
+    {
+        $this->authorize();
+        if ($this->rows('SELECT id_produit FROM produit WHERE id_produit=?',[$productId])===[]) throw new DomainException('Produit introuvable.',404);
+        $available=(int)$this->database->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('option_produit','valeur_option_produit','variante_valeur_option')")->fetchColumn()===3
+            && (int)$this->database->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='variante_produit' AND COLUMN_NAME='cle_combinaison'")->fetchColumn()===1;
+        $definitions=[];
+        if ($available) foreach ($this->rows('SELECT id_option,nom,position FROM option_produit WHERE id_produit=? ORDER BY position,id_option',[$productId]) as $option) {
+            $option['valeurs']=$this->rows('SELECT id_valeur,libelle FROM valeur_option_produit WHERE id_option=? ORDER BY ordre_affichage,id_valeur',[$option['id_option']]);
+            $definitions[]=$option;
+        }
+        $variants=$this->rows('SELECT * FROM variante_produit WHERE id_produit=? ORDER BY id_variante',[$productId]);
+        $candidates=[];$candidateError=null;
+        if ($definitions!==[]) {
+            try {
+            $preview=$this->candidates(array_map(static fn(array $d):array=>['nom'=>$d['nom'],'valeurs'=>array_column($d['valeurs'],'libelle')],$definitions));
+            foreach ($preview['candidates'] as $token=>$candidate) {
+                $key=$this->storedSelectionKey($definitions,$candidate['selection']);
+                $candidate['existing']=in_array($key,array_column($variants,'cle_combinaison'),true);
+                $candidates[$token]=$candidate;
+            }
+            } catch (ProductFormValidationException $error) { $candidateError=$error->getMessage(); }
+        }
+        return compact('available','definitions','variants','candidates','candidateError');
+    }
+
+    /** Prévisualisation bornée et revalidation serveur, sans aucun INSERT. */
+    public function candidates(array $definitions): array
+    {
+        $this->authorize();
+        if (!array_is_list($definitions) || count($definitions)<1 || count($definitions)>3) throw new ProductFormValidationException('options','Ajoutez de une à trois options.');
+        $normalized=[];$names=[];$count=1;$errors=[];
+        foreach ($definitions as $index=>$definition) {
+            if (!is_array($definition)) throw new ProductFormValidationException('options','Option invalide.');
+            $this->fields($definition,['nom','valeurs']);
+            try {$name=$this->label($definition['nom']??null);} catch(DomainException $e) {$errors['options.'.$index.'.nom']=$e->getMessage();$name='';}
+            $values=$definition['valeurs']??null;
+            if (!is_array($values)||!array_is_list($values)||count($values)<1||count($values)>100) {$errors['options.'.$index.'.valeurs']='Indiquez de une à cent valeurs.';$values=[];}
+            $labels=[];
+            foreach ($values as $valueIndex=>$value) {
+                try {$labels[]=$this->label($value);}catch(DomainException $e){$errors['options.'.$index.'.valeurs.'.$valueIndex]=$e->getMessage();}
+            }
+            if ($labels!==[] && $this->duplicateLabels($labels)) $errors['options.'.$index.'.valeurs']='Chaque valeur doit être différente.';
+            $names[]=$name;$normalized[]=['nom'=>$name,'valeurs'=>$labels];
+            $count*=max(1,count($values));
+        }
+        if ($this->duplicateLabels($names)) $errors['options']='Chaque option doit avoir un nom différent.';
+        if ($count>100) $errors['options']='Ces options créent plus de 100 combinaisons. Réduisez le nombre de valeurs.';
+        if ($errors!==[]) throw new ProductFormValidationException($errors);
+        $candidates=[''=>['label'=>'','selection'=>[]]];
+        foreach ($normalized as $i=>$definition) {
+            $next=[];
+            foreach ($candidates as $token=>$candidate) foreach ($definition['valeurs'] as $j=>$label) {
+                $next[ltrim($token.'|'.($i+1).':'.($j+1),'|')]=['label'=>$candidate['label']===''?$label:$candidate['label'].' / '.$label,'selection'=>$candidate['selection']+[$i+1=>$j+1]];
+            }
+            $candidates=$next;
+        }
+        return ['definitions'=>$normalized,'candidates'=>$candidates,'count'=>$count];
+    }
+
+    /** Politique 4C-1 : prix source sous verrou, stock zéro et nouvelles variantes inactives. */
+    public function configureVersions(int $productId, array $definitions, array $selected, string $reuse, ?string $request = null): array
+    {
+        return $this->transaction($productId,function()use($productId,$definitions,$selected,$reuse):array {
+            $preview=$this->candidates($definitions);
+            if (!array_is_list($selected)||$selected===[]||count($selected)>100||count(array_unique($selected,SORT_REGULAR))!==count($selected)) $this->invalid('Choisissez les combinaisons vendues, sans doublon.');
+            if (!in_array($reuse,$selected,true)) throw new ProductFormValidationException('reuse','Choisissez explicitement la combinaison qui conserve la version existante.');
+            $existing=$this->lockedVariants($productId);
+            if (count($existing)!==1) $this->invalid('Cette conversion exige un produit simple avec une seule version existante.');
+            $old=reset($existing);
+            if ($old['devise_reference']!=='USD') $this->invalid('Le prix de référence de la version existante doit être défini en USD avant conversion.');
+            $variants=[];
+            foreach ($selected as $token) {
+                if (!is_string($token)||!isset($preview['candidates'][$token])) $this->invalid('Une combinaison sélectionnée ne correspond pas aux options.');
+                $row=['selection'=>$preview['candidates'][$token]['selection']];
+                if ($token===$reuse) $row['id_variante']=(int)$old['id_variante'];
+                else $row+=['prix'=>$old['prix_reference'],'devise'=>'USD','stock'=>0,'statut'=>'inactif'];
+                $variants[]=$row;
+            }
+            return $this->initializeLocked($productId,$preview['definitions'],$variants);
+        },['configure',$request,[$definitions,$selected,$reuse]]);
+    }
+
+    private function duplicateLabels(array $labels): bool
+    {
+        if (count($labels)<2) return false;
+        $sql=implode(' UNION ALL ',array_fill(0,count($labels),'SELECT CAST(? AS CHAR CHARACTER SET utf8mb4) AS label'));
+        return $this->rows('SELECT COUNT(*) FROM ('.$sql.') labels GROUP BY label COLLATE utf8mb4_unicode_ci HAVING COUNT(*)>1 LIMIT 1',$labels)!==[];
+    }
+
+    /** Ajout uniquement : décocher une version existante ne la supprime/désactive jamais. */
+    public function extendVersions(int $productId, array $selected, ?string $request = null): array
+    {
+        return $this->transaction($productId,function()use($productId,$selected):array {
+            $data=$this->form($productId);
+            if ($data['definitions']===[]) $this->invalid('Définissez d’abord les options du produit.');
+            if (!array_is_list($selected)||$selected===[]||count($selected)>100) $this->invalid('Choisissez au moins une nouvelle combinaison.');
+            $existing=$this->lockedVariants($productId);$source=reset($existing);
+            if (!$source||$source['devise_reference']!=='USD') $this->invalid('Le prix de référence doit être défini en USD.');
+            $lines=[];$seen=[];
+            foreach ($selected as $token) {
+                if (!is_string($token)||!isset($data['candidates'][$token])||isset($seen[$token])) $this->invalid('Combinaison invalide ou répétée.');
+                $seen[$token]=true;
+                if ($data['candidates'][$token]['existing']) continue;
+                $values=[];
+                foreach ($data['candidates'][$token]['selection'] as $option=>$value) $values[(int)$data['definitions'][$option-1]['id_option']]=(int)$data['definitions'][$option-1]['valeurs'][$value-1]['id_valeur'];
+                $lines[]=['valeurs'=>$values,'prix'=>$source['prix_reference'],'devise'=>'USD','stock'=>0,'statut'=>'inactif'];
+            }
+            return $lines===[]?[]:$this->persist($productId,$lines,null,$existing,false);
+        },['extend',$request,[$selected]]);
+    }
+
+    private function storedSelectionKey(array $definitions, array $selection): string
+    {
+        $pairs=[];
+        foreach ($selection as $option=>$value) $pairs[(int)$definitions[$option-1]['id_option']]=(int)$definitions[$option-1]['valeurs'][$value-1]['id_valeur'];
+        ksort($pairs,SORT_NUMERIC);$parts=[];
+        foreach ($pairs as $option=>$value) $parts[]=$option.':'.$value;
+        return implode('|',$parts);
     }
 
     /** Lot choisi explicitement, jamais un produit cartésien. Prix commun facultatif {prix,devise}. */
-    public function saveVariants(int $productId, array $variants, ?array $commonPrice = null): array
+    public function saveVariants(int $productId, array $variants, ?array $commonPrice = null, ?string $request = null): array
     {
-        return $this->transaction($productId, fn(): array => $this->persist($productId,$variants,$commonPrice,$this->lockedVariants($productId),false));
+        return $this->transaction($productId, fn(): array => $this->persist($productId,$variants,$commonPrice,$this->lockedVariants($productId),false),['save',$request,[$variants,$commonPrice]]);
     }
 
-    public function addValue(int $productId, int $optionId, string $label, int $position = 0): int
+    public function addValue(int $productId, int $optionId, string $label, int $position = 0, bool $limitCandidates = false): int
     {
-        return $this->transaction($productId, function() use ($productId,$optionId,$label,$position): int {
+        return $this->transaction($productId, function() use ($productId,$optionId,$label,$position,$limitCandidates): int {
             $this->ownedOption($productId,$optionId);
+            if ($limitCandidates) {
+                $data=$this->form($productId);$definitions=[];
+                foreach ($data['definitions'] as $definition) {
+                    $values=array_column($definition['valeurs'],'libelle');
+                    if ((int)$definition['id_option']===$optionId) $values[]=$label;
+                    $definitions[]=['nom'=>$definition['nom'],'valeurs'=>$values];
+                }
+                $this->candidates($definitions);
+            }
             $this->execute('INSERT INTO valeur_option_produit(id_option,libelle,ordre_affichage) VALUES(?,?,?)', [$optionId,$this->label($label),$this->integer($position,0,32767)]);
             return (int)$this->database->lastInsertId();
         });
@@ -116,6 +256,7 @@ final class AdminProductVariantService
     {
         $this->transaction($productId, function() use ($productId,$optionId,$valueId): void {
             $this->ownedOption($productId,$optionId);
+            if ($this->rows('SELECT id_valeur FROM valeur_option_produit WHERE id_option=? AND id_valeur=?',[$optionId,$valueId])===[]) $this->invalid('Cette valeur n’appartient pas à l’option du produit.');
             if ($this->rows('SELECT id_variante FROM variante_valeur_option WHERE id_option=? AND id_valeur=? LIMIT 1',[$optionId,$valueId]) !== []) $this->invalid('Cette valeur est utilisée. Désactivez la variante plutôt que supprimer sa définition.');
             $this->execute('DELETE FROM valeur_option_produit WHERE id_option=? AND id_valeur=?',[$optionId,$valueId]);
         });
@@ -160,7 +301,8 @@ final class AdminProductVariantService
                 if ($otherId !== $id && $other['cle_combinaison'] === $key) $this->invalid('Cette combinaison existe déjà.');
             }
             $sku = isset($row['sku']) ? $this->input->sku($this->text($row['sku'])) : ($old['sku'] ?? '');
-            if ($sku === '') $sku = $old['sku'] ?? $this->input->generatedSku();
+            if ($sku === '') $sku = $old['sku'] ?? '';
+            $reservation=null;
             if ($price !== null && (isset($row['prix']) || isset($row['devise']))) $this->invalid('Choisissez un prix commun ou des prix individuels, pas les deux.');
             $reference = $price ?? ((isset($row['prix']) || isset($row['devise'])) ? $this->price($row) : ($old['prix_reference'] ?? null));
             if ($reference === null) $this->invalid('Indiquez le prix de chaque variante.');
@@ -179,7 +321,7 @@ final class AdminProductVariantService
             if (!in_array($status,['actif','inactif'],true)) $this->invalid('Choisissez un statut de variante valide.');
             // Une variante simple historique conserve sa description libre.
             if ($options === []) $description = $old['description_variante'] ?? null;
-            $prepared[] = compact('id','sku','reference','stock','status','key','description','values');
+            $prepared[] = compact('id','sku','reference','stock','status','key','description','values','reservation');
         }
         if (count($existing)+$newCount > 100) $this->invalid('Un produit ne peut pas dépasser 100 variantes, actives et inactives comprises.');
         if ($options === [] && count($existing)+$newCount !== 1) $this->invalid('Un produit simple doit conserver une seule variante technique. Définissez explicitement ses options.');
@@ -187,6 +329,18 @@ final class AdminProductVariantService
         if ($options !== []) foreach ($existing as $id => $old) {
             if ($old['cle_combinaison'] === null && !isset($seen[$id])) $this->invalid('Classez explicitement toutes les variantes historiques de ce produit.');
         }
+        // Réserver tout le lot AVANT les bind métier. Un bind modifie les index du
+        // registre sur la connexion métier : alterner bind et nouvelle réservation
+        // peut bloquer l'allocateur indépendant sur un gap InnoDB (lots importants).
+        foreach ($prepared as &$row) {
+            $old=$row['id']===null?null:$existing[$row['id']];
+            if ($old===null || $row['sku']!==$old['sku']) {
+                if ($this->skuOperation===null) throw new \LogicException('Opération SKU requise.');
+                $row['reservation']=$this->skus->reserve($this->skuOperation,(string)$this->skuItem++,$row['sku']);
+                $row['sku']=$row['reservation']['sku'];
+            }
+        }
+        unset($row);
         $ids = [];
         foreach ($prepared as $row) {
             if ($row['id'] === null) {
@@ -196,6 +350,7 @@ final class AdminProductVariantService
                 $id = $row['id'];
                 $this->execute("UPDATE variante_produit SET sku=?,prix_reference=?,devise_reference='USD',stock=?,statut=?,description_variante=?,cle_combinaison=? WHERE id_variante=? AND id_produit=?",[$row['sku'],$row['reference'],$row['stock'],$row['status'],$row['description'],$row['key'],$id,$productId]);
             }
+            if ($row['reservation']!==null) $this->skus->bind($row['reservation']['cle'],$id);
             $this->execute('DELETE FROM variante_valeur_option WHERE id_variante=?',[$id]);
             foreach ($row['values'] as $option => $value) $this->execute('INSERT INTO variante_valeur_option(id_variante,id_produit,id_option,id_valeur) VALUES(?,?,?,?)',[$id,$productId,$option,$value]);
             $ids[] = $id;
@@ -244,15 +399,23 @@ final class AdminProductVariantService
         return $rows;
     }
 
-    private function transaction(int $productId, callable $action): mixed
+    private function transaction(int $productId, callable $action, ?array $intent = null): mixed
     {
         $this->access->requireCurrentAdmin();
         if ($this->database->inTransaction()) throw new \LogicException('Le moteur doit posséder sa transaction.');
+        CatalogueWriteLock::acquire($this->database);
+        try {
+        $operation=$intent===null?null:$this->skus->operation('variant:'.$productId.':'.$intent[0],$intent[1],$intent[2]);
         $this->database->beginTransaction();
         try {
             $this->access->requireCurrentAdmin(true);
             if ($productId < 1 || $this->rows('SELECT id_produit FROM produit WHERE id_produit=? FOR UPDATE',[$productId]) === []) throw new DomainException('Produit introuvable.',404);
+            if ($operation!==null && ($replay=$this->skus->replay($operation))!==null) {
+                $this->database->commit();return $replay;
+            }
+            $this->skuOperation=$operation;$this->skuItem=0;
             $result = $action();
+            if ($operation!==null) $this->skus->complete($operation,$result);
             $this->database->commit();
             return $result;
         } catch (Throwable $error) {
@@ -264,6 +427,7 @@ final class AdminProductVariantService
             }
             throw $error;
         }
+        } finally { $this->skuOperation=null;CatalogueWriteLock::release($this->database); }
     }
 
     private function ownedOption(int $productId, int $id): void

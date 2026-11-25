@@ -8,6 +8,8 @@ use DomainException;
 use PDO;
 use Throwable;
 
+require_once __DIR__.'/CatalogueWriteLock.php';
+
 /** Le moteur reste indépendant de HTTP. Le contrôleur valide d'abord HttpImageUpload.
  * Le verrou produit sérialise comptage, principale et ordre, y compris pendant GD.
  * Les seuls fichiers publics sont des WebP générés ; chemin BDD = version large.
@@ -44,6 +46,8 @@ final class AdminProductImageService
         if(!in_array($action,['primary','up','down','delete'],true))throw new DomainException('Action photo invalide.',422);
         if($this->database->inTransaction())throw new DomainException('Modification indisponible pour le moment.',503);
         $files=[];
+        CatalogueWriteLock::acquire($this->database);
+        try {
         $this->database->beginTransaction();
         try {
             $this->access->requireCurrentAdmin(true);
@@ -76,6 +80,7 @@ final class AdminProductImageService
             if($this->database->inTransaction())$this->database->rollBack();
             throw $error;
         }
+        } finally { CatalogueWriteLock::release($this->database); }
         // Jamais avant commit : une erreur SQL ne peut casser une ligne conservée.
         $clean=true;
         foreach($files as $file)if(is_file($file)&&!@unlink($file))$clean=false;
@@ -113,6 +118,8 @@ final class AdminProductImageService
         if ($product<1) throw new DomainException('Produit introuvable.',404);
         if ($this->database->inTransaction()) throw new DomainException('Ajout indisponible pour le moment.',503);
         $processed=null;$created=[];
+        CatalogueWriteLock::acquire($this->database);
+        try {
         $this->database->beginTransaction();
         try {
             $this->access->requireCurrentAdmin(true);
@@ -156,5 +163,6 @@ final class AdminProductImageService
                 if (is_dir($processed['temporary_directory'])&&!@rmdir($processed['temporary_directory']))error_log('Nettoyage dossier photo temporaire incomplet.');
             }
         }
+        } finally { CatalogueWriteLock::release($this->database); }
     }
 }

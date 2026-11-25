@@ -20,8 +20,6 @@ final class ProductVariantInput
         return $sku;
     }
 
-    public function generatedSku(): string { return 'TYE-'.strtoupper(bin2hex(random_bytes(8))); }
-
     public function price(string $value, string $currency): string
     {
         $amount = str_replace([' ', "\u{00A0}", "\u{202F}", ','], ['', '', '', '.'], trim($value));

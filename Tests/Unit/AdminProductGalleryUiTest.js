@@ -11,7 +11,7 @@ const gallery = {
   removeAttribute: key => delete attributes[key]
 };
 vm.runInNewContext(script, {
-  document: {querySelectorAll: () => [gallery], querySelector: () => null},
+  document: {querySelectorAll: selector => selector === '[data-gallery-actions]' ? [gallery] : [], querySelector: () => null},
   window: {confirm: () => { confirms++; return accepted; }, addEventListener: (event, callback) => { restore = callback; }}
 });
 let blocked = false;

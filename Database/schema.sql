@@ -1,4 +1,4 @@
--- Schéma de référence MariaDB 10.4 pour une base neuve (S1.16 options incluse).
+-- Schéma de référence MariaDB 10.4 pour une base neuve (S1.17 SKU incluse).
 -- Ce fichier ne contient volontairement aucune suppression de table ou de données.
 
 CREATE DATABASE IF NOT EXISTS tout_y_est
@@ -595,3 +595,76 @@ ALTER TABLE journal_commande DROP CONSTRAINT IF EXISTS chk_journal_acteur,
 ALTER TABLE livraison DROP INDEX IF EXISTS uq_livraison_livreur_engage;
 ALTER TABLE livraison DROP COLUMN IF EXISTS id_livreur_engage;
 UPDATE verrou_dispatch SET version_schema=15 WHERE id=1;
+
+
+-- S1.17 : SKU globaux par variante, registre permanent.
+-- Appliquer avec SkuMigration.php : verrou catalogue, contrôles et import obligatoires.
+CREATE TABLE IF NOT EXISTS sku_sequence (
+    id TINYINT UNSIGNED NOT NULL PRIMARY KEY CHECK (id=1),
+    dernier_numero BIGINT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+INSERT INTO sku_sequence(id,dernier_numero) VALUES(1,0) ON DUPLICATE KEY UPDATE id=id;
+
+CREATE TABLE IF NOT EXISTS sku_attribution (
+    cle CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+    sku VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+    origine ENUM('operation','automatique','manuel','historique') NOT NULL,
+    id_variante BIGINT UNSIGNED NULL,
+    empreinte CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    resultat LONGTEXT NULL,
+    cree_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_sku_attribution_reference (sku),
+    KEY idx_sku_attribution_variante (id_variante),
+    CONSTRAINT chk_sku_attribution_type CHECK (
+        (origine='operation' AND sku IS NULL AND empreinte IS NOT NULL AND id_variante IS NULL)
+        OR (origine<>'operation' AND sku IS NOT NULL AND resultat IS NULL)
+    )
+) ENGINE=InnoDB;
+-- Pas de FK : le registre doit survivre à la suppression d'une variante.
+
+CREATE TRIGGER IF NOT EXISTS sku_attribution_no_delete BEFORE DELETE ON sku_attribution
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Le registre SKU est permanent';
+
+CREATE TRIGGER IF NOT EXISTS sku_attribution_identity BEFORE UPDATE ON sku_attribution
+FOR EACH ROW
+BEGIN
+    IF NOT (NEW.cle <=> OLD.cle) OR NOT (BINARY NEW.sku <=> BINARY OLD.sku)
+       OR NEW.origine<>OLD.origine OR NOT (NEW.empreinte <=> OLD.empreinte)
+       OR NEW.cree_at<>OLD.cree_at
+       OR (OLD.id_variante IS NOT NULL AND NOT (NEW.id_variante <=> OLD.id_variante))
+       OR (OLD.resultat IS NOT NULL AND NOT (BINARY NEW.resultat <=> BINARY OLD.resultat)) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Attribution SKU immuable';
+    END IF;
+END;
+
+CREATE TRIGGER IF NOT EXISTS sku_sequence_no_delete BEFORE DELETE ON sku_sequence
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Le compteur SKU est permanent';
+
+CREATE TRIGGER IF NOT EXISTS sku_sequence_monotonic BEFORE UPDATE ON sku_sequence
+FOR EACH ROW
+BEGIN
+    IF NEW.id<>OLD.id OR NEW.dernier_numero<OLD.dernier_numero THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Le compteur SKU ne peut pas reculer';
+    END IF;
+END;
+
+-- Métadonnées privées uniquement ; aucune modification des références historiques.
+CREATE TABLE IF NOT EXISTS product_photo_batch (
+    ticket CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    owner_id BIGINT UNSIGNED NOT NULL,
+    expires_at DATETIME NOT NULL,
+    product_id BIGINT UNSIGNED NULL,
+    cleaned_at DATETIME NULL,
+    INDEX(owner_id, expires_at)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS product_photo_item (
+    batch_ticket CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    ticket CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    state ENUM('processing','ready','removed','consumed') NOT NULL,
+    source_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    manifest LONGTEXT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(batch_ticket,ticket),
+    UNIQUE KEY photo_source_per_batch(batch_ticket,source_hash),
+    CONSTRAINT photo_batch_fk FOREIGN KEY(batch_ticket) REFERENCES product_photo_batch(ticket) ON DELETE CASCADE
+) ENGINE=InnoDB;

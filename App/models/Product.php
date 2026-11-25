@@ -11,6 +11,12 @@ require_once __DIR__ . '/CatalogVisibility.php';
 /** Effectue uniquement les lectures de produits dans la base de données. */
 final class Product
 {
+    private ?string $publicVisibility = null;
+
+    private function publicProductSql(): string
+    {
+        return $this->publicVisibility ??= CatalogVisibility::publicProductSql($this->database);
+    }
     private const ACTIVE_PROMOTION = "pr.statut NOT IN ('inactif', 'inactive', 'brouillon', 'archive') AND NOW() BETWEEN pr.date_debut AND pr.date_fin";
 
     /** Reçoit la connexion PDO centralisée. */
@@ -45,7 +51,7 @@ final class Product
         $query = trim($query);
         $statement = $this->database->prepare(
             $this->selectSql(true)
-            . ' WHERE ' . CatalogVisibility::productSql()
+            . ' WHERE ' . $this->publicProductSql()
             . ' AND (
                     p.nom LIKE :candidate_name
                     OR c.nom LIKE :candidate_category
@@ -91,7 +97,7 @@ final class Product
     /** Lecture publique uniquement ; le futur Admin aura une lecture distincte. */
     public function findById(int $productId): ?array
     {
-        $statement = $this->database->prepare($this->selectSql() . ' WHERE p.id_produit = :product_id AND ' . CatalogVisibility::productSql() . ' LIMIT 1');
+        $statement = $this->database->prepare($this->selectSql() . ' WHERE p.id_produit = :product_id AND ' . $this->publicProductSql() . ' LIMIT 1');
         $statement->bindValue(':product_id', $productId, PDO::PARAM_INT);
         $statement->execute();
         $product = $statement->fetch();
@@ -118,7 +124,7 @@ final class Product
         $statement = $this->database->prepare(
             $this->selectSql()
             . ' WHERE p.id_produit IN (' . implode(', ', $placeholders) . ')'
-            . ' AND ' . CatalogVisibility::productSql(),
+            . ' AND ' . $this->publicProductSql(),
         );
         $this->bindParameters($statement, $parameters);
         $statement->execute();
@@ -146,7 +152,7 @@ final class Product
             $this->selectSql(false, true)
             . ' WHERE v.id_variante IN (' . implode(', ', $placeholders) . ')'
             . ' AND ' . CatalogVisibility::activeSql('v.statut')
-            . ' AND ' . CatalogVisibility::productSql(),
+            . ' AND ' . $this->publicProductSql(),
         );
         $this->bindParameters($statement, $parameters);
         $statement->execute();
@@ -226,7 +232,7 @@ final class Product
     /** Transforme les filtres validés en clauses SQL et paramètres préparés. */
     private function buildFilters(array $filters): array
     {
-        $conditions = [CatalogVisibility::productSql()];
+        $conditions = [$this->publicProductSql()];
         $parameters = [];
 
         if (($filters['search'] ?? '') !== '') {

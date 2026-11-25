@@ -51,8 +51,14 @@ final class UploadService
         $this->config = $config;
     }
 
-    public function process(string $source): array
+    public function process(string $source, ?string $workspace = null): array
     {
+        $temporaryRoot=$this->config['temporary_root'];
+        if($workspace!==null){
+            $resolved=realpath($workspace);
+            if($resolved===false||!is_dir($resolved)||!self::inside($resolved,$temporaryRoot))throw new InvalidArgumentException('Espace de préparation images non autorisé.');
+            $temporaryRoot=$resolved;
+        }
         $directory = null;
         $directoryCreated = false;
         $created = [];
@@ -67,7 +73,7 @@ final class UploadService
             $image = $this->orient($image, $orientation);
             $width = imagesx($image);
             $height = imagesy($image);
-            $directory = $this->config['temporary_root'] . DIRECTORY_SEPARATOR . 'tye-image-' . bin2hex(random_bytes(16));
+            $directory = $temporaryRoot . DIRECTORY_SEPARATOR . 'tye-image-' . bin2hex(random_bytes(16));
             if (!$this->checked(static fn() => mkdir($directory, 0700))) throw new DomainException('Création des images impossible pour le moment.', 503);
             $directoryCreated = true;
             $derivatives = [];

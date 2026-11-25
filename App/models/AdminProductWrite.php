@@ -28,7 +28,7 @@ final class AdminProductWrite
 
     public function variants(int $id): array
     {
-        $query=$this->database->prepare('SELECT sku,prix_reference,devise_reference,stock,statut FROM variante_produit WHERE id_produit=? ORDER BY id_variante');
+        $query=$this->database->prepare('SELECT id_variante,sku,description_variante,prix_reference,devise_reference,stock,statut FROM variante_produit WHERE id_produit=? ORDER BY id_variante');
         $query->execute([$id]);return $query->fetchAll();
     }
 

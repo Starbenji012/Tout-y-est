@@ -9,7 +9,7 @@ let enhanced = 0, focused = false, serverInvalid = false;
 const trigger = {setAttribute: (k, v) => attributes[k] = v, removeAttribute: k => delete attributes[k], focus: () => focused = true};
 const select = {id: 'product-category', hidden: false, getAttribute: key => key === 'aria-invalid' && serverInvalid ? 'true' : null, addEventListener: (k, v) => selectHandlers[k] = v};
 const form = {
-  querySelectorAll: () => [select], querySelector: () => feedback,
+  querySelectorAll: () => [select], querySelector: selector => selector === '[data-product-form-feedback]' ? feedback : null,
   addEventListener: (k, v) => handlers[k] = v,
   setAttribute: (k, v) => attributes[k] = v, removeAttribute: k => delete attributes[k]
 };
@@ -33,7 +33,7 @@ handlers.submit({preventDefault: () => {throw new Error('Retour navigateur bloqu
 const view = fs.readFileSync(path.join(root, 'App/views/admin/product-form.php'), 'utf8');
 assert.ok(view.includes('method="post"') && view.includes('name="_token"'));
 assert.ok(view.includes('name="stock_initial"') && view.includes('<?php if (!$editing): ?>'));
-assert.ok(view.includes('name="statut" value="brouillon"'));
+assert.ok(view.includes('id="product-status" name="statut"') && view.includes("$value('statut','actif')"));
 assert.ok(view.includes('photo nécessaire'));
 assert.ok(!view.includes('name="taux"') && !view.includes('name="prix_usd"'));
 assert.ok(view.includes('type="file"') && view.includes('enctype="multipart/form-data"'));
@@ -48,13 +48,14 @@ vm.runInNewContext(script, context);
 assert.equal(attributes['aria-invalid'], 'true', 'Erreur serveur reportée sur le select visible');
 selectHandlers.change();
 assert.equal(attributes['aria-invalid'], 'true', 'Erreur serveur conservée avant nouvelle validation');
-assert.ok(view.includes('Référence (SKU) — facultatif'));
-assert.ok(view.includes('Code unique permettant d’identifier le produit. Laissez vide pour le générer automatiquement.'));
+assert.ok(view.includes('name="sku_mode"') && view.includes('Saisir ma propre référence'));
+assert.ok(view.includes("La référence sera générée lors de l'enregistrement du produit."));
 assert.ok(view.includes('Informations de vente') && !view.includes('Variantes — consultation'));
-assert.ok(view.includes('admin-product-sales__details'));
+assert.ok(view.includes("require __DIR__.'/product-sales.php'"));
 assert.ok(view.includes('$attributes(\'prix\',\'product-price-help\')'));
 assert.ok(view.includes('$inlineError(\'prix\')'));
-assert.ok(view.includes('admin-product-notice--success'));
+assert.ok(view.includes('admin-product-notice--success ui-message" role="status"') && view.includes('Enregistrement réussi'));
+assert.ok(view.includes('ui-message--error') && view.includes('role="alert"'));
 const css = fs.readFileSync(path.join(root, 'Public/assets/css/admin-products.css'), 'utf8');
 assert.ok(css.includes('@media(max-width:60rem)'));
 assert.ok(css.includes('.admin-products .select-control__trigger:is(:focus-visible,[aria-expanded="true"])'));

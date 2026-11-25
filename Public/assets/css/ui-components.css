@@ -1,0 +1,45 @@
+/* Socle opt-in : ajouter ui-scope à une page validée, sans modifier les autres écrans.
+   Réutilise .btn-* de global.css et .select-control (CSS/JS), sans les recopier. */
+.ui-scope { --ui-control-height:2.75rem; --spacing-xs:8px; --spacing-sm:8px; --spacing-md:16px; --spacing-lg:24px; --spacing-xl:32px; }
+.ui-scope h2 { font-size:var(--font-size-xl); line-height:var(--line-height-tight); margin:0 0 var(--spacing-md); }
+.ui-scope h3 { font-size:var(--font-size-lg); line-height:var(--line-height-tight); }
+.ui-scope .btn { min-width:0; min-height:var(--ui-control-height); width:fit-content; max-width:100%; padding:var(--spacing-sm) var(--spacing-md); font:inherit; font-size:var(--font-size-sm); font-weight:var(--font-weight-semibold); line-height:1.4; white-space:normal; }
+.ui-scope .btn-danger { border-color:var(--color-error); background:var(--brand-gray-50); color:var(--color-error); }
+.ui-scope .btn-danger:hover:where(:not(:disabled)) { background:var(--color-error); color:var(--brand-gray-50); }
+.ui-scope :is(input:where(:not([type=hidden]):not([type=checkbox]):not([type=radio])),textarea,select,.select-control__trigger) { box-sizing:border-box; width:100%; min-width:0; max-width:100%; min-height:var(--ui-control-height); padding:var(--spacing-sm) var(--spacing-md); border:var(--border); border-radius:var(--radius-field); background:var(--brand-gray-50); color:var(--color-text); font:inherit; font-size:var(--font-size-sm); line-height:1.5; }
+.ui-scope textarea { resize:vertical; }
+.ui-scope :is(input,textarea,select,.select-control__trigger):hover:where(:not(:disabled)) { border-color:var(--color-border-strong); }
+.ui-scope :is(input,textarea,select,.select-control__trigger)[aria-invalid=true] { border-color:var(--color-error); box-shadow:0 0 0 1px var(--color-error); }
+.ui-scope :is(input,textarea,select,button,a,summary,[tabindex]):focus-visible { outline:2px solid var(--color-gold-dark); outline-offset:3px; }
+.ui-scope input:is([type=checkbox],[type=radio]) { accent-color:var(--color-gold-dark); width:1.125rem; height:1.125rem; flex-shrink:0; }
+.ui-scope :is(input,textarea,select,button):disabled { opacity:.55; cursor:not-allowed; }
+.ui-scope input[type=file] { padding:var(--spacing-sm); }
+.ui-scope input[type=file]::file-selector-button { min-height:2.25rem; margin-inline-end:var(--spacing-md); padding:var(--spacing-sm) var(--spacing-md); border:var(--border); border-radius:var(--radius-button); background:var(--color-background-muted); color:var(--color-anthracite); font:inherit; cursor:pointer; }
+.ui-scope input[type=file]:hover::file-selector-button { background:var(--brand-gray-300); border-color:var(--color-border-strong); }
+.ui-scope .ui-card { min-width:0; padding:var(--spacing-md); border:var(--border); border-radius:var(--radius-card); background:var(--brand-gray-50); }
+.ui-scope .ui-message { padding:var(--spacing-sm) var(--spacing-md); border:var(--border); border-inline-start:3px solid var(--color-gold-dark); border-radius:var(--radius-field); background:var(--brand-gray-50); }
+.ui-scope .ui-message--error { border-inline-start-color:var(--color-error); }
+.ui-scope .ui-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:var(--font-size-sm); }
+.ui-scope .ui-table :is(th,td) { text-align:start; padding:var(--spacing-sm); border-bottom:var(--border); overflow-wrap:anywhere; vertical-align:top; }
+.ui-scope .ui-table th { background:var(--brand-gray-50); font-weight:var(--font-weight-semibold); }
+.ui-scope .ui-table caption { text-align:start; color:var(--color-text-muted); padding-bottom:var(--spacing-sm); }
+.ui-scope [aria-busy=true] { cursor:progress; }
+.ui-scope progress { width:100%; accent-color:var(--color-gold-dark); }
+.ui-scope [aria-busy=true] .btn { opacity:.65; cursor:progress; }
+.ui-scope .btn:disabled:hover,.ui-scope [aria-busy=true] .btn:hover { transform:none; box-shadow:none; }
+@media(prefers-reduced-motion:reduce) { .ui-scope .btn,.ui-scope .btn::after { transition:none; transform:none; } }
+.ui-scope [hidden] { display:none; }
+.ui-scope label.ui-choice { display:flex; align-items:center; gap:var(--spacing-sm); }
+.ui-scope .ui-disclosure { margin-top:var(--spacing-md); min-width:0; }
+.ui-scope .ui-disclosure > summary { list-style:none; cursor:pointer; }
+.ui-scope .ui-disclosure > summary::-webkit-details-marker { display:none; }
+.ui-scope .ui-disclosure__less,.ui-scope .ui-disclosure[open] > summary .ui-disclosure__more { display:none; }
+.ui-scope .ui-disclosure[open] > summary .ui-disclosure__less { display:inline; }
+.ui-scope .ui-table-region { container:ui-table / inline-size; min-width:0; }
+@container ui-table (max-width:48rem) {
+    .ui-scope .ui-table--stacked thead { position:absolute; width:1px; height:1px; clip-path:inset(50%); overflow:hidden; }
+    .ui-scope .ui-table--stacked tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding-block:var(--spacing-sm); border-bottom:var(--border); }
+    .ui-scope .ui-table--stacked td { display:block; border:0; }
+    .ui-scope .ui-table--stacked td:first-child { grid-column:1/-1; }
+    .ui-scope .ui-table--stacked td::before { content:attr(data-label); display:block; font-weight:var(--font-weight-semibold); color:var(--color-text-muted); }
+}

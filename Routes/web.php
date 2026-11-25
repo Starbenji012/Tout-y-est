@@ -44,13 +44,17 @@ $adminCourierController = new \App\Controllers\Admin\CourierController($adminCou
 /** @var \App\Services\AdminProductReadService|null $adminProductReadService */
 /** @var \App\Services\AdminProductWriteService|null $adminProductWriteService */
 /** @var \App\Services\AdminProductImageService|null $adminProductImageService */
-$adminProductController = new \App\Controllers\Admin\ProductController($adminProductReadService,$request,$adminProductWriteService,$adminProductImageService??null);
+/** @var \App\Services\AdminProductVariantService|null $adminProductVariantService */
+$adminProductController = new \App\Controllers\Admin\ProductController($adminProductReadService,$request,$adminProductWriteService,$adminProductImageService??null,$adminProductVariantService??null,$productPhotoPreparation??null);
 return [
     '/admin/produits' => [$adminProductController,'index'],
     '/admin/produit/ajouter' => [$adminProductController,'create'],
     '/admin/produit' => [$adminProductController,'edit'],
     '/admin/produits/enregistrer' => [$adminProductController,'save'],
+    '/admin/produits/versions' => [$adminProductController,'manageVersions'],
     '/admin/produits/photo' => [$adminProductController,'uploadPhoto'],
+    '/admin/produits/photos/preparer' => [$adminProductController,'prepareCreationPhoto'],
+    '/admin/produits/photos/apercu' => [$adminProductController,'previewCreationPhoto'],
     '/admin/produits/photo/modifier' => [$adminProductController,'managePhoto'],
     '/livreur/livraisons' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'index'],
     '/livreur/tournee/demarrer' => [new \App\Controllers\CourierTourController($database instanceof PDO ? new \App\Services\CourierTourService($database) : null,$adminAccess,$request),'start'],

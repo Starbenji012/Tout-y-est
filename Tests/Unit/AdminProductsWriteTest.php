@@ -44,7 +44,7 @@ try {
     $zero=$build($db)->save(array_replace($input,['prix'=>'0','stock_initial'=>'0']));
     $query->execute([$zero['id']]);$assert($query->fetch()['prix_reference']==='0.00','Prix nul valide');
     $variants=$db->query('SELECT sku FROM variante_produit WHERE sku<>\'TEST-MANUEL\'')->fetchAll(PDO::FETCH_COLUMN);
-    $assert(count($variants)===count(array_unique($variants))&&(bool)preg_match('/^TYE-[A-F0-9]{16}$/D',$variants[0]),'SKU auto unique');
+    $assert(count($variants)===count(array_unique($variants))&&(bool)preg_match('/^TYE-P[0-9]{6,}$/D',$variants[0]),'SKU auto unique');
     $slugs=$db->query('SELECT slug FROM produit')->fetchAll(PDO::FETCH_COLUMN);$assert(count($slugs)===count(array_unique($slugs)),'Slug unique malgré noms identiques');
     foreach ([['nom'=>''],['id_categorie'=>'999'],['prix'=>'-1'],['prix'=>'abc'],['prix'=>'1.234'],['stock_initial'=>'-1'],['stock_initial'=>'1.5'],['stock_initial'=>'4294967296'],['devise'=>'EUR'],['sku'=>'test-manuel'],['statut'=>'actif'],['slug'=>'client-slug'],['taux'=>'1'],['prix_usd'=>'1'],['description'=>str_repeat('é',33000)]] as $change) {
         $before=$count();$rejected(fn()=>$build($db)->save(array_replace($input,$change)));$assert($count()===$before,'Aucun produit incomplet après refus');
@@ -97,7 +97,13 @@ try {
         $process=proc_open([PHP_BINARY,__FILE__,'http',$name,(string)$user,$method,$url,base64_encode(json_encode($payload,JSON_THROW_ON_ERROR)),$csrf],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
         fclose($pipes[0]);$out=stream_get_contents($pipes[1]);$log=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$assert(proc_close($process)===0&&str_ends_with($out,'__HTTP='.$status),'HTTP '.$status.' '.substr($out,-100).' '.$log);return $out;
     };
-    $html=$http(1,'GET','/admin/produit/ajouter',[],200);$assert(str_contains($html,'Créer le brouillon')&&str_contains($html,'name="stock_initial"'),'Formulaire réel création');
+    $html=$http(1,'GET','/admin/produit/ajouter',[],200);$assert(str_contains($html,'Publier le produit')&&str_contains($html,'name="stock_initial"'),'Formulaire réel création');
+    $assert((bool)preg_match('/name="sku_request" value="([a-f0-9]{32})"/',$html,$requestMatch),'Clé idempotente dans le formulaire natif');
+    $httpPayload=$input+['sku_request'=>$requestMatch[1]];
+    $httpBefore=$count();
+    $http(1,'POST','/admin/produits/enregistrer',$httpPayload,303);
+    $http(1,'POST','/admin/produits/enregistrer',$httpPayload,303);
+    $assert($count()===[$httpBefore[0]+1,$httpBefore[1]+1],'Rejeu HTTP : un seul produit et une seule variante');
     $html=$http(1,'GET','/admin/produit',['id'=>(string)$id],200);$assert(!str_contains($html,'name="stock_initial"')&&str_contains($html,'name="id_produit"'),'Stock existant seulement en lecture');
     $http(2,'GET','/admin/produit/ajouter',[],403);$http(3,'POST','/admin/produits/enregistrer',$input,403);
     $before=$count();$http(1,'POST','/admin/produits/enregistrer',$input,419,'bad');$assert($count()===$before,'CSRF invalide sans écriture');
@@ -115,14 +121,14 @@ try {
         ob_start();require $root.'/App/views/admin/product-form.php';return ob_get_clean();
     };
     $formData=$build($db)->form();
-    foreach (['nom'=>'','description'=>str_repeat('é',33000),'id_categorie'=>'999','sku'=>'bad sku','prix'=>'-1','devise'=>'EUR','stock_initial'=>'-1','statut'=>'actif'] as $field=>$invalid) {
+    foreach (['nom'=>'','description'=>str_repeat('é',33000),'id_categorie'=>'999','sku'=>'bad sku','prix'=>'-1','devise'=>'EUR','stock_initial'=>'-1','statut'=>'inconnu'] as $field=>$invalid) {
         $old=array_replace($input,[$field=>$invalid]);
         try {$build($db)->save($old);throw new RuntimeException('Validation attendue');}
         catch(App\Services\ProductFormValidationException $error) {
             $assert(isset($error->errors[$field]),'Champ réel associé : '.$field);
             $html=$render($formData,$old,$error->errors);
             $assert(str_contains($html,'id="product-error-'.$field.'"')&&str_contains($html,'Erreur : '),'Erreur inline : '.$field);
-            if($field==='statut')$assert((bool)preg_match('/<fieldset[^>]*aria-invalid="true"[^>]*aria-describedby="product-error-statut"/',$html),'Publication associée');
+            if($field==='statut')$assert((bool)preg_match('/<div class="admin-product-form__publication"[^>]*aria-invalid="true"[^>]*aria-describedby="product-error-statut"/',$html),'Publication associée');
             else $assert((bool)preg_match('/name="'.$field.'"[^>]*aria-invalid="true"[^>]*aria-describedby="[^"]*product-error-'.$field.'/',$html),'Association accessible : '.$field);
             if(in_array($field,['sku','prix','stock_initial'],true))$assert(str_contains($html,'value="'.htmlspecialchars($invalid,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'"'),'Saisie conservée : '.$field);
             if($field==='statut')$assert(substr_count($html,'Ajoutez au moins une photo')===1,'Photo non dupliquée dans les erreurs');
@@ -144,7 +150,7 @@ try {
     $html=$http(1,'POST','/admin/produits/enregistrer',array_replace($input,['sku'=>'référence','prix'=>'-10']),422);
     $assert(str_contains($html,'id="product-error-sku"')&&str_contains($html,'id="product-error-prix"')&&str_contains($html,'value="référence"')&&str_contains($html,'value="-10"'),'POST réel : deux erreurs et saisies conservées ensemble');
     $html=$render($formData,[],[]);
-    $assert(str_contains($html,'Référence (SKU) — facultatif')&&str_contains($html,'Code unique permettant'),'SKU expliqué');
+    $assert(str_contains($html,'value="auto" checked')&&str_contains($html,"La référence sera générée lors de l'enregistrement du produit."),'Génération automatique sélectionnée et expliquée');
     $assert(substr_count($html,'Ajoutez au moins une photo')===1,'Photo unique en création');
     $html=$render($build($db)->form($id),[],[],$first['message']);
     $assert(str_contains($html,'Informations de vente')&&!str_contains($html,'Variantes — consultation')&&str_contains($html,'<dt>Référence (SKU)</dt><dd>TEST-MANUEL</dd>'),'Vente lisible et SKU contextualisé');
@@ -153,6 +159,41 @@ try {
     $html=$http(1,'POST','/admin/produits/enregistrer',array_replace($input,['prix'=>'-1']),422);
     $assert(str_contains($html,'id="product-error-prix"')&&str_contains($html,'aria-describedby="product-price-help product-error-prix"'),'Inline via vrai contrôleur');
     $assert(str_contains($db->query('SHOW CREATE TABLE variante_produit')->fetch(PDO::FETCH_NUM)[1],"`devise_reference` = 'USD'"),'Contrainte USD intacte');
+    // Choix UX explicite : validation manuelle avant toute réservation et maintien du mode.
+    $before=$count();$registryBefore=(int)$db->query('SELECT COUNT(*) FROM sku_attribution')->fetchColumn();
+    $html=$http(1,'POST','/admin/produits/enregistrer',$input+['sku_mode'=>'manual'],422);
+    $assert(str_contains($html,'value="manual" checked')&&str_contains($html,'id="product-error-sku"'),'Manuel vide : erreur serveur et mode conservé');
+    $html=$http(1,'POST','/admin/produits/enregistrer',array_replace($input,['sku_mode'=>'manual','sku'=>'UX-VALIDE','prix'=>'-1']),422);
+    $assert(str_contains($html,'value="manual" checked')&&str_contains($html,'value="UX-VALIDE"'),'Mode et saisie manuelle conservés sur erreur indépendante');
+    $rejected(fn()=>$build($db)->save($input+['sku_mode'=>'inconnu']));
+    $assert($count()===$before&&(int)$db->query('SELECT COUNT(*) FROM sku_attribution')->fetchColumn()===$registryBefore,'Erreurs de mode sans écriture ni réservation');
+    $modeKey=bin2hex(random_bytes(16));
+    $auto=$build($db)->save(array_replace($input,['sku_mode'=>'auto','sku'=>'IGNORER-CETTE-SAISIE','sku_request'=>$modeKey]));
+    $autoRetry=$input;unset($autoRetry['sku']);$autoRetry+=['sku_mode'=>'auto','sku_request'=>$modeKey];
+    $assert($build($db)->save($autoRetry)===$auto,'Idempotence automatique avec champ masqué absent ou présent');
+    $manual=$build($db)->save(array_replace($input,['sku_mode'=>'manual','sku'=>'UX-MANUEL']));
+    $assert($build($db)->form($manual['id'])['variants'][0]['sku']==='UX-MANUEL','Manuel transmis au service SKU existant');
+    $duplicateKey=bin2hex(random_bytes(16));
+    $html=$http(1,'POST','/admin/produits/enregistrer',array_replace($input,['sku_mode'=>'manual','sku'=>'UX-MANUEL','sku_request'=>$duplicateKey]),422);
+    $assert((bool)preg_match('/name="sku_request" value="([a-f0-9]{32})"/',$html,$correctedKey)&&$correctedKey[1]!==$duplicateKey,'SKU refusé : nouvelle clé pour une correction de saisie');
+    $assert(str_contains($html,'value="manual" checked')&&str_contains($html,'value="UX-MANUEL"'),'Doublon : choix et saisie conservés');
+    $corrected=array_replace($input,['sku_mode'=>'manual','sku'=>'UX-CORRIGE','sku_request'=>$correctedKey[1]]);$correctedBefore=$count();
+    $http(1,'POST','/admin/produits/enregistrer',$corrected,303);$http(1,'POST','/admin/produits/enregistrer',$corrected,303);
+    $assert($count()===[$correctedBefore[0]+1,$correctedBefore[1]+1],'Correction d’un doublon puis rejeu sans nouvelle création');
+    // Résumé en lecture seule : prix/stock actifs, conservation des statuts et variantes historiques.
+    $multipleId=$auto['id'];
+    $db->exec("UPDATE variante_produit SET stock=4,prix_reference=10 WHERE id_produit=$multipleId");
+    $db->exec("INSERT INTO variante_produit(id_produit,sku,description_variante,prix_reference,devise_reference,stock,statut) VALUES($multipleId,'TEST-UX-A','Noir / Petit',20,'USD',7,'active'),($multipleId,'TEST-UX-I','Blanc / Grand',999,'USD',99,'inactif')");
+    $multiple=$build($db)->form($multipleId);
+    $assert($multiple['salesSummary']===['count'=>3,'activeCount'=>2,'stock'=>11,'priceLabel'=>'$10.00 – $20.00'],'Fourchette et stock des seules variantes actives');
+    $html=$render($multiple,[],[]);
+    $assert(str_contains($html,'<details class="ui-disclosure" id="product-sales-details" data-sales-disclosure>')&&!str_contains($html,'id="product-sales-details" open'),'Détails fermés par défaut');
+    foreach(['Voir plus','Voir moins','Noir / Petit','TEST-UX-A','Inactive','Stock total des variantes actives'] as $label)$assert(str_contains($html,$label),'Information de vente : '.$label);
+    $db->exec("UPDATE variante_produit SET prix_reference=10 WHERE id_produit=$multipleId AND statut='active'");
+    $assert($build($db)->form($multipleId)['salesSummary']['priceLabel']==='$10.00','Prix unique sans fausse fourchette');
+    $db->exec("UPDATE variante_produit SET statut='inactif' WHERE id_produit=$multipleId");
+    $summary=$build($db)->form($multipleId)['salesSummary'];
+    $assert($summary['stock']===0&&$summary['priceLabel']==='Aucune variante active','Produit sans variante active explicite');
     echo "ADMIN_PRODUCTS_WRITE_OK (USD/CDF serveur, taux absents/invalides, brouillon, CSRF, droits, rollback, SKU/slug/concurrence, édition sans stock, archivage, snapshots, bootstrap PRG).\n";
 } finally {
     if($db->inTransaction())$db->rollBack();$db->exec('USE tout_y_est');$db->exec('DROP DATABASE IF EXISTS `'.$name.'`');

@@ -148,24 +148,28 @@ try {
     $updates=[['id_variante'=>$v,'statut'=>'actif']];$service->saveVariants($p,$updates);$before=$row($v);$service->saveVariants($p,$updates);
     $assert($row($v)===$before,'Retry update idempotent');
     $assert($db->query('SELECT * FROM ligne_commande')->fetchAll()===$snapshots&&$db->query('SELECT * FROM ligne_panier')->fetchAll()===$cart,'Snapshots et références finaux intacts');
-    // Une combinaison gérée par 4B est réellement achetable/réservable via le service S1.7 inchangé.
+    // Avant Phase 5, seul le simple est achetable ; une conversion préserve la commande déjà créée.
+    $saleProduct=$product();$saleVariant=$service->saveVariants($saleProduct,[['prix'=>'30','devise'=>'USD','stock'=>20]])[0];
+    $db->exec('UPDATE ligne_panier SET id_variante='.$saleVariant.' WHERE id_panier=1');$saleCart=$db->query('SELECT * FROM ligne_panier')->fetchAll();
     $db->exec("INSERT INTO zone_livraison(id_zone_livraison,nom,frais_reference,devise_reference,statut) VALUES(1,'TEST zone',5,'USD','actif')");
     $users=new App\Models\User($db);$cartModel=new App\Models\Cart($db);$zones=new App\Models\DeliveryZone($db);$addresses=new App\Models\UserAddress($db);$money=new App\Services\MoneyService(new App\Models\Setting($db));
     $checkout=new App\Services\CheckoutService(new App\Services\CartService(new App\Services\ProductService(new App\Models\Product($db)),$cartModel,$money),new App\Services\AuthService($users),$users,$addresses,$zones,$money);
     $orders=new App\Services\OrderService($db,$users,$cartModel,new App\Models\ProductVariant($db),$zones,$addresses,new App\Models\Order($db),new App\Models\OrderItem($db),new App\Models\Delivery($db),$checkout,$money);
     $draft=['address'=>['nom_destinataire'=>'TEST','prenom_destinataire'=>'Client','telephone'=>'+243812345678','commune'=>'TEST','adresse'=>'TEST adresse','repere'=>'','instructions'=>'','id_zone_livraison'=>1]];
     $creationKey=bin2hex(random_bytes(32));$order=$orders->create(2,$draft,$creationKey);$retry=$orders->create(2,$draft,$creationKey);
-    $assert($retry['id']===$order['id']&&$retry['reused']&&$row($v)['stock']===18,'S1.7 réserve une seule fois la combinaison');
-    $reject(fn()=>$service->saveVariants($p,[['id_variante'=>$v,'stock'=>4294967295,'stock_attendu'=>18]]));
-    $assert($row($v)['stock']===18,'Remplacement extrême refusé pour préserver les restitutions');
+    $assert($retry['id']===$order['id']&&$retry['reused']&&$row($saleVariant)['stock']===18,'S1.7 réserve une seule fois le simple');
+    $reject(fn()=>$service->saveVariants($saleProduct,[['id_variante'=>$saleVariant,'stock'=>4294967295,'stock_attendu'=>18]]));
+    $assert($row($saleVariant)['stock']===18,'Remplacement extrême refusé pour préserver les restitutions');
     $q=$db->prepare('SELECT * FROM ligne_commande WHERE id_commande=?');$q->execute([$order['id']]);$historical=$q->fetchAll();
-    $assert($historical[0]['description_variante_snapshot']==='Noir profond / S'&&$historical[0]['prix_unitaire_applique']==='30.00','Snapshots produits depuis le moteur 4B');
-    $service->renameValue($p,$o1,$noir,'Noir futur');$service->saveVariants($p,[['id_variante'=>$v,'prix'=>'99','devise'=>'USD']]);
+    $assert($historical[0]['description_variante_snapshot']===null&&$historical[0]['prix_unitaire_applique']==='30.00','Snapshots du simple avant conversion');
+    $convertedSale=$service->initialize($saleProduct,[['nom'=>'Teinte','valeurs'=>['Noir']]],[['id_variante'=>$saleVariant,'selection'=>[1=>1]]]);
+    [$saleOption,$saleValue]=$convertedSale['options'][1][1];
+    $service->renameValue($saleProduct,$saleOption,$saleValue,'Noir futur');$service->saveVariants($saleProduct,[['id_variante'=>$saleVariant,'prix'=>'99','devise'=>'USD']]);
     $q->execute([$order['id']]);$assert($q->fetchAll()===$historical,'Renommage/prix ne recalculent pas les anciennes commandes');
     $db->exec('UPDATE commande SET reservation_expire_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE id_commande='.(int)$order['id']);
-    $assert($orders->expireReservations()===1&&$row($v)['stock']===20,'Expiration S1.7 restitue deux unités');
-    $assert($orders->expireReservations()===0&&$row($v)['stock']===20,'Deuxième expiration neutre');
-    $assert($db->query('SELECT * FROM ligne_panier')->fetchAll()===$cart,'Panier toujours basé sur le même ID');
+    $assert($orders->expireReservations()===1&&$row($saleVariant)['stock']===20,'Expiration S1.7 restitue deux unités même après conversion');
+    $assert($orders->expireReservations()===0&&$row($saleVariant)['stock']===20,'Deuxième expiration neutre');
+    $assert($db->query('SELECT * FROM ligne_panier')->fetchAll()===$saleCart,'Panier toujours basé sur le même ID');
     echo "PRODUCT_VARIANT_ENGINE_OK PHP=".PHP_VERSION." MariaDB=".$db->query('SELECT VERSION()')->fetchColumn()." (simple, options, combinaisons, héritage, prix, droits, rollback, plafond concurrent, stock/réservation concurrente, retry, snapshots).\n";
 } finally {
     if($db->inTransaction())$db->rollBack();$db->exec('USE tout_y_est');$db->exec('DROP DATABASE IF EXISTS `'.$name.'`');
