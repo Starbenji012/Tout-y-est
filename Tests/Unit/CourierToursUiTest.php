@@ -51,6 +51,10 @@ $assert(str_contains($account,'<i data-lucide="truck" aria-hidden="true"></i><h2
 $css=file_get_contents($root.'/Public/assets/css/courier-tours.css');
 $assert(str_contains($css,'max-width:768px')&&str_contains($css,'max-width:480px')&&str_contains($css,'min-height:44px')&&str_contains($css,':focus-visible')&&str_contains($css,'overflow-wrap:anywhere'),'Cibles tactiles, focus et règles responsive');
 $schema=file_get_contents($root.'/Database/schema.sql');$migration=file_get_contents($root.'/Database/migrations/S1.15_courier_tours.sql');
-$assert(trim(substr($schema,strpos($schema,'-- S1.15 forward')))===trim($migration),'Schéma et migration identiques');
+// Later migrations may follow S1.15; all of S1.15 must still match exactly.
+$blocks=[];
+$assert(preg_match_all('~(-- S1\.15 forward\b.*?UPDATE verrou_dispatch SET version_schema=15 WHERE id=1;)~s',$schema,$blocks)===1,'Un seul bloc S1.15 complet dans le schéma');
+$normalize=static fn(string $sql):string=>trim(str_replace("\r\n","\n",$sql));
+$assert($normalize($blocks[1][0])===$normalize($migration),'Schéma et migration identiques');
 $bootstrap=file_get_contents($root.'/Public/index.php');$assert(str_contains($bootstrap,"'/App/services/CourierTourService.php'")&&str_contains($bootstrap,"'/App/controllers/CourierTourController.php'"),'Dépendances explicites du bootstrap réel');
 echo "COURIER_TOURS_UI_OK (chargement, terrain, retour, état vide, XSS, snapshots, devises, bootstrap, schéma).\n";

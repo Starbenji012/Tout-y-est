@@ -129,6 +129,7 @@
     if (running || mutations > 0 || active().some(entry => entry.state !== 'ready')) {
       event.preventDefault(); event.stopImmediatePropagation(); say('Attendez la fin des envois, réessayez les photos en erreur ou retirez-les.'); pendingWarning=true; feedback.tabIndex = -1; feedback.focus(); return;
     }
+    if (event.submitter?.name === 'creation_action') return;
     if (form.elements.statut.value === 'actif' && active().length === 0) {
       event.preventDefault(); event.stopImmediatePropagation(); say('Ajoutez au moins une photo valide pour publier, ou choisissez Brouillon.'); input.focus(); return;
     }

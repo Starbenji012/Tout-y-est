@@ -44,13 +44,13 @@ final class AdminProductWrite
         $query->execute([$sku]);return $query->fetchColumn()!==false;
     }
 
-    public function create(array $data,string $slug,string $sku,string $price,int $stock): int
+    /** Insert only the draft product; the service writes its variant in the same transaction. */
+    public function createDraft(array $data,string $slug): int
     {
         $query=$this->database->prepare("INSERT INTO produit(nom,description,id_categorie,slug,statut) VALUES(?,?,?,?,'brouillon')");
         $query->execute([$data['nom'],$data['description'],$data['id_categorie'],$slug]);
         $id=(int)$this->database->lastInsertId();
-        $query=$this->database->prepare("INSERT INTO variante_produit(id_produit,sku,prix_reference,devise_reference,stock,statut) VALUES(?,?,?,'USD',?,'actif')");
-        $query->execute([$id,$sku,$price,$stock]);return $id;
+        return $id;
     }
 
     public function update(int $id,array $data,string $status): void

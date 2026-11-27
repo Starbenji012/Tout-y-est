@@ -181,6 +181,19 @@ final class ProductController extends Controller
             if (!$this->request->isPost()) throw new DomainException('Méthode non autorisée.',405);
             \App\Services\ProductPhotoPreparation::guardPostSize();
             if (!CsrfMiddleware::isValid($input['_token']??null)) throw new DomainException('Session expirée. Rechargez la page avant de réessayer.',419);
+            if(!isset($input['id_produit'])) \App\Services\ProductCreationInput::guard($input);
+            if(!isset($input['id_produit'])&&isset($input['creation_action'])) {
+                $action=$input['creation_action'];unset($input['creation_action']);
+                if(!in_array($action,['mode','preview'],true))throw new ProductFormValidationException('creation','Action invalide.');
+                if(($_FILES['creation_photo']['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE)throw new ProductFormValidationException('photos','Préparez la photo sélectionnée avant d’afficher les combinaisons.');
+                if($action==='preview') {
+                    $preview=$this->writer->creationPreview($input);
+                    if(($input['creation_signature']??null)!==$preview['signature'])unset($input['creation_variants']);
+                    $input['creation_preview']='1';
+                    $input['creation_signature']=$preview['signature'];
+                }
+                $this->formPage(null,$input,null,200);return;
+            }
             if(!isset($input['id_produit'])&&isset($input['photo_action'])) {
                 if(!$this->preparation)throw new DomainException('Préparation indisponible.',503);
                 $batch=\App\Services\ProductPhotoPreparation::token($input['photo_batch']??null);
@@ -207,7 +220,7 @@ final class ProductController extends Controller
             Session::set('_admin_product_flash',['id'=>$result['id'],'message'=>$result['message']]);
             Response::redirect('/admin/produit?'.http_build_query(['id'=>$result['id']]));
         } catch (DomainException $error) {
-            unset($input['photo_action']);
+            unset($input['photo_action'],$input['creation_action']);
             if (in_array($error->getCode(),[413,419,422,429,409,503],true)) {
                 $id=array_key_exists('id_produit',$input)?filter_var($input['id_produit'],FILTER_VALIDATE_INT):null;
                 if ($id===false) {$this->formFailure(422,'Produit invalide.');return;}
@@ -242,12 +255,29 @@ final class ProductController extends Controller
                     $error=$error??$photoError->getMessage();
                 }
             }
+            $data['creationPreview']=null;
+            if($id===null&&($old['product_type']??'simple')==='variable'&&(($old['creation_preview']??null)==='1'||isset($old['creation_variants']))) {
+                try {
+                    $data['creationPreview']=$this->writer->creationPreview($old);
+                    // A stale selection stays stale until the explicit preview action.
+                    if(is_string($old['creation_signature']??null))$data['creationPreview']['signature']=$old['creation_signature'];
+                } catch(DomainException $previewError) {
+                    $error=$error??$previewError->getMessage();$fieldErrors['creation']=$previewError->getMessage();
+                    // Preserve the previous commercial inputs even while an option is invalid.
+                    // These display-only tokens are never accepted without server recalculation.
+                    $candidates=[];
+                    foreach(array_slice(is_array($old['creation_variants']??null)?$old['creation_variants']:[],0,100,true) as $token=>$row) {
+                        if(is_string($token)&&preg_match('/^[1-3]:[1-9][0-9]{0,2}(\|[1-3]:[1-9][0-9]{0,2}){0,2}$/D',$token))$candidates[$token]=['label'=>'Variante précédente '.(count($candidates)+1).' — vérifiez les options'];
+                    }
+                    if($candidates!==[])$data['creationPreview']=['signature'=>is_string($old['creation_signature']??null)?$old['creation_signature']:'','candidates'=>$candidates];
+                }
+            }
             $data['versions']=$id!==null&&$this->versions?$this->versions->form($id):null;
             $data['versionsDraft']=$versionsDraft;
             $data['photos']=$id!==null&&$this->images?$this->images->gallery($id):[];
             $flash=Session::get('_admin_product_flash');Session::remove('_admin_product_flash');
             http_response_code($status);
-            $this->render('admin/product-form',$data+['old'=>$old,'fieldErrors'=>$fieldErrors,'formError'=>$error,'flash'=>is_array($flash)&&($flash['id']??null)===$id?$flash['message']:null,'csrfToken'=>CsrfMiddleware::token(),'title'=>$id===null?'Ajouter un produit':'Modifier le produit','adminPage'=>'products','pageStyles'=>['/assets/css/admin-products.css','/assets/css/select-control.css','/assets/css/ui-components.css'],'pageScripts'=>['/assets/js/select-control.js','/assets/js/admin-product-form.js','/assets/js/product-photo-preparation.js','/assets/js/admin-product-options.js']],'admin');
+            $this->render('admin/product-form',$data+['old'=>$old,'fieldErrors'=>$fieldErrors,'formError'=>$error,'flash'=>is_array($flash)&&($flash['id']??null)===$id?$flash['message']:null,'csrfToken'=>CsrfMiddleware::token(),'title'=>$id===null?'Ajouter un produit':'Modifier le produit','adminPage'=>'products','pageStyles'=>['/assets/css/admin-products.css','/assets/css/select-control.css','/assets/css/ui-components.css'],'pageScripts'=>['/assets/js/select-control.js','/assets/js/admin-product-form.js','/assets/js/product-photo-preparation.js','/assets/js/admin-product-options.js','/assets/js/admin-product-creation.js']],'admin');
         } catch (DomainException $failure) {$this->formFailure($failure->getCode(),$failure->getMessage());}
         catch (Throwable $failure) {error_log('Formulaire Admin produit : '.get_class($failure));$this->formFailure(503,'Administration temporairement indisponible.');}
     }

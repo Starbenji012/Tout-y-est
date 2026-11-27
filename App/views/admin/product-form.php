@@ -1,6 +1,7 @@
 <?php
 $escape=static fn(mixed $value):string=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
 $editing=$product!==null;
+$variable=!$editing&&($old['product_type']??'simple')==='variable';
 $skuManual=($old['sku_mode']??null)==='manual'||(!isset($old['sku_mode'])&&is_string($old['sku']??null)&&trim($old['sku'])!=='');
 $value=static fn(string $key,string $default=''):string=>isset($old[$key])&&is_string($old[$key])?$old[$key]:(string)($product[$key]??$default);
 $fieldErrors=$fieldErrors??[];
@@ -22,6 +23,13 @@ $showPhotoHelp=(!$editing||!$canPublish)&&!str_contains($flash??'','photo')&&!st
         <?php if (!$editing): ?><input type="hidden" name="sku_request" value="<?= $escape(is_string($old['sku_request']??null)?$old['sku_request']:bin2hex(random_bytes(16))) ?>"><?php endif; ?>
         <?php if (!$editing): ?><input type="hidden" name="photo_batch" value="<?= $escape(is_string($old['photo_batch']??null)?$old['photo_batch']:bin2hex(random_bytes(16))) ?>"><?php endif; ?>
         <?php if ($editing): ?><input type="hidden" name="id_produit" value="<?= (int)$product['id_produit'] ?>"><?php endif; ?>
+        <?php if (!$editing): ?>
+        <fieldset data-product-type><legend>Type de produit</legend>
+            <label class="ui-choice"><input type="radio" name="product_type" value="simple"<?= !$variable?' checked':'' ?>>Produit simple</label>
+            <label class="ui-choice"><input type="radio" name="product_type" value="variable"<?= $variable?' checked':'' ?>>Produit avec variantes</label>
+            <noscript><button class="btn btn-secondary" name="creation_action" value="mode" formnovalidate>Appliquer le type de produit</button></noscript>
+        </fieldset>
+        <?php endif; ?>
         <p>Les champs marqués * sont obligatoires.</p>
         <p data-product-form-feedback role="alert" hidden></p>
         <fieldset><legend>Informations du produit</legend>
@@ -39,7 +47,7 @@ $showPhotoHelp=(!$editing||!$canPublish)&&!str_contains($flash??'','photo')&&!st
         </div>
         </fieldset>
         <?php if (!$editing): ?>
-        <fieldset><legend>Informations de vente</legend>
+        <fieldset data-simple-creation<?= $variable?' hidden disabled':'' ?>><legend>Informations de vente</legend>
             <fieldset class="admin-product-sku" data-sku-mode><legend>Référence produit (SKU)</legend>
                 <label class="ui-choice"><input type="radio" name="sku_mode" value="auto"<?= !$skuManual?' checked':'' ?> aria-describedby="product-sku-auto-help"<?= $attributes('sku_mode') ?>>Générer automatiquement</label>
                 <label class="ui-choice"><input type="radio" name="sku_mode" value="manual"<?= $skuManual?' checked':'' ?><?= $attributes('sku_mode') ?>>Saisir ma propre référence</label>
@@ -57,11 +65,13 @@ $showPhotoHelp=(!$editing||!$canPublish)&&!str_contains($flash??'','photo')&&!st
             <p id="product-price-help">Saisissez votre prix en dollars ou en francs congolais. Les francs sont convertis au taux de la boutique ; le prix est conservé en dollars, arrondi au centime.</p>
             <label>Stock initial *<input id="product-stock" type="number" name="stock_initial" value="<?= $escape($value('stock_initial','0')) ?>" min="0" max="4294967295" step="1" required<?= $attributes('stock_initial') ?>><?= $inlineError('stock_initial') ?></label>
         </fieldset>
+        <?php require __DIR__.'/product-creation-variants.php'; ?>
         <?php else: ?>
         <?php require __DIR__.'/product-sales.php'; ?>
         <?php endif; ?>
         <?php if (!$editing): require __DIR__.'/product-photo-preparation.php'; endif; ?>
         <button class="btn btn-primary" type="submit" data-product-submit><?= $editing?'Enregistrer les modifications':($value('statut','actif')==='actif'?'Publier le produit':'Créer le brouillon') ?></button>
+        <?php if (!$editing): ?><input type="hidden" name="creation_end" value="v1"><?php endif; ?>
     </form>
     <?php if ($editing&&isset($versions)): require __DIR__.'/product-options.php'; endif; ?>
     <?php if ($editing): $photos=$photos??[]; ?>

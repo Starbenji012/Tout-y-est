@@ -11,6 +11,8 @@ use Throwable;
 require_once __DIR__ . '/ProductFormValidationException.php';
 require_once __DIR__ . '/ProductVariantInput.php';
 require_once __DIR__ . '/SkuService.php';
+require_once __DIR__ . '/ProductVariantWriter.php';
+require_once __DIR__ . '/ProductCreationInput.php';
 
 /** Écritures atomiques du produit ; les mouvements de stock existant sont exclus. */
 final class AdminProductWriteService
@@ -53,12 +55,23 @@ final class AdminProductWriteService
         return ['product'=>$product,'variants'=>$variants,'salesSummary'=>$salesSummary,'categories'=>$this->products->categories(),'canPublish'=>$product!==null&&(CatalogVisibility::isActive($product['statut'])||$this->hasImage((int)$product['id_produit']))];
     }
 
+    public function creationPreview(array $input): array
+    {
+        $this->authorize();
+        return (new ProductCreationInput(new ProductVariantWriter($this->database,$this->access,$this->money),new ProductVariantInput($this->money)))->preview($input);
+    }
+
     public function save(array $input): array
     {
         $this->authorize();
         $edit=array_key_exists('id_produit',$input);
+        if (!$edit) ProductCreationInput::guard($input);
+        $variable=!$edit&&($input['product_type']??'simple')==='variable';
+        $creation=new ProductCreationInput(new ProductVariantWriter($this->database,$this->access,$this->money),new ProductVariantInput($this->money));
+        $preview=$variable?$creation->preview($input):null;
+        $variants=$variable?$creation->variants($input,$preview):[];
         $allowed=['_token','nom','description','id_categorie','statut'];
-        $allowed=array_merge($allowed,$edit?['id_produit']:['sku','sku_mode','prix','devise','stock_initial','sku_request','photo_batch','photo_ids','primary_photo']);
+        $allowed=array_merge($allowed,$edit?['id_produit']:['sku','sku_mode','prix','devise','stock_initial','sku_request','photo_batch','photo_ids','primary_photo','product_type','creation_options','creation_variants','creation_signature','creation_preview','creation_end']);
         if (array_diff(array_keys($input),$allowed)) throw new DomainException('Ce formulaire contient un champ non autorisé.',422);
         $errors=[];
         $data=$this->general($input,$errors);
@@ -69,7 +82,7 @@ final class AdminProductWriteService
         return $status;
         },$errors);
         $id=$edit?$this->collect(fn()=>$this->integer($input,'id_produit',1,PHP_INT_MAX),$errors):null;
-        $manual=$edit?'':$this->collect(function()use($input,$edit){
+        $manual=($edit||$variable)?'':$this->collect(function()use($input,$edit){
         $raw=$this->text($input,'sku','');
         // Les anciens appels sans mode gardent leur contrat : vide=auto, sinon manuel.
         $mode=$this->text($input,'sku_mode',trim($raw)===''?'auto':'manual');
@@ -79,8 +92,8 @@ final class AdminProductWriteService
         if ($manual==='') throw new ProductFormValidationException('sku','Saisissez votre référence ou choisissez la génération automatique.');
         return $manual;
         },$errors);
-        $stock=$edit?0:$this->collect(fn()=>$this->integer($input,'stock_initial',0,4294967295),$errors);
-        $price=$edit?null:$this->collect(fn()=>$this->referencePrice($input),$errors);
+        $stock=($edit||$variable)?0:$this->collect(fn()=>$this->integer($input,'stock_initial',0,4294967295),$errors);
+        $price=($edit||$variable)?null:$this->collect(fn()=>$this->referencePrice($input),$errors);
         $photos=$input['photo_ids']??[];$primary=$input['primary_photo']??'';
         if(!is_array($photos)||!array_is_list($photos)||count($photos)>6||array_filter($photos,static fn($v)=>!is_string($v)||!preg_match('/^[a-f0-9]{32}$/D',$v))||count(array_unique($photos))!==count($photos)){$errors['photos']='Vérifiez les photos préparées (six maximum).';$photos=[];}
         if(!is_string($primary)||($photos!==[]&&!in_array($primary,$photos,true)))$errors['photos']='Choisissez une photo principale.';
@@ -94,7 +107,9 @@ final class AdminProductWriteService
         CatalogueWriteLock::acquire($this->database);
         try {
         $payload=$input;unset($payload['_token'],$payload['sku_request']);
-        if (array_key_exists('sku_mode',$input)) {
+        if ($variable) {
+            unset($payload['sku_mode'],$payload['sku'],$payload['prix'],$payload['devise'],$payload['stock_initial']);
+        } elseif (array_key_exists('sku_mode',$input)) {
             // Même intention avec/sans JS : l'input désactivé peut être absent du POST.
             // Les anciens appels sans mode conservent leur empreinte historique.
             unset($payload['sku_mode']);$payload['sku']=$manual;ksort($payload);
@@ -117,13 +132,19 @@ final class AdminProductWriteService
                 } else {
                     if (!$this->products->categoryExists($data['id_categorie'])) throw new ProductFormValidationException('id_categorie','Choisissez une catégorie existante.');
                     if ($manual!==''&&$this->products->skuExists($manual)) throw new ProductFormValidationException('sku','Cette référence (SKU) est déjà utilisée. Choisissez-en une autre ou laissez ce champ vide.');
-                    $reservation=$skus->reserve($operation,'initial',$manual);
-                    $sku=$reservation['sku'];
+                    $reservation=$variable?null:$skus->reserve($operation,'initial',$manual);
+                    $sku=$reservation['sku']??'';
                     $slug=$this->slug($data['nom']);
                     if ($attempt>0)$slug.='-'.bin2hex(random_bytes(6));
-                    $id=$this->products->create($data,$slug,$sku,$price,$stock);
-                    $q=$this->database->prepare('SELECT id_variante FROM variante_produit WHERE id_produit=?');$q->execute([$id]);
-                    $skus->bind($reservation['cle'],(int)$q->fetchColumn());
+                    $id=$this->products->createDraft($data,$slug);
+                    $writer=new ProductVariantWriter($this->database,$this->access,$this->money);
+                    if ($variable) {
+                        $writer->useOperation($operation);
+                        $writer->initializeLocked($id,$preview['definitions'],$variants);
+                    } else {
+                        $variant=$writer->createSimple($id,$sku,$price,$stock);
+                        $skus->bind($reservation['cle'],$variant);
+                    }
                     if($photos!==[]) {
                         if(!$this->preparation)throw new DomainException('Préparation des photos indisponible.',503);
                         $this->preparation->attach(ProductPhotoPreparation::token($input['photo_batch']??null),$photos,$primary,$id);
@@ -132,6 +153,7 @@ final class AdminProductWriteService
                     if($status==='actif')$this->products->update($id,$data,'actif');
                 }
                 $result=['id'=>$id,'message'=>$edit?'Produit enregistré.':($status==='actif'?'Produit publié.':'Brouillon créé.')];
+                if ($variable) $result['message'].=' Produit avec variantes : indisponible aux clients jusqu’à la phase 5.';
                 if ($operation!==null) $skus->complete($operation,$result);
                 $this->database->commit();
                 return $result;

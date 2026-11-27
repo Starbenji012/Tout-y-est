@@ -44,6 +44,29 @@ try {
     $db->exec("INSERT INTO categorie(id_categorie,nom,slug,statut) VALUES(1,'TEST','test','actif')");
     $product=static function()use($db):int {$slug='test-'.bin2hex(random_bytes(5));$q=$db->prepare("INSERT INTO produit(id_categorie,nom,slug,description,statut) VALUES(1,'TEST',?,'','actif')");$q->execute([$slug]);return (int)$db->lastInsertId();};
     $row=static function(int $id)use($db):array {$q=$db->prepare('SELECT * FROM variante_produit WHERE id_variante=?');$q->execute([$id]);return $q->fetch(PDO::FETCH_ASSOC);};
+    // 4C-2A: the shared writer never owns the business transaction.
+    $access=new App\Services\AdminAccessService(new App\Models\User($db));
+    $writer=new App\Services\ProductVariantWriter($db,$access,new App\Services\MoneyService(new App\Models\Setting($db)));
+    try {$writer->initializeLocked(1,[],[]);throw new RuntimeException('Transaction required');} catch (LogicException) {}
+    $db->beginTransaction();
+    try {$writer->initializeLocked(1,[],[]);throw new RuntimeException('Catalogue lock required');} catch (LogicException) {}
+    $assert($db->inTransaction(),'Rejected writer call leaves caller transaction open');$db->rollBack();
+    $beforeProducts=(int)$db->query('SELECT COUNT(*) FROM produit')->fetchColumn();
+    App\Services\CatalogueWriteLock::acquire($db);
+    try {
+        $operation=(new App\Services\SkuService($db))->operation('test:shared-writer',bin2hex(random_bytes(16)),['shared']);
+        $writer->useOperation($operation);
+        $db->beginTransaction();$draftProduct=$product();
+        $result=$writer->initializeLocked($draftProduct,[['nom'=>'Test','valeurs'=>['A','B']]],[['selection'=>[1=>1],'prix'=>'10','devise'=>'USD','stock'=>0],['selection'=>[1=>2],'prix'=>'12','devise'=>'USD','stock'=>0]]);
+        $assert(count($result['variantes'])===2&&$db->inTransaction(),'Shared initialization keeps owning transaction open');
+        $db->rollBack();
+        $assert((int)$db->query('SELECT COUNT(*) FROM produit')->fetchColumn()===$beforeProducts&&(int)$db->query('SELECT COUNT(*) FROM option_produit')->fetchColumn()===0&&(int)$db->query('SELECT COUNT(*) FROM variante_produit')->fetchColumn()===0,'Caller rollback removes product, options and combinations');
+        $db->beginTransaction();$draftProduct=$product();
+        $reject(fn()=>$writer->candidates([['nom'=>'A','valeurs'=>array_map('strval',range(1,11))],['nom'=>'B','valeurs'=>array_map('strval',range(1,10))]]));
+        $assert($db->inTransaction(),'Validation does not roll back caller');$db->rollBack();
+    } finally {
+        if($db->inTransaction())$db->rollBack();$writer->useOperation(null);App\Services\CatalogueWriteLock::release($db);
+    }
     $service=$build($db);$p=$product();
     $v=$service->saveVariants($p,[['prix'=>'25','devise'=>'USD','stock'=>8,'sku'=>'test-simple']])[0];
     $simple=$row($v);$assert($simple['cle_combinaison']==='simple'&&$simple['sku']==='TEST-SIMPLE'&&$simple['prix_reference']==='25.00','Simple sans option fictive');

@@ -20,7 +20,11 @@ $db=$connect($config['database']);$names=['tout_y_est_tours_test_'.bin2hex(rando
 $assert=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeException($why);};
 $reject=static function(callable $fn,int $code)use($assert):void{try{$fn();}catch(DomainException $e){$assert($e->getCode()===$code,$why='Refus attendu '.$code.', reçu '.$e->getCode());return;}throw new RuntimeException('Refus attendu.');};
 $schema=file_get_contents($root.'/Database/schema.sql');$migration=file_get_contents($root.'/Database/migrations/S1.15_courier_tours.sql');
-$schemaTail=substr($schema,strpos($schema,"-- S1.15 forward"));$assert(trim($schemaTail)===trim($migration),'schema.sql et migration forward identiques');
+// Compare the complete S1.15 block, not the later migrations appended to schema.sql.
+$blocks=[];
+$assert(preg_match_all('~(-- S1\.15 forward\b.*?UPDATE verrou_dispatch SET version_schema=15 WHERE id=1;)~s',$schema,$blocks)===1,'Un seul bloc S1.15 complet dans le schéma');
+$normalize=static fn(string $sql):string=>trim(str_replace("\r\n","\n",$sql));
+$assert($normalize($blocks[1][0])===$normalize($migration),'schema.sql et migration forward identiques');
 try{
     $db->exec(str_replace('tout_y_est',$name,explode('-- BEGIN S1.15',$schema,2)[0]));
     $db->exec("INSERT INTO utilisateur(id_utilisateur,nom,prenom,email,mot_de_passe,role,statut,email_verified_at) VALUES
